@@ -39,7 +39,12 @@ before_install:
   - mvn --version
   - rm -rf /home/travis/.cache/bazel/_bazel_travis/install/e4abe4ff56d8f229afa015dc729c5bd9
   - which gcc-4.8
-  - export CC=$(which gcc-4.8)
+  - which g++-4.8
+  - mkdir travis_bin
+  - ln -s $(which gcc-4.8) travis_bin/gcc
+  - ln -s $(which g++-4.8) travis_bin/g++
+  - export PATH="travis_bin:${PATH}"
+  # - export CC=$(which gcc-4.8)
 
 script: bazel test --test_output errors //...
 
