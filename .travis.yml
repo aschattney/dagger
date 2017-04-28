@@ -15,7 +15,7 @@ addons:
       - libstdc++-4.9-dev # https://github.com/nodegit/nodegit/issues/853
       - bazel=0.4.5
       - gcc-4.8
-      - g++-4.9
+      - g++-4.8
 
 jdk:
   - &jdk_for_publishing oraclejdk8
