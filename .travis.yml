@@ -37,8 +37,8 @@ before_install:
   - export PATH=$M2_HOME/bin:$PATH
   - mvn --version
   - rm -rf /home/travis/.cache/bazel/_bazel_travis/install/e4abe4ff56d8f229afa015dc729c5bd9
-  - which gcc
-  - which cc1plus
+  - which gcc-4.8
+  - export CC=$(which gcc-4.8)
 
 script: bazel test --test_output errors //...
 
