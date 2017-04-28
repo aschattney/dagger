@@ -43,7 +43,7 @@ before_install:
   - mkdir travis_bin
   - ln -s $(which gcc-4.8) travis_bin/gcc
   - ln -s $(which g++-4.8) travis_bin/g++
-  - export PATH="travis_bin:${PATH}"
+  - export PATH="$(pwd)/travis_bin:${PATH}"
   # - export CC=$(which gcc-4.8)
 
 script: bazel test --test_output errors //...
