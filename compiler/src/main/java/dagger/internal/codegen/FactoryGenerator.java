@@ -246,10 +246,11 @@ final class FactoryGenerator extends SourceFileGenerator<ProvisionBinding> {
             .addAnnotation(Override.class)
             .addModifiers(PUBLIC);
 
+    final CodeBlock codeBlock = CodeBlock.of(getDelegateFieldName(binding.key()));
     if (binding.bindingKind().equals(PROVISION)) {
       final String delegateFieldName = Util.getDelegateFieldName(binding.key());
-      getMethodBuilder.beginControlFlow("if ($S != null)", delegateFieldName);
-      getMethodBuilder.addStatement("return $S.get($L)", delegateFieldName, parametersCodeBlock);
+      getMethodBuilder.beginControlFlow("if ($L != null)", CodeBlock.of(delegateFieldName));
+      getMethodBuilder.addStatement("return $L.get($L)", CodeBlock.of(delegateFieldName), parametersCodeBlock);
       getMethodBuilder.nextControlFlow("else");
       CodeBlock.Builder providesMethodInvocationBuilder = CodeBlock.builder();
       if (binding.requiresModuleInstance()) {
@@ -279,11 +280,12 @@ final class FactoryGenerator extends SourceFileGenerator<ProvisionBinding> {
       }*/
     } else if (binding.membersInjectionRequest().isPresent()) {
 
-      getMethodBuilder.beginControlFlow("if (delegate != null)");
+      getMethodBuilder.beginControlFlow("if ($L != null)", codeBlock);
       getMethodBuilder.addStatement(
-              "return $T.injectMembers($N, delegate.get($L))",
+              "return $T.injectMembers($N, $L.get($L))",
               MembersInjectors.class,
               fields.get(binding.membersInjectionRequest().get().bindingKey()),
+              codeBlock,
               parametersCodeBlock);
       getMethodBuilder.nextControlFlow("else");
       getMethodBuilder.addStatement(
@@ -294,8 +296,8 @@ final class FactoryGenerator extends SourceFileGenerator<ProvisionBinding> {
           parametersCodeBlock);
       getMethodBuilder.endControlFlow();
     } else {
-      getMethodBuilder.beginControlFlow("if (delegate != null)");
-      getMethodBuilder.addStatement("return delegate.get($L)", parametersCodeBlock);
+      getMethodBuilder.beginControlFlow("if ($L != null)", codeBlock);
+      getMethodBuilder.addStatement("return $L.get($L)", codeBlock, parametersCodeBlock);
       getMethodBuilder.nextControlFlow("else");
       getMethodBuilder.addStatement("return new $T($L)", providedTypeName, parametersCodeBlock);
       getMethodBuilder.endControlFlow();

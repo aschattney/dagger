@@ -829,8 +829,8 @@ abstract class AbstractComponentWriter implements HasBindingMembers {
               if (supportsTestDelegate) {
                 final ClassName delegateTypeName = Util.getDelegateTypeName(interfaceRequest.key());
                 final String fieldName = Util.getDelegateFieldName(interfaceRequest.key());
-                builder.beginControlFlow("if ($S != null)", fieldName)
-                        .add("return $S.get($L)", fieldName, codeBlock)
+                builder.beginControlFlow("if ($L != null)", CodeBlock.of(fieldName))
+                        .add("return $L.get($L)", CodeBlock.of(fieldName), codeBlock)
                         .nextControlFlow("else");
               }
               interfaceMethod.addStatement("return $L", codeBlock);

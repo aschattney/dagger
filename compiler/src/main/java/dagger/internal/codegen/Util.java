@@ -34,10 +34,7 @@ import com.google.common.base.Optional;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import com.squareup.javapoet.ClassName;
-import com.squareup.javapoet.FieldSpec;
-import com.squareup.javapoet.MethodSpec;
-import com.squareup.javapoet.TypeSpec;
+import com.squareup.javapoet.*;
 import dagger.Binds;
 import dagger.Provides;
 import dagger.producers.Produces;
@@ -242,7 +239,7 @@ final class Util {
 
   static ClassName getDelegateTypeName(Key key) {
     final ClassName topLevelClassName = getTopLevelClassName(key.type());
-    if (key.qualifier().isPresent()) {
+    if (key.qualifier().isPresent() && key.qualifier().get().getAnnotationType().asElement().asType().toString().equals(Named.class.getName())) {
       final AnnotationMirror annotationMirror = key.qualifier().get();
       String value = "";
       for (Map.Entry<? extends ExecutableElement, ? extends AnnotationValue> entry : annotationMirror.getElementValues().entrySet()) {
@@ -259,7 +256,7 @@ final class Util {
 
   static String getDelegateFieldName(Key key) {
 
-    if (key.qualifier().isPresent()) {
+    if (key.qualifier().isPresent() && key.qualifier().get().getAnnotationType().asElement().asType().toString().equals(Named.class.getName())) {
       final AnnotationMirror annotationMirror = key.qualifier().get();
       String value = "";
       for (Map.Entry<? extends ExecutableElement, ? extends AnnotationValue> entry : annotationMirror.getElementValues().entrySet()) {
@@ -347,21 +344,37 @@ final class Util {
           final FrameworkField contributionBindingField = FrameworkField.forResolvedBindings(resolvedBindings, Optional.absent());
           ContributionBinding binding = resolvedBindings.contributionBinding();
           if (supportsTestDelegate(binding)) {
-              final String delegateFieldName = contributionBindingField.name() + "Delegate";
+              final String delegateFieldName = Util.getDelegateFieldName(resolvedBindings.binding().key());
               final ClassName delegateType = getDelegateTypeName(resolvedBindings.binding().key());
               final FieldSpec.Builder builder = FieldSpec.builder(delegateType, delegateFieldName);
               delegateFieldNames.put(resolvedBindings.key(), delegateFieldName);
               final FieldSpec fieldSpec = builder.build();
               classBuilder.addField(fieldSpec);
-              final String methodName = "with" + delegateType.simpleName().toString();
+            final String methodName = "with" + delegateType.simpleName();
               classBuilder.addMethod(MethodSpec.methodBuilder(methodName)
                       .addModifiers(Modifier.PUBLIC)
                       .returns(generatedTypeName)
-                      .addParameter(delegateType, "delegate")
-                      .addStatement("this.$N = delegate", fieldSpec)
+                      .addParameter(delegateType, delegateFieldName)
+                      .addStatement("this.$N = $L", fieldSpec, CodeBlock.of(delegateFieldName))
                       .addStatement("return this")
                       .build());
           }
       }catch(Exception e) {}
+  }
+
+  public static String getFieldName(Key key) {
+    if (key.qualifier().isPresent()) {
+      final AnnotationMirror annotationMirror = key.qualifier().get();
+      String value = "";
+      for (Map.Entry<? extends ExecutableElement, ? extends AnnotationValue> entry : annotationMirror.getElementValues().entrySet()) {
+        if (entry.getKey().getSimpleName().toString().equals("value")) {
+          value = entry.getValue().getValue().toString();
+          break;
+        }
+      }
+      return  capitalizeFirstLetter(value);
+    }else {
+      return capitalizeFirstLetter(ClassName.bestGuess(key.type().toString()).simpleName());
+    }
   }
 }

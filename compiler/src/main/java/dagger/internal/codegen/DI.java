@@ -1,9 +1,8 @@
 package dagger.internal.codegen;
 
-import com.google.common.collect.ImmutableList;
 import com.squareup.javapoet.ClassName;
 
-import javax.lang.model.element.Element;
+import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
 import java.util.List;
 
@@ -12,23 +11,29 @@ import java.util.List;
  */
 public class DI {
     private final TypeElement injector;
-    private final List<InjectorType> injectors;
+    private List<ExecutableElement> methods;
+    private List<InjectorType> injectorTypes;
 
-    public DI(TypeElement injector, List<InjectorType> injectors) {
+    public DI(TypeElement injector, List<ExecutableElement> methods, List<InjectorType> injectorTypes) {
         this.injector = injector;
-        this.injectors = injectors;
+        this.methods = methods;
+        this.injectorTypes = injectorTypes;
     }
 
     public TypeElement getInjector() {
         return injector;
     }
 
-    public List<InjectorType> getInjectors() {
-        return ImmutableList.copyOf(injectors);
-    }
-
     public ClassName getClassName() {
         final ClassName className = ClassName.bestGuess(injector.asType().toString());
         return ClassName.bestGuess(className.packageName() + "." + "Test" + className.simpleName());
+    }
+
+    public List<ExecutableElement> getMethods() {
+        return methods;
+    }
+
+    public List<InjectorType> getInjectorTypes() {
+        return injectorTypes;
     }
 }
