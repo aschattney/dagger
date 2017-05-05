@@ -30,6 +30,7 @@ import static javax.lang.model.element.Modifier.STATIC;
 import com.google.auto.common.MoreElements;
 import com.google.auto.common.MoreTypes;
 import com.google.common.base.Function;
+import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableList;
@@ -326,7 +327,7 @@ final class Util {
     return original.substring(0, 1).toUpperCase() + original.substring(1);
   }
 
-  private static String lowerCaseFirstLetter(String original) {
+  public static String lowerCaseFirstLetter(String original) {
     if (original == null || original.length() == 0) {
       return original;
     }
@@ -376,5 +377,15 @@ final class Util {
     }else {
       return capitalizeFirstLetter(ClassName.bestGuess(key.type().toString()).simpleName());
     }
+  }
+
+  public static ClassName getDaggerComponentClassName(ClassName componentDefinitionClassName) {
+      String componentName =
+        "Dagger" + Joiner.on('_').join(componentDefinitionClassName.simpleNames());
+      return componentDefinitionClassName.topLevelClassName().peerClass(componentName);
+  }
+
+  public static ClassName getDaggerComponentClassName(Element component) {
+      return getDaggerComponentClassName(ClassName.bestGuess(component.asType().toString()));
   }
 }

@@ -63,7 +63,7 @@ public class InjectorProcessingStep implements BasicAnnotationProcessor.Processi
             try {
                 ComponentDescriptor componentDescriptor = componentDescriptorFactory.forComponent(componentTypeElement);
                 BindingGraph bindingGraph = bindingGraphFactory.create(componentDescriptor);
-                InjectorType injectorType = new InjectorType(componentTypeElement, bindingGraph);
+                InjectorType injectorType = new InjectorType(componentTypeElement, bindingGraph, componentDescriptor);
                 injectorTypeList.add(injectorType);
             } catch (TypeNotPresentException e) {
                 rejectedElements.add(componentTypeElement);
