@@ -23,12 +23,16 @@ import com.google.auto.common.BasicAnnotationProcessor;
 import com.google.auto.service.AutoService;
 import com.google.common.collect.ImmutableList;
 import com.google.googlejavaformat.java.filer.FormattingFiler;
+import dagger.Injector;
+
+import java.util.Arrays;
 import java.util.Set;
 import javax.annotation.processing.Filer;
 import javax.annotation.processing.Messager;
 import javax.annotation.processing.Processor;
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.SourceVersion;
+import javax.lang.model.element.Element;
 import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
 
@@ -46,6 +50,8 @@ public final class ComponentProcessor extends BasicAnnotationProcessor {
   private InjectBindingRegistry injectBindingRegistry;
   private FactoryGenerator factoryGenerator;
   private MembersInjectorGenerator membersInjectorGenerator;
+  private StubGenerator stubGenerator;
+  private MultipleSourceFileGenerator<ProvisionBinding> multipleGenerator;
 
   @Override
   public SourceVersion getSupportedSourceVersion() {
@@ -106,8 +112,11 @@ public final class ComponentProcessor extends BasicAnnotationProcessor {
             methodSignatureFormatter,
             multibindingsMethodValidator);
 
+    this.stubGenerator =
+            new StubGenerator(filer, elements, types);
     this.factoryGenerator =
         new FactoryGenerator(filer, elements, compilerOptions, injectValidatorWhenGeneratingCode);
+    this.multipleGenerator = new MultipleSourceFileGenerator<>(filer, elements, Arrays.asList(this.stubGenerator, this.factoryGenerator));
     this.membersInjectorGenerator =
         new MembersInjectorGenerator(filer, elements, injectValidatorWhenGeneratingCode);
     ComponentGenerator componentGenerator =
@@ -205,7 +214,7 @@ public final class ComponentProcessor extends BasicAnnotationProcessor {
             messager,
             moduleValidator,
             provisionBindingFactory,
-            factoryGenerator,
+            this.multipleGenerator,
             providesMethodValidator,
             bindsMethodValidator,
             multibindsMethodValidator,
@@ -225,7 +234,7 @@ public final class ComponentProcessor extends BasicAnnotationProcessor {
             messager,
             moduleValidator,
             provisionBindingFactory,
-            factoryGenerator,
+            this.multipleGenerator,
             providesMethodValidator,
             productionBindingFactory,
             producerFactoryGenerator,
@@ -243,7 +252,14 @@ public final class ComponentProcessor extends BasicAnnotationProcessor {
             bindingGraphValidator,
             componentDescriptorFactory,
             bindingGraphFactory,
-            componentGenerator));
+            componentGenerator),
+         new InjectorProcessingStep(
+                 messager,
+                 new InjectorGenerator(filer, elements),
+                 ComponentDescriptor.Kind.COMPONENT,
+                 bindingGraphFactory,
+                 componentDescriptorFactory)
+    );
   }
 
   @Override
@@ -251,7 +267,7 @@ public final class ComponentProcessor extends BasicAnnotationProcessor {
     if (!roundEnv.processingOver()) {
       try {
         injectBindingRegistry.generateSourcesForRequiredBindings(
-            factoryGenerator, membersInjectorGenerator);
+            multipleGenerator, membersInjectorGenerator);
       } catch (SourceFileGenerationException e) {
         e.printMessageTo(processingEnv.getMessager());
       }

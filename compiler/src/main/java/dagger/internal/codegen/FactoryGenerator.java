@@ -35,6 +35,9 @@ import static dagger.internal.codegen.SourceFiles.generateBindingFieldsForDepend
 import static dagger.internal.codegen.SourceFiles.generatedClassNameForBinding;
 import static dagger.internal.codegen.SourceFiles.parameterizedGeneratedTypeNameForBinding;
 import static dagger.internal.codegen.TypeNames.factoryOf;
+import static dagger.internal.codegen.TypeNames.providerOf;
+import static dagger.internal.codegen.Util.getDelegateFieldName;
+import static dagger.internal.codegen.Util.getDelegateTypeName;
 import static javax.lang.model.element.Modifier.FINAL;
 import static javax.lang.model.element.Modifier.PRIVATE;
 import static javax.lang.model.element.Modifier.PUBLIC;
@@ -62,8 +65,10 @@ import java.util.List;
 import java.util.Map;
 import javax.annotation.processing.Filer;
 import javax.inject.Inject;
+import javax.inject.Named;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ExecutableElement;
+import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.Elements;
 import javax.tools.Diagnostic;
 
@@ -80,10 +85,10 @@ final class FactoryGenerator extends SourceFileGenerator<ProvisionBinding> {
   private final InjectValidator injectValidator;
 
   FactoryGenerator(
-      Filer filer,
-      Elements elements,
-      CompilerOptions compilerOptions,
-      InjectValidator injectValidator) {
+          Filer filer,
+          Elements elements,
+          CompilerOptions compilerOptions,
+          InjectValidator injectValidator) {
     super(filer, elements);
     this.compilerOptions = compilerOptions;
     this.injectValidator = injectValidator;
@@ -140,7 +145,14 @@ final class FactoryGenerator extends SourceFileGenerator<ProvisionBinding> {
         break;
       case CLASS_CONSTRUCTOR:
         constructorBuilder = Optional.of(constructorBuilder().addModifiers(PUBLIC));
+        addConstructorParameterAndTypeField(
+                getDelegateTypeName(binding.key()),
+                getDelegateFieldName(binding.key()),
+                factoryBuilder,
+                constructorBuilder.get()
+        );
         if (binding.requiresModuleInstance()) {
+
           addConstructorParameterAndTypeField(
               TypeName.get(binding.bindingTypeElement().get().asType()),
               "module",
@@ -235,18 +247,25 @@ final class FactoryGenerator extends SourceFileGenerator<ProvisionBinding> {
             .addModifiers(PUBLIC);
 
     if (binding.bindingKind().equals(PROVISION)) {
+      final String delegateFieldName = Util.getDelegateFieldName(binding.key());
+      getMethodBuilder.beginControlFlow("if ($S != null)", delegateFieldName);
+      getMethodBuilder.addStatement("return $S.get($L)", delegateFieldName, parametersCodeBlock);
+      getMethodBuilder.nextControlFlow("else");
       CodeBlock.Builder providesMethodInvocationBuilder = CodeBlock.builder();
       if (binding.requiresModuleInstance()) {
         providesMethodInvocationBuilder.add("module");
       } else {
         providesMethodInvocationBuilder.add(
-            "$T", ClassName.get(binding.bindingTypeElement().get()));
+                "$T", ClassName.get(binding.bindingTypeElement().get()));
       }
       providesMethodInvocationBuilder.add(
-          ".$L($L)", binding.bindingElement().get().getSimpleName(), parametersCodeBlock);
-      CodeBlock providesMethodInvocation = providesMethodInvocationBuilder.build();
+              ".$L($L)", binding.bindingElement().get().getSimpleName(), parametersCodeBlock);
 
-      if (binding.nullableType().isPresent()
+      CodeBlock providesMethodInvocation = providesMethodInvocationBuilder.build();
+      getMethodBuilder.addStatement("return $L", providesMethodInvocation);
+      getMethodBuilder.endControlFlow();
+
+      /*if (binding.nullableType().isPresent()
           || compilerOptions.nullableValidationKind().equals(Diagnostic.Kind.WARNING)) {
         if (binding.nullableType().isPresent()) {
           getMethodBuilder.addAnnotation((ClassName) TypeName.get(binding.nullableType().get()));
@@ -257,16 +276,29 @@ final class FactoryGenerator extends SourceFileGenerator<ProvisionBinding> {
             Preconditions.class,
             providesMethodInvocation,
             CANNOT_RETURN_NULL_FROM_NON_NULLABLE_PROVIDES_METHOD);
-      }
+      }*/
     } else if (binding.membersInjectionRequest().isPresent()) {
+
+      getMethodBuilder.beginControlFlow("if (delegate != null)");
+      getMethodBuilder.addStatement(
+              "return $T.injectMembers($N, delegate.get($L))",
+              MembersInjectors.class,
+              fields.get(binding.membersInjectionRequest().get().bindingKey()),
+              parametersCodeBlock);
+      getMethodBuilder.nextControlFlow("else");
       getMethodBuilder.addStatement(
           "return $T.injectMembers($N, new $T($L))",
           MembersInjectors.class,
           fields.get(binding.membersInjectionRequest().get().bindingKey()),
           providedTypeName,
           parametersCodeBlock);
+      getMethodBuilder.endControlFlow();
     } else {
+      getMethodBuilder.beginControlFlow("if (delegate != null)");
+      getMethodBuilder.addStatement("return delegate.get($L)", parametersCodeBlock);
+      getMethodBuilder.nextControlFlow("else");
       getMethodBuilder.addStatement("return new $T($L)", providedTypeName, parametersCodeBlock);
+      getMethodBuilder.endControlFlow();
     }
 
     factoryBuilder.addMethod(getMethodBuilder.build());

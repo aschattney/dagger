@@ -18,8 +18,12 @@ package com.example.dagger.activitygraphs;
 
 import android.app.Application;
 import android.location.LocationManager;
+import dagger.Injector;
+import dagger.ProvidesComponent;
+
 import javax.inject.Inject;
 
+@Injector
 public class DemoApplication extends Application {
   private ApplicationComponent applicationComponent;
 
@@ -33,6 +37,7 @@ public class DemoApplication extends Application {
         .build();
   }
 
+  @ProvidesComponent
   public ApplicationComponent component() {
     return applicationComponent;
   }

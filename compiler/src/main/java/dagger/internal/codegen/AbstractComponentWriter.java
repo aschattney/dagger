@@ -72,8 +72,7 @@ import static dagger.internal.codegen.TypeNames.TYPED_RELEASABLE_REFERENCE_MANAG
 import static dagger.internal.codegen.TypeNames.UNSUPPORTED_OPERATION_EXCEPTION;
 import static dagger.internal.codegen.TypeNames.providerOf;
 import static dagger.internal.codegen.TypeSpecs.addSupertype;
-import static dagger.internal.codegen.Util.componentCanMakeNewInstances;
-import static dagger.internal.codegen.Util.requiresAPassedInstance;
+import static dagger.internal.codegen.Util.*;
 import static javax.lang.model.element.Modifier.ABSTRACT;
 import static javax.lang.model.element.Modifier.FINAL;
 import static javax.lang.model.element.Modifier.PRIVATE;
@@ -120,20 +119,10 @@ import dagger.releasablereferences.CanReleaseReferences;
 import dagger.releasablereferences.ForReleasableReferences;
 import dagger.releasablereferences.ReleasableReferenceManager;
 import dagger.releasablereferences.TypedReleasableReferenceManager;
-import java.util.Arrays;
-import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+
+import java.util.*;
 import javax.inject.Provider;
-import javax.lang.model.element.AnnotationMirror;
-import javax.lang.model.element.ExecutableElement;
-import javax.lang.model.element.Modifier;
-import javax.lang.model.element.Name;
-import javax.lang.model.element.TypeElement;
-import javax.lang.model.element.VariableElement;
+import javax.lang.model.element.*;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.ExecutableType;
 import javax.lang.model.type.TypeKind;
@@ -164,6 +153,7 @@ abstract class AbstractComponentWriter implements HasBindingMembers {
   private final RequestFulfillmentRegistry requestFulfillmentRegistry;
   protected final MethodSpec.Builder constructor = constructorBuilder().addModifiers(PRIVATE);
   protected Optional<ClassName> builderName = Optional.absent();
+  private Map<Key, String> delegateFieldNames = new HashMap<>();
   private final OptionalFactories optionalFactories;
   private boolean done;
 
@@ -301,7 +291,6 @@ abstract class AbstractComponentWriter implements HasBindingMembers {
   protected CodeBlock getReferenceReleasingProviderManagerExpression(Scope scope) {
     return referenceReleasingProviderManagerFields.get(scope).getExpressionFor(name);
   }
-
   /**
    * Constructs a {@link TypeSpec.Builder} that models the {@link BindingGraph} for this component.
    * This is only intended to be called once (and will throw on successive invocations). If the
@@ -596,7 +585,6 @@ abstract class AbstractComponentWriter implements HasBindingMembers {
 
   private void addField(ResolvedBindings resolvedBindings) {
     BindingKey bindingKey = resolvedBindings.bindingKey();
-
     // If the binding can be satisfied with a static method call without dependencies or state,
     // no field is necessary.
     Optional<MemberSelect> staticMemberSelect = staticMemberSelect(resolvedBindings);
@@ -636,9 +624,28 @@ abstract class AbstractComponentWriter implements HasBindingMembers {
     if (useRawType) {
       contributionField.addAnnotation(AnnotationSpecs.suppressWarnings(RAWTYPES));
     }
-
     FieldSpec field = contributionField.build();
     component.addField(field);
+   // try {
+      //ContributionBinding binding = resolvedBindings.contributionBinding();
+      createDelegateFieldAndMethod(name, component, resolvedBindings, delegateFieldNames);
+      /*if (supportsTestDelegate(binding)) {
+        final String delegateFieldName = contributionBindingField.name() + "Delegate";
+        final ClassName delegateType = getDelegateTypeName(resolvedBindings.binding().key());
+        final FieldSpec.Builder builder = FieldSpec.builder(delegateType, delegateFieldName);
+        delegateFieldNames.put(resolvedBindings.key(), delegateFieldName);
+        final FieldSpec fieldSpec = builder.build();
+        component.addField(fieldSpec);
+        final String methodName = "with" + delegateType.simpleName().toString();
+        component.addMethod(MethodSpec.methodBuilder(methodName)
+                              .addModifiers(Modifier.PUBLIC)
+                              .returns(name)
+                              .addParameter(delegateType, "delegate")
+                              .addStatement("this.$N = delegate", fieldSpec)
+                              .addStatement("return this")
+                              .build());
+      }*/
+    //}catch(Exception e) {}
     return field;
   }
 
@@ -784,12 +791,11 @@ abstract class AbstractComponentWriter implements HasBindingMembers {
 
   private void implementInterfaceMethods() {
     Set<MethodSignature> interfaceMethods = Sets.newHashSet();
-    for (ComponentMethodDescriptor componentMethod :
-        graph.componentDescriptor().componentMethods()) {
+    final ImmutableSet<ComponentMethodDescriptor> componentMethodDescriptors = graph.componentDescriptor().componentMethods();
+    for (ComponentMethodDescriptor componentMethod : componentMethodDescriptors) {
       if (componentMethod.dependencyRequest().isPresent()) {
         DependencyRequest interfaceRequest = componentMethod.dependencyRequest().get();
-        ExecutableElement methodElement =
-            MoreElements.asExecutable(componentMethod.methodElement());
+        ExecutableElement methodElement = MoreElements.asExecutable(componentMethod.methodElement());
         ExecutableType requestType =
             MoreTypes.asExecutable(
                 types.asMemberOf(
@@ -818,7 +824,20 @@ abstract class AbstractComponentWriter implements HasBindingMembers {
               }
               // fall through
             default:
+              CodeBlock.Builder builder = CodeBlock.builder();
+              final boolean supportsTestDelegate = !componentMethod.methodElement().getReturnType().toString().equals(void.class.getName());
+              if (supportsTestDelegate) {
+                final ClassName delegateTypeName = Util.getDelegateTypeName(interfaceRequest.key());
+                final String fieldName = Util.getDelegateFieldName(interfaceRequest.key());
+                builder.beginControlFlow("if ($S != null)", fieldName)
+                        .add("return $S.get($L)", fieldName, codeBlock)
+                        .nextControlFlow("else");
+              }
               interfaceMethod.addStatement("return $L", codeBlock);
+              if (supportsTestDelegate) {
+                builder.endControlFlow();
+              }
+
               break;
           }
           component.addMethod(interfaceMethod.build());
@@ -1003,15 +1022,13 @@ abstract class AbstractComponentWriter implements HasBindingMembers {
   private CodeBlock initializeDelegateFactoriesForUninitializedDependencies(Binding binding) {
     ImmutableList.Builder<CodeBlock> initializations = ImmutableList.builder();
 
-    for (BindingKey dependencyKey :
-        FluentIterable.from(binding.dependencies())
+    final ImmutableSet<BindingKey> bindingKeys = FluentIterable.from(binding.dependencies())
             .transform(DependencyRequest::bindingKey)
-            .toSet()) {
-      if (!getMemberSelect(dependencyKey).staticMember()
-          && getInitializationState(dependencyKey).equals(UNINITIALIZED)) {
-        initializations.add(
-            CodeBlock.of(
-                "this.$L = new $T();", getMemberSelectExpression(dependencyKey), DELEGATE_FACTORY));
+            .toSet();
+    for (BindingKey dependencyKey : bindingKeys) {
+      if (!getMemberSelect(dependencyKey).staticMember() && getInitializationState(dependencyKey).equals(UNINITIALIZED)) {
+        final CodeBlock codeBlock = CodeBlock.of("this.$L = new $T();", getMemberSelectExpression(dependencyKey), DELEGATE_FACTORY);
+        initializations.add(codeBlock);
         setInitializationState(dependencyKey, DELEGATED);
       }
     }
@@ -1073,6 +1090,7 @@ abstract class AbstractComponentWriter implements HasBindingMembers {
 
   private CodeBlock initializeFactoryForContributionBinding(ContributionBinding binding) {
     TypeName bindingKeyTypeName = TypeName.get(binding.key().type());
+    final String delegateFieldName = delegateFieldNames.get(binding.key());
     switch (binding.bindingKind()) {
       case COMPONENT:
         return CodeBlock.of(
@@ -1097,14 +1115,12 @@ abstract class AbstractComponentWriter implements HasBindingMembers {
           // We can easily include the raw type (no generics) + annotation type (no values),
           // using .class & String.format -- but that wouldn't be the whole story.
           // What should we do?
-          CodeBlock getMethodBody =
-              binding.nullableType().isPresent()
-                      || compilerOptions.nullableValidationKind().equals(Diagnostic.Kind.WARNING)
-                  ? CodeBlock.of("return $L;", callFactoryMethod)
-                  : CodeBlock.of("return $T.checkNotNull($L, $S);",
-                      Preconditions.class,
-                      callFactoryMethod,
-                      CANNOT_RETURN_NULL_FROM_NON_NULLABLE_COMPONENT_METHOD);
+          CodeBlock.Builder getMethodBodyBuilder = CodeBlock.builder();
+          /*getMethodBodyBuilder.beginControlFlow("if (" + delegateFieldName + " != null)");
+          getMethodBodyBuilder.add(CodeBlock.of("return " + delegateFieldName + ".get();"));
+          getMethodBodyBuilder.nextControlFlow("else");*/
+          getMethodBodyBuilder.add(getCodeBlock(binding, callFactoryMethod));
+          //getMethodBodyBuilder.endControlFlow();
           return CodeBlock.of(
               Joiner.on('\n')
                   .join(
@@ -1120,7 +1136,7 @@ abstract class AbstractComponentWriter implements HasBindingMembers {
               /* 4 */ nullableAnnotation(binding.nullableType()),
               /* 5 */ TypeName.get(dependencyType.asType()),
               /* 6 */ dependencyVariable,
-              /* 7 */ getMethodBody);
+              /* 7 */ getMethodBodyBuilder.build());
         }
 
       case SUBCOMPONENT_BUILDER:
@@ -1145,11 +1161,15 @@ abstract class AbstractComponentWriter implements HasBindingMembers {
       case PROVISION:
         {
           List<CodeBlock> arguments =
-              Lists.newArrayListWithCapacity(binding.explicitDependencies().size() + 1);
+              Lists.newArrayListWithCapacity(binding.explicitDependencies().size() + 2);
           if (binding.requiresModuleInstance()) {
             arguments.add(getComponentContributionExpression(binding.contributingModule().get()));
           }
           arguments.addAll(getDependencyArguments(binding));
+
+          if (supportsTestDelegate(binding)) {
+            arguments.add(0, CodeBlock.of(delegateFieldName));
+          }
 
           CodeBlock factoryCreate =
               CodeBlock.of(
@@ -1223,6 +1243,16 @@ abstract class AbstractComponentWriter implements HasBindingMembers {
     }
   }
 
+  private CodeBlock getCodeBlock(ContributionBinding binding, CodeBlock callFactoryMethod) {
+    return binding.nullableType().isPresent()
+            || compilerOptions.nullableValidationKind().equals(Diagnostic.Kind.WARNING)
+        ? CodeBlock.of("return $L;", callFactoryMethod)
+        : CodeBlock.of("return $T.checkNotNull($L, $S);",
+            Preconditions.class,
+            callFactoryMethod,
+            CANNOT_RETURN_NULL_FROM_NON_NULLABLE_COMPONENT_METHOD);
+  }
+
   private TypeElement dependencyTypeForBinding(ContributionBinding binding) {
     return graph.componentDescriptor().dependencyMethodIndex().get(binding.bindingElement().get());
   }
@@ -1253,10 +1283,11 @@ abstract class AbstractComponentWriter implements HasBindingMembers {
       case NO_OP:
         return CodeBlock.of("$T.noOp()", MEMBERS_INJECTORS);
       case INJECT_MEMBERS:
+        final ImmutableList<CodeBlock> arguments = getDependencyArguments(binding);
         return CodeBlock.of(
             "$T.create($L)",
             membersInjectorNameForType(binding.membersInjectedType()),
-            makeParametersCodeBlock(getDependencyArguments(binding)));
+            makeParametersCodeBlock(arguments));
       default:
         throw new AssertionError();
     }
@@ -1504,7 +1535,7 @@ abstract class AbstractComponentWriter implements HasBindingMembers {
     }
   }
 
-  private static String simpleVariableName(TypeElement typeElement) {
+  public static String simpleVariableName(Element typeElement) {
     return UPPER_CAMEL.to(LOWER_CAMEL, typeElement.getSimpleName().toString());
   }
 

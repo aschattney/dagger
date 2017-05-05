@@ -168,10 +168,10 @@ final class InjectBindingRegistry {
    * {@linkplain #registerBinding explicitly} or implicitly via
    * {@link #getOrFindMembersInjectionBinding} or {@link #getOrFindProvisionBinding}) are generated.
    */
-  void generateSourcesForRequiredBindings(FactoryGenerator factoryGenerator,
-      MembersInjectorGenerator membersInjectorGenerator) throws SourceFileGenerationException {
-    provisionBindings.generateBindings(factoryGenerator);
+  void generateSourcesForRequiredBindings(SourceFileGenerator<ProvisionBinding> factoryGenerator,
+                                          MembersInjectorGenerator membersInjectorGenerator) throws SourceFileGenerationException {
     membersInjectionBindings.generateBindings(membersInjectorGenerator);
+    provisionBindings.generateBindings(factoryGenerator);
   }
 
   /**

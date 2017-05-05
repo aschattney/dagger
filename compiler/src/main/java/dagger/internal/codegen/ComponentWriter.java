@@ -48,12 +48,12 @@ import javax.lang.model.util.Types;
 final class ComponentWriter extends AbstractComponentWriter {
 
   ComponentWriter(
-      Types types,
-      Elements elements,
-      Key.Factory keyFactory,
-      CompilerOptions compilerOptions,
-      ClassName name,
-      BindingGraph graph) {
+          Types types,
+          Elements elements,
+          Key.Factory keyFactory,
+          CompilerOptions compilerOptions,
+          ClassName name,
+          BindingGraph graph) {
     super(
         types,
         elements,

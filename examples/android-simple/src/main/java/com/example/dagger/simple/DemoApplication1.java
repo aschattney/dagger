@@ -20,31 +20,39 @@ import android.app.Application;
 import android.location.LocationManager;
 import com.example.dagger.simple.ui.HomeActivity;
 import dagger.Component;
+import dagger.Injector;
+import dagger.ProvidesComponent;
+
 import javax.inject.Inject;
+import javax.inject.Named;
 import javax.inject.Singleton;
 
-public class DemoApplication extends Application {
+@Injector
+public class DemoApplication1 extends Application {
   
   @Singleton
-  @Component(modules = AndroidModule.class)
+  @Component(modules = {AndroidModule.class, SingletonModule.class})
   public interface ApplicationComponent {
-    void inject(DemoApplication application);
+    void inject(DemoApplication1 application);
     void inject(HomeActivity homeActivity);
     void inject(DemoActivity demoActivity);
   }
   
   @Inject LocationManager locationManager; // for some reason.
-  
+  @Inject @Named("apiKey") String someString;
+  @Inject @Named("apiKey1") String anotherString;
   private ApplicationComponent component;
 
   @Override public void onCreate() {
     super.onCreate();
-    component = DaggerDemoApplication_ApplicationComponent.builder()
+    component = DaggerDemoApplication1_ApplicationComponent.builder()
         .androidModule(new AndroidModule(this))
+
         .build();
     component().inject(this); // As of now, LocationManager should be injected into this.
   }
 
+  @ProvidesComponent
   public ApplicationComponent component() {
     return component;
   }

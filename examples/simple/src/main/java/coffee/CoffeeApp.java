@@ -1,6 +1,8 @@
 package coffee;
 
 import dagger.Component;
+
+import javax.inject.Named;
 import javax.inject.Singleton;
 
 public class CoffeeApp {
@@ -8,6 +10,13 @@ public class CoffeeApp {
   @Component(modules = { DripCoffeeModule.class })
   public interface Coffee {
     CoffeeMaker maker();
+    Thermosiphon thermosiphon();
+  }
+
+  @ActivityScope
+  @Component(dependencies = {Coffee.class})
+  public interface Bleu {
+    Thermosiphon thermosiphon();
   }
 
   public static void main(String[] args) {

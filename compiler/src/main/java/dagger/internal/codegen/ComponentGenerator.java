@@ -39,11 +39,11 @@ final class ComponentGenerator extends SourceFileGenerator<BindingGraph> {
   private final CompilerOptions compilerOptions;
 
   ComponentGenerator(
-      Filer filer,
-      Elements elements,
-      Types types,
-      Key.Factory keyFactory,
-      CompilerOptions compilerOptions) {
+          Filer filer,
+          Elements elements,
+          Types types,
+          Key.Factory keyFactory,
+          CompilerOptions compilerOptions) {
     super(filer, elements);
     this.types = types;
     this.elements = elements;

@@ -51,7 +51,7 @@ final class ModuleProcessingStep implements ProcessingStep {
       Messager messager,
       ModuleValidator moduleValidator,
       final ProvisionBinding.Factory provisionBindingFactory,
-      FactoryGenerator factoryGenerator,
+      MultipleSourceFileGenerator<ProvisionBinding> multipleSourceFileGenerator,
       ProvidesMethodValidator providesMethodValidator,
       BindsMethodValidator bindsMethodValidator,
       MultibindsMethodValidator multibindsMethodValidator,
@@ -61,7 +61,7 @@ final class ModuleProcessingStep implements ProcessingStep {
         Module.class,
         moduleValidator,
         ImmutableSet.<ModuleMethodFactoryGenerator>of(
-            new ProvisionModuleMethodFactoryGenerator(provisionBindingFactory, factoryGenerator)),
+            new ProvisionModuleMethodFactoryGenerator(provisionBindingFactory, multipleSourceFileGenerator)),
         ImmutableSet.of(
             providesMethodValidator,
             bindsMethodValidator,
@@ -77,7 +77,7 @@ final class ModuleProcessingStep implements ProcessingStep {
       Messager messager,
       ModuleValidator moduleValidator,
       ProvisionBinding.Factory provisionBindingFactory,
-      FactoryGenerator factoryGenerator,
+      MultipleSourceFileGenerator<ProvisionBinding> multipleSourceFileGenerator,
       ProvidesMethodValidator providesMethodValidator,
       ProductionBinding.Factory productionBindingFactory,
       ProducerFactoryGenerator producerFactoryGenerator,
@@ -90,7 +90,7 @@ final class ModuleProcessingStep implements ProcessingStep {
         ProducerModule.class,
         moduleValidator,
         ImmutableSet.of(
-            new ProvisionModuleMethodFactoryGenerator(provisionBindingFactory, factoryGenerator),
+            new ProvisionModuleMethodFactoryGenerator(provisionBindingFactory, multipleSourceFileGenerator),
             new ProductionModuleMethodFactoryGenerator(
                 productionBindingFactory, producerFactoryGenerator)),
         ImmutableSet.of(
@@ -207,10 +207,10 @@ final class ModuleProcessingStep implements ProcessingStep {
       implements ModuleMethodFactoryGenerator {
 
     private final ProvisionBinding.Factory provisionBindingFactory;
-    private final FactoryGenerator factoryGenerator;
+    private final MultipleSourceFileGenerator<ProvisionBinding> factoryGenerator;
 
     ProvisionModuleMethodFactoryGenerator(
-        ProvisionBinding.Factory provisionBindingFactory, FactoryGenerator factoryGenerator) {
+        ProvisionBinding.Factory provisionBindingFactory, MultipleSourceFileGenerator<ProvisionBinding> factoryGenerator) {
       this.provisionBindingFactory = provisionBindingFactory;
       this.factoryGenerator = factoryGenerator;
     }

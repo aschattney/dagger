@@ -34,17 +34,19 @@ import com.google.common.base.Optional;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.squareup.javapoet.ClassName;
+import com.squareup.javapoet.FieldSpec;
+import com.squareup.javapoet.MethodSpec;
+import com.squareup.javapoet.TypeSpec;
 import dagger.Binds;
 import dagger.Provides;
 import dagger.producers.Produces;
 import java.lang.annotation.Annotation;
 import java.util.Comparator;
+import java.util.Map;
 import java.util.stream.Collector;
-import javax.lang.model.element.AnnotationMirror;
-import javax.lang.model.element.Element;
-import javax.lang.model.element.ElementVisitor;
-import javax.lang.model.element.ExecutableElement;
-import javax.lang.model.element.TypeElement;
+import javax.inject.Named;
+import javax.lang.model.element.*;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.Elements;
@@ -238,5 +240,128 @@ final class Util {
     return collectingAndThen(toList(), ImmutableSet::copyOf);
   }
 
+  static ClassName getDelegateTypeName(Key key) {
+    final ClassName topLevelClassName = getTopLevelClassName(key.type());
+    if (key.qualifier().isPresent()) {
+      final AnnotationMirror annotationMirror = key.qualifier().get();
+      String value = "";
+      for (Map.Entry<? extends ExecutableElement, ? extends AnnotationValue> entry : annotationMirror.getElementValues().entrySet()) {
+        if (entry.getKey().getSimpleName().toString().equals("value")) {
+          value = entry.getValue().getValue().toString();
+          break;
+        }
+      }
+      return ClassName.bestGuess(topLevelClassName.packageName() + "." + capitalizeFirstLetter(value) + "Delegate");
+    }else {
+      return ClassName.bestGuess(getBaseDelegateClassName(key.type()) + "Delegate");
+    }
+  }
+
+  static String getDelegateFieldName(Key key) {
+
+    if (key.qualifier().isPresent()) {
+      final AnnotationMirror annotationMirror = key.qualifier().get();
+      String value = "";
+      for (Map.Entry<? extends ExecutableElement, ? extends AnnotationValue> entry : annotationMirror.getElementValues().entrySet()) {
+        if (entry.getKey().getSimpleName().toString().equals("value")) {
+          value = entry.getValue().getValue().toString();
+          break;
+        }
+      }
+      return lowerCaseFirstLetter(value) + "Delegate";
+    }else {
+      return lowerCaseFirstLetter(ClassName.bestGuess(key.type().toString()).simpleName()) + "Delegate";
+    }
+  }
+
+  static ClassName getDelegateTypeName(ProvisionBinding binding) {
+    String baseClassName;
+    if (binding.requiresModuleInstance()) {
+      ExecutableElement element = (ExecutableElement) binding.bindingElement().get();
+      baseClassName = getBaseDelegateClassName(binding.contributedType(), element);
+      return ClassName.bestGuess(baseClassName + "Delegate");
+    }else {
+      baseClassName = getBaseDelegateClassName(binding.key().type());
+      return ClassName.bestGuess(baseClassName + "Delegate");
+    }
+  }
+
+  private static String getBaseDelegateClassName(TypeMirror typeMirror, Element element) {
+    String baseClassName;
+    ClassName bestGuess = getTopLevelClassName(typeMirror);
+    if (element.getAnnotation(Named.class) != null) {
+      baseClassName = bestGuess.packageName() + "." + getCapitalizedAnnotationValue(element);
+    }else if (typeMirror.getAnnotation(Named.class) != null) {
+      baseClassName = bestGuess.packageName() + "." + getCapitalizedAnnotationValue(typeMirror);
+    }else {
+      baseClassName = typeMirror.toString();
+    }
+    return baseClassName;
+  }
+
+  private static String getCapitalizedAnnotationValue(Element element) {
+    return capitalizeFirstLetter(element.getAnnotation(Named.class).value());
+  }
+
+  private static ClassName getTopLevelClassName(TypeMirror typeMirror) {
+    return ClassName.bestGuess(typeMirror.toString()).topLevelClassName();
+  }
+
+  private static String getBaseDelegateClassName(TypeMirror typeMirror) {
+    String baseClassName;
+    ClassName bestGuess = getTopLevelClassName(typeMirror);
+    if (typeMirror.getAnnotation(Named.class) != null) {
+      baseClassName = bestGuess.packageName() + "." + getCapitalizedAnnotationValue(typeMirror);
+    }else {
+      baseClassName = typeMirror.toString();
+    }
+    return baseClassName;
+  }
+
+  private static String getCapitalizedAnnotationValue(TypeMirror typeMirror) {
+    return capitalizeFirstLetter(typeMirror.getAnnotation(Named.class).value());
+  }
+
+  private static String capitalizeFirstLetter(String original) {
+    if (original == null || original.length() == 0) {
+      return original;
+    }
+    return original.substring(0, 1).toUpperCase() + original.substring(1);
+  }
+
+  private static String lowerCaseFirstLetter(String original) {
+    if (original == null || original.length() == 0) {
+      return original;
+    }
+    return original.substring(0, 1).toLowerCase() + original.substring(1);
+  }
+
+  public static boolean supportsTestDelegate(ContributionBinding binding) {
+    return binding.factoryCreationStrategy() != ContributionBinding.FactoryCreationStrategy.DELEGATE;
+  }
+
   private Util() {}
+
+  public static void createDelegateFieldAndMethod(ClassName generatedTypeName, TypeSpec.Builder classBuilder, ResolvedBindings resolvedBindings, Map<Key, String> delegateFieldNames) {
+      try {
+          final FrameworkField contributionBindingField = FrameworkField.forResolvedBindings(resolvedBindings, Optional.absent());
+          ContributionBinding binding = resolvedBindings.contributionBinding();
+          if (supportsTestDelegate(binding)) {
+              final String delegateFieldName = contributionBindingField.name() + "Delegate";
+              final ClassName delegateType = getDelegateTypeName(resolvedBindings.binding().key());
+              final FieldSpec.Builder builder = FieldSpec.builder(delegateType, delegateFieldName);
+              delegateFieldNames.put(resolvedBindings.key(), delegateFieldName);
+              final FieldSpec fieldSpec = builder.build();
+              classBuilder.addField(fieldSpec);
+              final String methodName = "with" + delegateType.simpleName().toString();
+              classBuilder.addMethod(MethodSpec.methodBuilder(methodName)
+                      .addModifiers(Modifier.PUBLIC)
+                      .returns(generatedTypeName)
+                      .addParameter(delegateType, "delegate")
+                      .addStatement("this.$N = delegate", fieldSpec)
+                      .addStatement("return this")
+                      .build());
+          }
+      }catch(Exception e) {}
+  }
 }

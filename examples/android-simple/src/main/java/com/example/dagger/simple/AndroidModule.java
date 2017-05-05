@@ -30,9 +30,9 @@ import javax.inject.Singleton;
  */
 @Module
 public class AndroidModule {
-  private final DemoApplication application;
+  private final DemoApplication1 application;
 
-  public AndroidModule(DemoApplication application) {
+  public AndroidModule(DemoApplication1 application) {
     this.application = application;
   }
 
