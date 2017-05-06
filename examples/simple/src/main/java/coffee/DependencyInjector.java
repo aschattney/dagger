@@ -3,6 +3,7 @@ package coffee;
 import dagger.Injector;
 import dagger.ProvidesComponent;
 import dagger.ProvidesModule;
+import dagger.ProvidesSubcomponent;
 
 
 @Injector
@@ -15,18 +16,17 @@ public class DependencyInjector {
                 .build();
     }
 
-    @ProvidesModule
-    public AModule aModule() {
-        return new AModule();
+    @ProvidesSubcomponent
+    public CoffeeApp.Bleu bleu(CoffeeApp.Coffee coffee) {
+        return coffee.any()
+                .requestModule(new AModule())
+                .build();
     }
 
-    @ProvidesModule
-    public BModule bModule() {
-        return new BModule();
-    }
-
-    @ProvidesModule
-    public DripCoffeeModule dripCoffeeModule() {
-        return new DripCoffeeModule();
+    @ProvidesSubcomponent
+    public CoffeeApp.Bleu2 bleu2(CoffeeApp.Coffee bleu) {
+        return bleu.bleu2()
+                .requestModule(new BModule())
+                .build();
     }
 }

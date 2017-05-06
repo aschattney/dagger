@@ -1,6 +1,7 @@
 package dagger.internal.codegen;
 
 import com.google.common.collect.ImmutableSet;
+import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.CodeBlock;
 import dagger.Injector;
 import dagger.internal.Preconditions;
@@ -48,44 +49,57 @@ public class ModuleStatement implements InitializationStatement {
         final ImmutableSet<ModuleDescriptor> modules = descriptor.modules();
         for (ModuleDescriptor moduleDescriptor : modules) {
             final TypeElement moduleElement = moduleDescriptor.moduleElement();
-            if (!moduleMethodMap.keySet().contains(moduleElement))
-                throw new IllegalStateException(moduleMethodMap.entrySet().toString() + " | " + moduleElement.toString());
             final ExecutableElement method = moduleMethodMap.get(moduleElement);
-            if (method == null) {
-                throw new IllegalStateException("method is null in moduleMethodMap in ModuleStatement");
+            Map<Key, VariableElement> parameterMap;
+            if (method != null) {
+                parameterMap = buildParameterMapWithProvidingModuleMethod(method);
+            }else {
+                parameterMap = getConstructorParameterMap(moduleElement);
             }
-            final HashMap<String, ExecutableElement> providingMethods = Util.findProvidingMethods(types, injector);
-            final ExecutableElement providingModuleMethod = providingMethods.get(moduleElement.toString());
-            if (providingModuleMethod == null) {
-                throw new IllegalStateException("providingModuleMethod is null in providingMethods in ModuleStatement");
-            }
-            //final Map<Key, VariableElement> constructorParameterMap = getConstructorParameterMap(moduleElement);
-            final Map<Key, VariableElement> parameterMap = getMethodParameterMap(providingModuleMethod);
             final List<CodeBlock> arguments = new ArrayList<>();
-            //if (!constructorParameterMap.isEmpty() || !providedParams.isEmpty())
-            //throw new IllegalStateException(constructorParameterMap.entrySet().toString() + " | "+ providedParams.entrySet().toString());
             for (Map.Entry<Key, VariableElement> entry : parameterMap.entrySet()) {
                 if (resolvesToInjectorType(entry)) {
-                    arguments.add(CodeBlock.of("$L", CodeBlock.of("this")));
-                }else {
+                    arguments.add(CodeBlock.of("$L", "this"));
+                } else {
                     final VariableElement variableElement = providedParams.get(entry.getKey());
                     if (variableElement == null) {
-                        throw new IllegalStateException("parameter is null in providedParams in ModuleStatement");
+                        throw new IllegalStateException("parameter is null in providedParams in ModuleStatement for param:" + entry.getValue().asType().toString() + " in module: " + moduleElement.getSimpleName().toString());
                     }
-                    arguments.add(CodeBlock.of("$L", CodeBlock.of(variableElement.getSimpleName().toString())));
+                    arguments.add(CodeBlock.of("$L", variableElement.getSimpleName().toString()));
                 }
             }
-            codeBuilder.add(".$L(this.$L($L))",
-                    CodeBlock.of(method.getSimpleName().toString()),
-                    CodeBlock.of(providingModuleMethod.getSimpleName().toString()),
-                    makeParametersCodeBlock(arguments));
+
+            String methodName = Util.lowerCaseFirstLetter(moduleElement.getSimpleName().toString());
+
+            if (descriptor.builderSpec().isPresent()) {
+                final ExecutableElement executableElement = descriptor.builderSpec().get().methodMap().get(moduleElement);
+                methodName = executableElement.getSimpleName().toString();
+            }
+
+            if (method != null) {
+                codeBuilder.add(".$L(this.$L($L))",
+                        methodName,
+                        method.getSimpleName().toString(),
+                        makeParametersCodeBlock(arguments)
+                );
+            }else {
+                codeBuilder.add(".$L(new $T($L))",
+                        methodName,
+                        ClassName.get(moduleElement),
+                        makeParametersCodeBlock(arguments)
+                );
+            }
         }
         return codeBuilder.build();
     }
 
+    private Map<Key, VariableElement> buildParameterMapWithProvidingModuleMethod(ExecutableElement providingModuleMethod) {
+        return getMethodParameterMap(providingModuleMethod);
+    }
+
     private boolean resolvesToInjectorType(Map.Entry<Key, VariableElement> entry) {
         final TypeMirror type = entry.getKey().type();
-        return types.isAssignable(type, injector.asType());
+        return types.isAssignable(injector.asType(), type);
     }
 
     private Map<Key, VariableElement> getMethodParameterMap(ExecutableElement element) {

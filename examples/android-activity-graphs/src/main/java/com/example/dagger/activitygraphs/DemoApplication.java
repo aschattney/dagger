@@ -48,7 +48,7 @@ public class DemoApplication extends Application {
   @ProvidesComponent
   public AbstractActivityComponent activityComponent(Activity activity) {
     return DaggerAbstractActivityComponent.builder()
-            .activityModule(this.activityModule(activity))
+            .activityModule(new ActivityModule(activity))
             .applicationComponent(this.component())
             .build();
   }
@@ -58,13 +58,4 @@ public class DemoApplication extends Application {
       return null;
   }
 
-  @ProvidesModule
-  public DemoApplicationModule demoApplicationModule() {
-    return new DemoApplicationModule(this);
-  }
-
-  @ProvidesModule
-  public ActivityModule activityModule(Activity activity) {
-    return new ActivityModule(activity);
-  }
 }

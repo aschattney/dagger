@@ -57,6 +57,8 @@ import dagger.producers.monitoring.ProductionComponentMonitor;
 import dagger.releasablereferences.ForReleasableReferences;
 import dagger.releasablereferences.ReleasableReferenceManager;
 import dagger.releasablereferences.TypedReleasableReferenceManager;
+
+import java.io.Serializable;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Executor;
@@ -83,10 +85,10 @@ import javax.lang.model.util.Types;
  * @author Gregory Kick
  */
 @AutoValue
-abstract class Key {
+abstract class Key implements Serializable{
 
   /** An object that is associated with a {@link Key}. */
-  interface HasKey {
+  interface HasKey extends Serializable {
     /** The key associated with this object. */
     Key key();
   }

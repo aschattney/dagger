@@ -13,14 +13,14 @@ public class CoffeeApp {
   public interface Coffee {
     CoffeeMaker maker();
     Thermosiphon thermosiphon();
-    Bleu.Builder bleu();
+    Bleu.Builder any();
+    Bleu2.Builder bleu2();
   }
 
   @ActivityScope
   @Subcomponent(modules = {AModule.class})
   public interface Bleu {
     Integer integer();
-    Bleu2.Builder bleu2();
     @Subcomponent.Builder
     interface Builder {
       Builder requestModule(AModule module);

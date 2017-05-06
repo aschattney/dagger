@@ -48,7 +48,7 @@ public class DemoApplication1 extends Application {
     super.onCreate();
     component = DaggerDemoApplication1_ApplicationComponent.builder()
         .androidModule(new AndroidModule(this))
-
+        .singletonModule(new SingletonModule())
         .build();
     component().inject(this); // As of now, LocationManager should be injected into this.
   }
@@ -58,13 +58,4 @@ public class DemoApplication1 extends Application {
     return component;
   }
 
-  @ProvidesModule
-  public AndroidModule androidModule() {
-    return new AndroidModule(this);
-  }
-
-  @ProvidesModule
-  public SingletonModule singletonModule() {
-    return new SingletonModule();
-  }
 }

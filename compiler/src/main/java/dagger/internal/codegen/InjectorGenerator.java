@@ -45,13 +45,6 @@ public class InjectorGenerator extends SourceFileGenerator<DI>{
         Map<Key, String> delegateFieldNames = new HashMap<>();
         Map<Key, ComponentDescriptor> componentDescriptors = new HashMap<>();
         for (InjectorType injectorType : input.getInjectorTypes()) {
-            injectorType.getBindingGraph().resolvedBindings().values().forEach(resolvedBindings -> {
-                if (resolvedBindings.bindingType() == BindingType.PROVISION) {
-                    if (!delegateFieldNames.containsKey(resolvedBindings.key())) {
-                        createDelegateFieldAndMethod(generatedTypeName, builder, resolvedBindings, delegateFieldNames);
-                    }
-                }
-            });
             final Key key = Key.builder(injectorType.getElement().asType()).build();
             componentDescriptors.put(key, injectorType.getComponentDescriptor());
         }
@@ -59,32 +52,8 @@ public class InjectorGenerator extends SourceFileGenerator<DI>{
         final Map<TypeElement, ProvidingMethodOverrider> methods = input.getMethods();
         for (Map.Entry<TypeElement, ProvidingMethodOverrider> entry : methods.entrySet()) {
             final ProvidingMethodOverrider overrider = entry.getValue();
-            final MethodSpec.Builder methodSpec = MethodSpec.overriding(overrider.getExecutableElement());
-            final List<InitializationStatement> statements = overrider.getStatements();
-            final CodeBlock.Builder codeBuilder = CodeBlock.builder();
-            for (InitializationStatement statement : statements) {
-                codeBuilder.add(statement.get());
-            }
-            methodSpec.addStatement("return $L", codeBuilder.build());
-            builder.addMethod(methodSpec.build());
+            overrider.process(builder, generatedTypeName, delegateFieldNames);
         }
-            /*final MethodSpec.Builder method = MethodSpec.overriding(executableElement);
-            final List<? extends VariableElement> parameters = executableElement.getParameters();
-            Map<Key, VariableElement> map = new HashMap<>();
-            for (VariableElement parameter : parameters) {
-                map.put(Key.builder(parameter.asType()).build(), parameter);
-            }
-            final Key key = Key.builder(executableElement.getReturnType()).build();
-            final ComponentDescriptor componentDescriptor = componentDescriptors.get(key);
-            final CodeBlock.Builder codeBuilder = CodeBlock.builder();
-            codeBuilder.add("$T", Util.getDaggerComponentClassName(componentDescriptor.componentDefinitionType())).add(".builder().");
-            for (ModuleDescriptor moduleDescriptor : componentDescriptor.modules()) {
-                final TypeElement element = moduleDescriptor.moduleElement();
-                codeBuilder.add(Util.lowerCaseFirstLetter(element.getSimpleName().toString()));
-            }
-            codeBuilder.add(".build()");
-            method.addStatement("return $L", codeBuilder.build());
-            builder.addMethod(method.build());*/
 
         return Optional.of(builder);
     }
