@@ -79,7 +79,7 @@ import javax.lang.model.util.Types;
  * @since 2.0
  */
 @AutoValue
-abstract class ComponentDescriptor {
+public abstract class ComponentDescriptor {
   ComponentDescriptor() {}
 
   enum Kind {

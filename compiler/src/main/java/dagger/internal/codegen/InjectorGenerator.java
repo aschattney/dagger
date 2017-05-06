@@ -56,8 +56,19 @@ public class InjectorGenerator extends SourceFileGenerator<DI>{
             componentDescriptors.put(key, injectorType.getComponentDescriptor());
         }
 
-        for (ExecutableElement executableElement : input.getMethods()) {
-            final MethodSpec.Builder method = MethodSpec.overriding(executableElement);
+        final Map<TypeElement, ProvidingMethodOverrider> methods = input.getMethods();
+        for (Map.Entry<TypeElement, ProvidingMethodOverrider> entry : methods.entrySet()) {
+            final ProvidingMethodOverrider overrider = entry.getValue();
+            final MethodSpec.Builder methodSpec = MethodSpec.overriding(overrider.getExecutableElement());
+            final List<InitializationStatement> statements = overrider.getStatements();
+            final CodeBlock.Builder codeBuilder = CodeBlock.builder();
+            for (InitializationStatement statement : statements) {
+                codeBuilder.add(statement.get());
+            }
+            methodSpec.addStatement("return $L", codeBuilder.build());
+            builder.addMethod(methodSpec.build());
+        }
+            /*final MethodSpec.Builder method = MethodSpec.overriding(executableElement);
             final List<? extends VariableElement> parameters = executableElement.getParameters();
             Map<Key, VariableElement> map = new HashMap<>();
             for (VariableElement parameter : parameters) {
@@ -73,8 +84,7 @@ public class InjectorGenerator extends SourceFileGenerator<DI>{
             }
             codeBuilder.add(".build()");
             method.addStatement("return $L", codeBuilder.build());
-            builder.addMethod(method.build());
-        }
+            builder.addMethod(method.build());*/
 
         return Optional.of(builder);
     }

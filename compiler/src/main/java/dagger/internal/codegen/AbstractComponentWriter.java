@@ -629,7 +629,7 @@ abstract class AbstractComponentWriter implements HasBindingMembers {
    // try {
       //ContributionBinding binding = resolvedBindings.contributionBinding();
       createDelegateFieldAndMethod(name, component, resolvedBindings, delegateFieldNames);
-      /*if (supportsTestDelegate(binding)) {
+      /*if (bindingSupportsTestDelegate(binding)) {
         final String delegateFieldName = contributionBindingField.name() + "Delegate";
         final ClassName delegateType = getDelegateTypeName(resolvedBindings.binding().key());
         final FieldSpec.Builder builder = FieldSpec.builder(delegateType, delegateFieldName);
@@ -1167,7 +1167,7 @@ abstract class AbstractComponentWriter implements HasBindingMembers {
           }
           arguments.addAll(getDependencyArguments(binding));
 
-          if (supportsTestDelegate(binding)) {
+          if (bindingSupportsTestDelegate(binding)) {
             arguments.add(0, CodeBlock.of(delegateFieldName));
           }
 

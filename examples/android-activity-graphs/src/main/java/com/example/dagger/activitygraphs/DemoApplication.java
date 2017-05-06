@@ -16,10 +16,13 @@
 
 package com.example.dagger.activitygraphs;
 
+import android.app.Activity;
 import android.app.Application;
 import android.location.LocationManager;
 import dagger.Injector;
+import dagger.Provides;
 import dagger.ProvidesComponent;
+import dagger.ProvidesModule;
 
 import javax.inject.Inject;
 
@@ -40,5 +43,28 @@ public class DemoApplication extends Application {
   @ProvidesComponent
   public ApplicationComponent component() {
     return applicationComponent;
+  }
+
+  @ProvidesComponent
+  public AbstractActivityComponent activityComponent(Activity activity) {
+    return DaggerAbstractActivityComponent.builder()
+            .activityModule(this.activityModule(activity))
+            .applicationComponent(this.component())
+            .build();
+  }
+
+  @ProvidesComponent
+  public FragmentComponent fragmentComponent(AbstractActivityComponent component) {
+      return null;
+  }
+
+  @ProvidesModule
+  public DemoApplicationModule demoApplicationModule() {
+    return new DemoApplicationModule(this);
+  }
+
+  @ProvidesModule
+  public ActivityModule activityModule(Activity activity) {
+    return new ActivityModule(activity);
   }
 }

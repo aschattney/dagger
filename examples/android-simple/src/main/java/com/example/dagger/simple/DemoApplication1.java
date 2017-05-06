@@ -22,6 +22,7 @@ import com.example.dagger.simple.ui.HomeActivity;
 import dagger.Component;
 import dagger.Injector;
 import dagger.ProvidesComponent;
+import dagger.ProvidesModule;
 
 import javax.inject.Inject;
 import javax.inject.Named;
@@ -55,5 +56,15 @@ public class DemoApplication1 extends Application {
   @ProvidesComponent
   public ApplicationComponent component() {
     return component;
+  }
+
+  @ProvidesModule
+  public AndroidModule androidModule() {
+    return new AndroidModule(this);
+  }
+
+  @ProvidesModule
+  public SingletonModule singletonModule() {
+    return new SingletonModule();
   }
 }

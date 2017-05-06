@@ -5,16 +5,17 @@ import com.squareup.javapoet.ClassName;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Created by Andy on 05.05.2017.
  */
 public class DI {
     private final TypeElement injector;
-    private List<ExecutableElement> methods;
+    private Map<TypeElement, ProvidingMethodOverrider> methods;
     private List<InjectorType> injectorTypes;
 
-    public DI(TypeElement injector, List<ExecutableElement> methods, List<InjectorType> injectorTypes) {
+    public DI(TypeElement injector, Map<TypeElement, ProvidingMethodOverrider> methods, List<InjectorType> injectorTypes) {
         this.injector = injector;
         this.methods = methods;
         this.injectorTypes = injectorTypes;
@@ -29,7 +30,7 @@ public class DI {
         return ClassName.bestGuess(className.packageName() + "." + "Test" + className.simpleName());
     }
 
-    public List<ExecutableElement> getMethods() {
+    public Map<TypeElement, ProvidingMethodOverrider> getMethods() {
         return methods;
     }
 

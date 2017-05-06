@@ -254,6 +254,7 @@ public final class ComponentProcessor extends BasicAnnotationProcessor {
             bindingGraphFactory,
             componentGenerator),
          new InjectorProcessingStep(
+                 types,
                  messager,
                  new InjectorGenerator(filer, elements),
                  ComponentDescriptor.Kind.COMPONENT,

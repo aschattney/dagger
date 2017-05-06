@@ -130,6 +130,13 @@
                 <annotationProcessor>com.google.auto.value.processor.AutoValueProcessor</annotationProcessor>
                 <annotationProcessor>com.google.auto.service.processor.AutoServiceProcessor</annotationProcessor>
               </annotationProcessors>
+              <compilerArguments>
+                <!-- enable the next line to have the output of the processor shown on console -->
+                <Xlint/>
+                <Averbose>true</Averbose>
+              </compilerArguments>
+              <!-- set the next to true to enable verbose output of the compiler plugin -->
+              <verbose>true</verbose>
             </configuration>
           </execution>
           <execution>
@@ -139,6 +146,13 @@
               <annotationProcessors>
                 <annotationProcessor>dagger.internal.codegen.ComponentProcessor</annotationProcessor>
               </annotationProcessors>
+              <compilerArguments>
+                <!-- enable the next line to have the output of the processor shown on console -->
+                <Xlint/>
+                <Averbose>true</Averbose>
+              </compilerArguments>
+              <!-- set the next to true to enable verbose output of the compiler plugin -->
+              <verbose>true</verbose>
             </configuration>
           </execution>
         </executions>
