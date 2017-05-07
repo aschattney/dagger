@@ -4,6 +4,7 @@ import com.google.auto.common.MoreElements;
 import com.google.auto.common.MoreTypes;
 import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.ImmutableSet;
+import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.CodeBlock;
 import dagger.Component;
 import dagger.Subcomponent;
@@ -16,19 +17,37 @@ import java.util.List;
 
 public class BuilderStatement implements InitializationStatement {
 
+    private final BindingGraph.Factory graphFactory;
     private ComponentDescriptor descriptor;
-    private ComponentDescriptor parentDescriptor;
     private ExecutableElement providingMethod;
+    private BuilderModuleStatement builderModuleStatement;
 
-    public BuilderStatement(ComponentDescriptor descriptor, ComponentDescriptor parentDescriptor, ExecutableElement providingMethod) {
+    public BuilderStatement(ComponentDescriptor descriptor, ExecutableElement providingMethod, BuilderModuleStatement builderModuleStatement, BindingGraph.Factory graphFactory) {
         this.descriptor = descriptor;
-        this.parentDescriptor = parentDescriptor;
         this.providingMethod = providingMethod;
+        this.builderModuleStatement = builderModuleStatement;
+        this.graphFactory = graphFactory;
     }
 
     @Override
     public CodeBlock get() {
         if (descriptor.kind() == ComponentDescriptor.Kind.SUBCOMPONENT) {
+            CodeBlock.Builder codeBlockBuilder = CodeBlock.builder();
+            final ComponentDescriptor parentDescriptor = descriptor.getParentDescriptor();
+            /*final ImmutableBiMap<ComponentDescriptor, String> subcomponentNamesMap =
+                    new ComponentWriter.UniqueSubcomponentNamesGenerator(graphFactory.create(parentDescriptor)).generate();
+
+            if (parentDescriptor.kind() == ComponentDescriptor.Kind.SUBCOMPONENT) {
+                final ClassName className = ClassName.bestGuess(resolveSubcomponentClassName(parentDescriptor));
+                packageName = className.packageName() + "." + className.simpleName();
+            }else {
+                final ClassName daggerComponentClassName = Util.getDaggerComponentClassName(parentDescriptor.componentDefinitionType());
+                packageName = daggerComponentClassName.packageName() + "." + daggerComponentClassName.simpleName();
+            }
+            final String subComponentClassName = subcomponentNamesMap.get(descriptor) + "Impl";*/
+            final String subComponentClassName = resolveClassName(descriptor);
+            final ClassName className = ClassName.bestGuess(subComponentClassName);
+            codeBlockBuilder.add("(($T)", className);
             final List<? extends VariableElement> parameters = providingMethod.getParameters();
             for (VariableElement parameter : parameters) {
                 final TypeElement element = MoreTypes.asTypeElement(parameter.asType());
@@ -41,13 +60,41 @@ public class BuilderStatement implements InitializationStatement {
                             typeToSearch = descriptor.builderSpec().get().builderDefinitionType().asType();
                         }
                         if (executableElement.getReturnType().toString().equals(typeToSearch.toString())) {
-                            return CodeBlock.of("$L.$L()", parameter.getSimpleName().toString(), executableElement.getSimpleName().toString());
+                            final String parameterName = parameter.getSimpleName().toString();
+                            final String methodName = executableElement.getSimpleName().toString();
+                            if (!descriptor.builderSpec().isPresent() ) {
+                                // check if method has parameters ...
+                                builderModuleStatement.setExecutableElement(executableElement);
+                                return codeBlockBuilder.add("$L.$L($L))\n", parameterName, methodName, builderModuleStatement.get()).build();
+                            }else {
+                                return codeBlockBuilder.add("$L.$L()\n", parameterName, methodName).build();
+                            }
                         }
                     }
                 }
             }
         }
-        return CodeBlock.of("$T.builder()", Util.getDaggerComponentClassName(descriptor.componentDefinitionType()));
+        final ClassName componentClassName = Util.getDaggerComponentClassName(descriptor.componentDefinitionType());
+        return CodeBlock.of("(($T)$T.builder()\n", componentClassName, componentClassName);
+    }
+
+    private String resolveClassName(ComponentDescriptor descriptor) {
+        if (descriptor.kind() == ComponentDescriptor.Kind.COMPONENT) {
+            final ClassName daggerComponentClassName = Util.getDaggerComponentClassName(descriptor.componentDefinitionType());
+            return daggerComponentClassName.packageName() + "." + daggerComponentClassName.simpleName();
+        }else if (descriptor.kind() == ComponentDescriptor.Kind.SUBCOMPONENT) {
+            final String parentClassName = resolveClassName(descriptor.getParentDescriptor());
+            final BindingGraph parentGraph = graphFactory.create(descriptor.getParentDescriptor());
+            final ImmutableBiMap<ComponentDescriptor, String> subcomponentNamesMap =
+                    new ComponentWriter.UniqueSubcomponentNamesGenerator(parentGraph).generate();
+            final String s = subcomponentNamesMap.get(descriptor);
+            if (s == null) {
+                throw new NullPointerException("s is null | " + subcomponentNamesMap.values().toString() + "|" + descriptor.componentDefinitionType().asType().toString());
+            }
+            return parentClassName + "." + s + "Impl";
+        }else {
+            throw new IllegalStateException("unknown");
+        }
     }
 
     private boolean isComponentOrSubcomponent(TypeElement element) {

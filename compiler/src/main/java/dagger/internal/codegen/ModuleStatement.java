@@ -24,11 +24,11 @@ import static dagger.internal.codegen.CodeBlocks.makeParametersCodeBlock;
  */
 public class ModuleStatement implements InitializationStatement {
 
-    private Types types;
-    private TypeElement injector;
-    private ComponentDescriptor descriptor;
-    private Map<TypeElement, ExecutableElement> moduleMethodMap;
-    private Map<Key, VariableElement> providedParams;
+    protected Types types;
+    protected TypeElement injector;
+    protected ComponentDescriptor descriptor;
+    protected Map<TypeElement, ExecutableElement> moduleMethodMap;
+    protected Map<Key, VariableElement> providedParams;
 
     public ModuleStatement(Types types, TypeElement injector, ComponentDescriptor descriptor, Map<TypeElement, ExecutableElement> moduleMethodMap, Map<Key, VariableElement> providedParams) {
         Preconditions.checkNotNull(types, "types is null!");
@@ -47,6 +47,11 @@ public class ModuleStatement implements InitializationStatement {
     public CodeBlock get() {
         final CodeBlock.Builder codeBuilder = CodeBlock.builder();
         final ImmutableSet<ModuleDescriptor> modules = descriptor.modules();
+
+        if (isSubComponent() && !descriptor.builderSpec().isPresent()) {
+            return CodeBlock.builder().build();
+        }
+
         for (ModuleDescriptor moduleDescriptor : modules) {
             final TypeElement moduleElement = moduleDescriptor.moduleElement();
             final ExecutableElement method = moduleMethodMap.get(moduleElement);
@@ -77,13 +82,13 @@ public class ModuleStatement implements InitializationStatement {
             }
 
             if (method != null) {
-                codeBuilder.add(".$L(this.$L($L))",
+                codeBuilder.add(".$L(this.$L($L))\n",
                         methodName,
                         method.getSimpleName().toString(),
                         makeParametersCodeBlock(arguments)
                 );
             }else {
-                codeBuilder.add(".$L(new $T($L))",
+                codeBuilder.add(".$L(new $T($L))\n",
                         methodName,
                         ClassName.get(moduleElement),
                         makeParametersCodeBlock(arguments)
@@ -91,6 +96,10 @@ public class ModuleStatement implements InitializationStatement {
             }
         }
         return codeBuilder.build();
+    }
+
+    private boolean isSubComponent() {
+        return descriptor.kind() == ComponentDescriptor.Kind.SUBCOMPONENT;
     }
 
     private Map<Key, VariableElement> buildParameterMapWithProvidingModuleMethod(ExecutableElement providingModuleMethod) {

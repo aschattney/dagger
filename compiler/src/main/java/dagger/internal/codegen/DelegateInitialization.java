@@ -1,6 +1,8 @@
 package dagger.internal.codegen;
 
 import com.google.common.base.Optional;
+import com.google.common.collect.ImmutableCollection;
+import com.google.common.collect.ImmutableList;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.CodeBlock;
 import com.squareup.javapoet.FieldSpec;
@@ -18,28 +20,39 @@ import static dagger.internal.codegen.Util.getDelegateTypeName;
  */
 public class DelegateInitialization implements InitializationStatement {
 
+    private ComponentDescriptor descriptor;
     private final BindingGraph graph;
 
-    public DelegateInitialization(BindingGraph graph) {
+    public DelegateInitialization(ComponentDescriptor descriptor, BindingGraph graph) {
+        this.descriptor = descriptor;
         this.graph = graph;
     }
 
     @Override
     public CodeBlock get() {
         final CodeBlock.Builder codeBuilder = CodeBlock.builder();
-        try {
-            HashMap<Key, String> delegateFieldNames = new HashMap<>();
-            for (ResolvedBindings resolvedBindings : graph.resolvedBindings().values()) {
+        final ImmutableCollection<ResolvedBindings> values = graph.resolvedBindings().values();
+        for (ResolvedBindings resolvedBindings : values) {
+            try {
+
+                if (resolvedBindings.ownedBindings().isEmpty()) {
+                    continue;
+                }
+
                 ContributionBinding binding = resolvedBindings.contributionBinding();
-                if (bindingSupportsTestDelegate(binding)) {
+                if (bindingSupportsTestDelegate(binding) && shouldCreateDelegate(binding)) {
                     final String delegateFieldName = Util.getDelegateFieldName(resolvedBindings.binding().key());
                     final ClassName delegateType = getDelegateTypeName(resolvedBindings.binding().key());
-                    delegateFieldNames.put(resolvedBindings.key(), delegateFieldName);
                     final String methodName = "with" + delegateType.simpleName();
-                    codeBuilder.add(".$L($L)", methodName, delegateFieldName);
+                    codeBuilder.add(".$L($L)\n", methodName, delegateFieldName);
                 }
+            } catch (Exception e) {
             }
-        }catch(Exception e) {}
+        }
         return codeBuilder.build();
+    }
+
+    private boolean shouldCreateDelegate(ContributionBinding binding) {
+        return descriptor.kind() != ComponentDescriptor.Kind.SUBCOMPONENT || binding.requiresModuleInstance();
     }
 }

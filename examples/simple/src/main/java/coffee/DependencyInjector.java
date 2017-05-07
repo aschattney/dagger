@@ -17,16 +17,20 @@ public class DependencyInjector {
     }
 
     @ProvidesSubcomponent
-    public CoffeeApp.Bleu bleu(CoffeeApp.Coffee coffee) {
-        return coffee.any()
-                .requestModule(new AModule())
-                .build();
+    public CoffeeApp.Bleu bleu(CoffeeApp.Coffee coffee, double d) {
+        return coffee.plus(new AModule(), new BModule(d));
     }
 
     @ProvidesSubcomponent
-    public CoffeeApp.Bleu2 bleu2(CoffeeApp.Coffee bleu) {
-        return bleu.bleu2()
-                .requestModule(new BModule())
+    public CoffeeApp.Bleu2 bleu2(CoffeeApp.Bleu bleu, double d) {
+        return bleu.someComponent()
+                .someModule(new BModule(d))
                 .build();
+    }
+
+
+    @ProvidesModule
+    public BModule moduleB(double a) {
+        return new BModule(a);
     }
 }

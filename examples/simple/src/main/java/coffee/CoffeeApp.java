@@ -1,6 +1,7 @@
 package coffee;
 
 import dagger.Component;
+import dagger.Module;
 import dagger.ProvidesModule;
 import dagger.Subcomponent;
 
@@ -13,19 +14,14 @@ public class CoffeeApp {
   public interface Coffee {
     CoffeeMaker maker();
     Thermosiphon thermosiphon();
-    Bleu.Builder any();
-    Bleu2.Builder bleu2();
+    Bleu plus(AModule module, BModule moduleB);
   }
 
   @ActivityScope
-  @Subcomponent(modules = {AModule.class})
+  @Subcomponent(modules = {AModule.class, BModule.class})
   public interface Bleu {
     Integer integer();
-    @Subcomponent.Builder
-    interface Builder {
-      Builder requestModule(AModule module);
-      Bleu build();
-    }
+    Bleu2.Builder someComponent();
   }
 
   @Subcomponent(modules = {BModule.class})
@@ -33,7 +29,7 @@ public class CoffeeApp {
     CoffeeMaker dou();
     @Subcomponent.Builder
     interface Builder {
-      Builder requestModule(BModule module);
+      Bleu2.Builder someModule(BModule whaaat);
       Bleu2 build();
     }
   }

@@ -62,7 +62,7 @@ public class ComponentStatement implements InitializationStatement{
                 arguments.add(CodeBlock.of("$L", CodeBlock.of(variableElement.getSimpleName().toString())));
             }
 
-            builder.add(".$L(this.$L($L))", CodeBlock.of(methodName), CodeBlock.of(executableElement.getSimpleName().toString()), makeParametersCodeBlock(arguments));
+            builder.add(".$L(this.$L($L))\n", CodeBlock.of(methodName), CodeBlock.of(executableElement.getSimpleName().toString()), makeParametersCodeBlock(arguments));
         }
         return builder.build();
     }

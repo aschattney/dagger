@@ -26,7 +26,7 @@ public class InjectorProcessingStep implements BasicAnnotationProcessor.Processi
 
     private Types types;
     private final Messager messager;
-    private final InjectorGenerator injectorGenerator;
+    private final InjectorGenerator.Factory injectorGeneratorFactory;
     private final ComponentDescriptor.Kind component;
     private final BindingGraph.Factory bindingGraphFactory;
     private final ComponentDescriptor.Factory componentDescriptorFactory;
@@ -34,10 +34,10 @@ public class InjectorProcessingStep implements BasicAnnotationProcessor.Processi
     private Map<TypeElement, ExecutableElement> moduleMethodMap;
     private Map<TypeElement, ExecutableElement> subcomponentMethodMap;
 
-    public InjectorProcessingStep(Types types, Messager messager, InjectorGenerator injectorGenerator, ComponentDescriptor.Kind component, BindingGraph.Factory bindingGraphFactory, ComponentDescriptor.Factory componentDescriptorFactory) {
+    public InjectorProcessingStep(Types types, Messager messager, InjectorGenerator.Factory injectorGeneratorFactory, ComponentDescriptor.Kind component, BindingGraph.Factory bindingGraphFactory, ComponentDescriptor.Factory componentDescriptorFactory) {
         this.types = types;
         this.messager = messager;
-        this.injectorGenerator = injectorGenerator;
+        this.injectorGeneratorFactory = injectorGeneratorFactory;
         this.component = component;
         this.bindingGraphFactory = bindingGraphFactory;
         this.componentDescriptorFactory = componentDescriptorFactory;
@@ -83,7 +83,7 @@ public class InjectorProcessingStep implements BasicAnnotationProcessor.Processi
             }
         }
         final DI di = new DI(injector, componentOverriderMap, injectorTypeList);
-        this.injectorGenerator.generate(di, messager);
+        this.injectorGeneratorFactory.create().generate(di, messager);
         return rejectedElements;
     }
 
@@ -104,7 +104,7 @@ public class InjectorProcessingStep implements BasicAnnotationProcessor.Processi
         final TypeElement component = MoreTypes.asTypeElement(executableElement.getReturnType());
         final ComponentDescriptor descriptor = componentDescriptorFactory.forComponent(component);
         final BindingGraph bindingGraph = bindingGraphFactory.create(descriptor);
-        List<InitializationStatement> statements = this.createInitializationsStatements(injector, descriptor, null, this.moduleMethodMap, executableElement, bindingGraph);
+        List<InitializationStatement> statements = this.createInitializationsStatements(injector, descriptor, this.moduleMethodMap, executableElement, bindingGraph);
         final ProvidingMethodOverrider componentMethodOverrider = new ProvidingMethodOverrider(component, descriptor, executableElement, statements, bindingGraph);
         findSubcomponentsToOverride(injector, descriptor, componentMethodOverrider);
         return componentMethodOverrider;
@@ -120,7 +120,7 @@ public class InjectorProcessingStep implements BasicAnnotationProcessor.Processi
             final TypeElement subcomponentType = MoreTypes.asTypeElement(e.getReturnType());
             final BindingGraph bindingGraph = bindingGraphFactory.create(subcomponentDescriptor);
             List<InitializationStatement> s =
-                    this.createInitializationsStatements(injector, subcomponentDescriptor, descriptor, this.moduleMethodMap, e, bindingGraph);
+                    this.createInitializationsStatements(injector, subcomponentDescriptor, this.moduleMethodMap, e, bindingGraph);
             final ProvidingMethodOverrider subcomponentOverrider =
                     new ProvidingMethodOverrider(subcomponentType, subcomponentDescriptor, e, s, bindingGraph);
             componentMethodOverrider.add(subcomponentOverrider);
@@ -135,18 +135,19 @@ public class InjectorProcessingStep implements BasicAnnotationProcessor.Processi
 
     private List<InitializationStatement> createInitializationsStatements(TypeElement injector,
                                                                           ComponentDescriptor componentDescriptor,
-                                                                          ComponentDescriptor parentDescriptor,
                                                                           Map<TypeElement, ExecutableElement> moduleMethodMap,
                                                                           ExecutableElement providingMethod,
                                                                           BindingGraph bindingGraph) {
 
         Map<Key, VariableElement> providedParams = toParameterMap(providingMethod.getParameters());
+        BuilderModuleStatement builderModuleStatement =
+                new BuilderModuleStatement(this.types, injector, componentDescriptor, moduleMethodMap, providedParams);
         return ImmutableList.of(
-                new BuilderStatement(componentDescriptor, parentDescriptor, providingMethod),
+                new BuilderStatement(componentDescriptor, providingMethod, builderModuleStatement, bindingGraphFactory),
                 new ComponentStatement(this.types, injector, componentDescriptorFactory, componentDescriptor, providedParams),
                 new ModuleStatement(this.types, injector, componentDescriptor, moduleMethodMap, providedParams),
-                new DelegateInitialization(bindingGraph),
-                new FinishBuilderStatement()
+                new FinishBuilderStatement(componentDescriptor),
+                new DelegateInitialization(componentDescriptor, bindingGraph)
         );
     }
 }

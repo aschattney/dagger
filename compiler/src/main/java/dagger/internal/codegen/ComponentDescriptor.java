@@ -80,6 +80,9 @@ import javax.lang.model.util.Types;
  */
 @AutoValue
 public abstract class ComponentDescriptor {
+
+  private ComponentDescriptor parent;
+
   ComponentDescriptor() {}
 
   enum Kind {
@@ -286,6 +289,14 @@ public abstract class ComponentDescriptor {
    */
   abstract ImmutableBiMap<ComponentMethodDescriptor, ComponentDescriptor>
       subcomponentsByFactoryMethod();
+
+  void setParentDescriptor(ComponentDescriptor parent) {
+      this.parent = parent;
+  }
+
+  ComponentDescriptor getParentDescriptor() {
+      return this.parent;
+  }
 
   /**
    * All {@linkplain Subcomponent direct child} components that are declared by a subcomponent

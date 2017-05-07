@@ -302,6 +302,7 @@ abstract class BindingGraph {
       for (ComponentDescriptor subcomponent :
           Iterables.consumingIterable(requestResolver.subcomponentsToResolve)) {
         if (resolvedSubcomponents.add(subcomponent)) {
+          subcomponent.setParentDescriptor(componentDescriptor);
           subgraphs.add(create(Optional.of(requestResolver), subcomponent));
         }
       }

@@ -23,6 +23,7 @@ import com.google.auto.common.BasicAnnotationProcessor;
 import com.google.auto.service.AutoService;
 import com.google.common.collect.ImmutableList;
 import com.google.googlejavaformat.java.filer.FormattingFiler;
+import com.squareup.javapoet.JavaFile;
 import dagger.Injector;
 
 import java.util.Arrays;
@@ -51,6 +52,7 @@ public final class ComponentProcessor extends BasicAnnotationProcessor {
   private FactoryGenerator factoryGenerator;
   private MembersInjectorGenerator membersInjectorGenerator;
   private StubGenerator stubGenerator;
+  private TestRegistry testRegistry = new TestRegistry();
   private MultipleSourceFileGenerator<ProvisionBinding> multipleGenerator;
 
   @Override
@@ -256,10 +258,14 @@ public final class ComponentProcessor extends BasicAnnotationProcessor {
          new InjectorProcessingStep(
                  types,
                  messager,
-                 new InjectorGenerator(filer, elements),
+                 new InjectorGenerator.Factory(filer, elements, new TestClassGenerator(filer, elements), testRegistry),
                  ComponentDescriptor.Kind.COMPONENT,
                  bindingGraphFactory,
-                 componentDescriptorFactory)
+                 componentDescriptorFactory),
+         new TriggerProcessingStep(
+                 testRegistry,
+                 filer
+         )
     );
   }
 

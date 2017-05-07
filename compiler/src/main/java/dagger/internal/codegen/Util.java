@@ -352,7 +352,6 @@ final class Util {
 
   public static void createDelegateFieldAndMethod(ClassName generatedTypeName, TypeSpec.Builder classBuilder, ResolvedBindings resolvedBindings, Map<Key, String> delegateFieldNames) {
       try {
-          final FrameworkField contributionBindingField = FrameworkField.forResolvedBindings(resolvedBindings, Optional.absent());
           ContributionBinding binding = resolvedBindings.contributionBinding();
           if (bindingSupportsTestDelegate(binding)) {
               final String delegateFieldName = Util.getDelegateFieldName(resolvedBindings.binding().key());

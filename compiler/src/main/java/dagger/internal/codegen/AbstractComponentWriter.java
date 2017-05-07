@@ -626,26 +626,7 @@ abstract class AbstractComponentWriter implements HasBindingMembers {
     }
     FieldSpec field = contributionField.build();
     component.addField(field);
-   // try {
-      //ContributionBinding binding = resolvedBindings.contributionBinding();
-      createDelegateFieldAndMethod(name, component, resolvedBindings, delegateFieldNames);
-      /*if (bindingSupportsTestDelegate(binding)) {
-        final String delegateFieldName = contributionBindingField.name() + "Delegate";
-        final ClassName delegateType = getDelegateTypeName(resolvedBindings.binding().key());
-        final FieldSpec.Builder builder = FieldSpec.builder(delegateType, delegateFieldName);
-        delegateFieldNames.put(resolvedBindings.key(), delegateFieldName);
-        final FieldSpec fieldSpec = builder.build();
-        component.addField(fieldSpec);
-        final String methodName = "with" + delegateType.simpleName().toString();
-        component.addMethod(MethodSpec.methodBuilder(methodName)
-                              .addModifiers(Modifier.PUBLIC)
-                              .returns(name)
-                              .addParameter(delegateType, "delegate")
-                              .addStatement("this.$N = delegate", fieldSpec)
-                              .addStatement("return this")
-                              .build());
-      }*/
-    //}catch(Exception e) {}
+    createDelegateFieldAndMethod(name, component, resolvedBindings, delegateFieldNames);
     return field;
   }
 

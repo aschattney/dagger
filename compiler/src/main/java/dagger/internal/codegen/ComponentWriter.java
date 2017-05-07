@@ -69,7 +69,7 @@ final class ComponentWriter extends AbstractComponentWriter {
    * Generates a map of unique simple names for all subcomponents, keyed by their {@link
    * ComponentDescriptor}.
    */
-  private static class UniqueSubcomponentNamesGenerator {
+  public static class UniqueSubcomponentNamesGenerator {
 
     private static final Splitter QUALIFIED_NAME_SPLITTER = Splitter.on('.');
     private static final Joiner QUALIFIED_NAME_JOINER = Joiner.on('_');
@@ -79,7 +79,7 @@ final class ComponentWriter extends AbstractComponentWriter {
         componentDescriptorsBySimpleName;
     private final ImmutableListMultimap<ComponentDescriptor, String> componentQualifiedNamePieces;
 
-    private UniqueSubcomponentNamesGenerator(BindingGraph graph) {
+    public UniqueSubcomponentNamesGenerator(BindingGraph graph) {
       this.graph = graph;
       componentDescriptorsBySimpleName =
           Multimaps.index(
@@ -89,7 +89,7 @@ final class ComponentWriter extends AbstractComponentWriter {
       componentQualifiedNamePieces = qualifiedNames(graph.componentDescriptors());
     }
 
-    private ImmutableBiMap<ComponentDescriptor, String> generate() {
+    public ImmutableBiMap<ComponentDescriptor, String> generate() {
       Map<ComponentDescriptor, String> subcomponentImplSimpleNames = new LinkedHashMap<>();
       for (Entry<String, Collection<ComponentDescriptor>> componentEntry :
           componentDescriptorsBySimpleName.asMap().entrySet()) {
