@@ -1,0 +1,17 @@
+package com.example.dagger.activitygraphs;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.Set;
+
+/**
+ * Created by Andy on 07.05.2017.
+ */
+public class SomeClass {
+
+    @Inject
+    public SomeClass() {
+
+    }
+
+}
