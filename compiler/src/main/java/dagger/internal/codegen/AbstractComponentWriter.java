@@ -808,7 +808,6 @@ abstract class AbstractComponentWriter implements HasBindingMembers {
               CodeBlock.Builder builder = CodeBlock.builder();
               final boolean supportsTestDelegate = !componentMethod.methodElement().getReturnType().toString().equals(void.class.getName());
               if (supportsTestDelegate) {
-                final ClassName delegateTypeName = Util.getDelegateTypeName(interfaceRequest.key());
                 final String fieldName = Util.getDelegateFieldName(interfaceRequest.key());
                 builder.beginControlFlow("if ($L != null)", CodeBlock.of(fieldName))
                         .add("return $L.get($L)", CodeBlock.of(fieldName), codeBlock)

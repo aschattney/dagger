@@ -41,8 +41,8 @@ public class DelegateInitialization implements InitializationStatement {
 
                 ContributionBinding binding = resolvedBindings.contributionBinding();
                 if (bindingSupportsTestDelegate(binding) && shouldCreateDelegate(binding)) {
-                    final String delegateFieldName = Util.getDelegateFieldName(resolvedBindings.binding().key());
-                    final ClassName delegateType = getDelegateTypeName(resolvedBindings.binding().key());
+                    final String delegateFieldName = Util.getDelegateFieldName(resolvedBindings.key());
+                    final ClassName delegateType = getDelegateTypeName(resolvedBindings.key());
                     final String methodName = "with" + delegateType.simpleName();
                     codeBuilder.add(".$L($L)\n", methodName, delegateFieldName);
                 }

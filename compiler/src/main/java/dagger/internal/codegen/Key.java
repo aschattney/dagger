@@ -16,6 +16,7 @@
 
 package dagger.internal.codegen;
 
+import static com.google.auto.common.MoreElements.asPackage;
 import static com.google.auto.common.MoreElements.isAnnotationPresent;
 import static com.google.auto.common.MoreTypes.asExecutable;
 import static com.google.auto.common.MoreTypes.isType;
@@ -45,10 +46,12 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSetMultimap;
 import com.google.common.collect.Multimaps;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.squareup.javapoet.ClassName;
 import dagger.Binds;
 import dagger.BindsOptionalOf;
+import dagger.MapKey;
 import dagger.Multibindings;
-import dagger.multibindings.Multibinds;
+import dagger.multibindings.*;
 import dagger.producers.Produced;
 import dagger.producers.Producer;
 import dagger.producers.Production;
@@ -62,13 +65,10 @@ import java.io.Serializable;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Executor;
+import javax.inject.Named;
 import javax.inject.Provider;
 import javax.inject.Qualifier;
-import javax.lang.model.element.AnnotationMirror;
-import javax.lang.model.element.ElementKind;
-import javax.lang.model.element.ExecutableElement;
-import javax.lang.model.element.Modifier;
-import javax.lang.model.element.TypeElement;
+import javax.lang.model.element.*;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.ExecutableType;
 import javax.lang.model.type.PrimitiveType;
@@ -176,9 +176,13 @@ abstract class Key implements Serializable{
    */
   static final class MultibindingContributionIdentifier {
     private final String identifierString;
+    private final ExecutableElement bindingMethod;
+    private final TypeElement contributingModule;
 
     MultibindingContributionIdentifier(
         ExecutableElement bindingMethod, TypeElement contributingModule) {
+      this.bindingMethod = bindingMethod;
+      this.contributingModule = contributingModule;
       this.identifierString =
           String.format(
               "%s#%s", contributingModule.getQualifiedName(), bindingMethod.getSimpleName());
@@ -193,6 +197,76 @@ abstract class Key implements Serializable{
     @Override
     public String toString() {
       return identifierString;
+    }
+
+    public ClassName getDelegateTypeName() {
+      final TypeMirror returnType = bindingMethod.getReturnType();
+      final Named annotation = bindingMethod.getAnnotation(Named.class);
+      final ClassName name = ClassName.bestGuess(Util.typeToString(returnType));
+      final String packageName = name.packageName();
+      if (annotation != null) {
+          return ClassName.bestGuess(packageName + "." + capitalizeFirstLetter(annotation.value()) + "Delegate");
+      }else {
+        final java.util.Optional<? extends AnnotationMirror> annotationMirror = getAnnotationMirror(bindingMethod);
+        if(annotationMirror.isPresent()) {
+          return ClassName.bestGuess(packageName + "." + getCapitalizedAnnotationValue(annotationMirror.get()) + "In" + contributingModule.getSimpleName().toString() + "Delegate");
+        }else {
+          return ClassName.bestGuess(packageName + "." + capitalizeFirstLetter(bindingMethod.getSimpleName().toString()) + "For" + contributingModule.getSimpleName().toString() + "Delegate");
+        }
+      }
+    }
+
+    public String getDelegateFieldName() {
+      final TypeMirror returnType = bindingMethod.getReturnType();
+      final Named annotation = bindingMethod.getAnnotation(Named.class);
+      if (annotation != null) {
+        return Util.lowerCaseFirstLetter(annotation.value())  + "Delegate";
+      }else {
+        final java.util.Optional<? extends AnnotationMirror> annotationMirror = getAnnotationMirror(returnType);
+        if(annotationMirror.isPresent()) {
+          return Util.lowerCaseFirstLetter(getCapitalizedAnnotationValue(annotationMirror.get())) + "Delegate";
+        }else {
+          return bindingMethod.getSimpleName().toString() + "For" + contributingModule.getSimpleName().toString() + "Delegate";
+        }
+      }
+    }
+
+    private static String getCapitalizedAnnotationValue(AnnotationMirror annotation) {
+      final Map<? extends ExecutableElement, ? extends AnnotationValue> elementValues = annotation.getElementValues();
+      for (Map.Entry<? extends ExecutableElement, ? extends AnnotationValue> entry : elementValues.entrySet()) {
+        if (entry.getKey().getSimpleName().toString().equals("value")) {
+          final String original = entry.getValue().getValue().toString();
+          if (!original.isEmpty()) {
+            return capitalizeFirstLetter(original);
+          }
+        }
+      }
+      throw new IllegalStateException("value not found");
+    }
+
+    private static String capitalizeFirstLetter(String original) {
+      if (original == null || original.length() == 0) {
+        return original;
+      }
+      return original.substring(0, 1).toUpperCase() + original.substring(1);
+    }
+
+    private static java.util.Optional<? extends AnnotationMirror> getAnnotationMirror(TypeMirror typeMirror) {
+      final ImmutableList<String> annotations =
+              ImmutableList.of(Named.class.getName(), StringKey.class.getName(), IntKey.class.getName(), LongKey.class.getName(), MapKey.class.getName(), ClassKey.class.getName());
+
+      return typeMirror.getAnnotationMirrors().stream()
+              .filter(e -> Util.isAnnotationPresent(MoreTypes.asElement(typeMirror), e.getAnnotationType()))
+              .findFirst();
+    }
+
+    private static java.util.Optional<? extends AnnotationMirror> getAnnotationMirror(ExecutableElement method) {
+      final ImmutableList<String> annotations =
+              ImmutableList.of(Named.class.getName(), StringKey.class.getName(), IntKey.class.getName(), LongKey.class.getName(), MapKey.class.getName(), ClassKey.class.getName());
+
+      return method.getAnnotationMirrors().stream()
+              .filter(e -> annotations.contains(e.getAnnotationType().toString()))
+              .findFirst();
     }
 
     @Override

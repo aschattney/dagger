@@ -19,6 +19,8 @@ package com.example.dagger.activitygraphs;
 import android.app.Activity;
 import android.app.Application;
 import android.location.LocationManager;
+import com.example.dagger.activitygraphs.ui.DaggerHomeComponent;
+import com.example.dagger.activitygraphs.ui.HomeComponent;
 import dagger.Injector;
 import dagger.Provides;
 import dagger.ProvidesComponent;
@@ -56,6 +58,14 @@ public class DemoApplication extends Application {
   @ProvidesComponent
   public FragmentComponent fragmentComponent(AbstractActivityComponent component) {
       return null;
+  }
+
+  @ProvidesComponent
+  public HomeComponent homeComponent(Activity activity) {
+    return DaggerHomeComponent.builder()
+            .activityModule(new ActivityModule(activity))
+            .applicationComponent(this.component())
+            .build();
   }
 
 }

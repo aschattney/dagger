@@ -21,11 +21,27 @@ import android.os.Bundle;
 import android.support.v4.app.FragmentActivity;
 import com.example.dagger.activitygraphs.ActivityModule;
 import com.example.dagger.activitygraphs.DemoApplication;
+import com.example.dagger.activitygraphs.SomeClass;
+
 import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 public class HomeActivity extends FragmentActivity {
+
   @Inject LocationManager locationManager;
   private HomeComponent component;
+
+  @Inject
+  SomeClass someClass;
+
+  @Inject
+  List<String> list;
+
+  @Inject
+  Map<String, String> map;
 
   HomeComponent component() {
     if (component == null) {

@@ -28,7 +28,7 @@ public class StubGenerator extends SourceFileGenerator<ProvisionBinding> {
 
     @Override
     ClassName nameGeneratedType(ProvisionBinding input) {
-        return Util.getDelegateTypeName(input);
+        return Util.getDelegateTypeName(input.key());
     }
 
     @Override
