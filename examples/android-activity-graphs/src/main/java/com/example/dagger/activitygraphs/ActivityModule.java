@@ -62,7 +62,12 @@ public class ActivityModule {
   @Provides
   @Named("AnyString")
   public String cString() {
-    return "B";
+    return "C";
+  }
+
+  @Provides
+  public String dString() {
+    return "D";
   }
 
   @Provides

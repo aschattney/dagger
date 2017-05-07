@@ -1,5 +1,7 @@
 package com.example.dagger.activitygraphs;
 
+import dagger.Lazy;
+
 import javax.inject.Inject;
 import javax.inject.Named;
 import java.util.Set;
@@ -10,7 +12,7 @@ import java.util.Set;
 public class SomeClass {
 
     @Inject
-    public SomeClass() {
+    public SomeClass(Lazy<String> lazy) {
 
     }
 

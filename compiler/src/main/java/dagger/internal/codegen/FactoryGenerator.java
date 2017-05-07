@@ -159,8 +159,7 @@ final class FactoryGenerator extends SourceFileGenerator<ProvisionBinding> {
               factoryBuilder,
               constructorBuilder.get());
         }
-        for (Map.Entry<BindingKey, FrameworkField> entry :
-            generateBindingFieldsForDependencies(binding).entrySet()) {
+        for (Map.Entry<BindingKey, FrameworkField> entry : generateBindingFieldsForDependencies(binding).entrySet()) {
           BindingKey bindingKey = entry.getKey();
           FrameworkField bindingField = entry.getValue();
           FieldSpec field =
