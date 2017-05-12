@@ -35,6 +35,8 @@ import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
+import dagger.IgnoreStubGeneration;
+
 import java.util.Set;
 import javax.annotation.CheckReturnValue;
 import javax.inject.Inject;
@@ -80,6 +82,8 @@ abstract class ProvisionBinding extends ContributionBinding {
 
   private static Builder builder() {
     return new AutoValue_ProvisionBinding.Builder()
+        .genericParameter(false)
+        .ignoreStubGeneration(false)
         .explicitDependencies(ImmutableSet.<DependencyRequest>of());
   }
   
@@ -151,6 +155,7 @@ abstract class ProvisionBinding extends ContributionBinding {
           ProvisionBinding.builder()
               .contributionType(ContributionType.UNIQUE)
               .bindingElement(constructorElement)
+              .ignoreStubGeneration(constructorElement.getAnnotation(IgnoreStubGeneration.class) != null)
               .key(key)
               .explicitDependencies(dependencies)
               .membersInjectionRequest(membersInjectionRequest)
@@ -186,6 +191,8 @@ abstract class ProvisionBinding extends ContributionBinding {
     ProvisionBinding forProvidesMethod(
         ExecutableElement providesMethod, TypeElement contributedBy) {
       checkArgument(providesMethod.getKind().equals(METHOD));
+      final DeclaredType declaredType = (DeclaredType) contributedBy.asType();
+      boolean genericParameter = !declaredType.getTypeArguments().isEmpty();
       ExecutableType resolvedMethod =
           MoreTypes.asExecutable(
               types.asMemberOf(MoreTypes.asDeclared(contributedBy.asType()), providesMethod));
@@ -197,8 +204,10 @@ abstract class ProvisionBinding extends ContributionBinding {
       return ProvisionBinding.builder()
           .contributionType(ContributionType.fromBindingMethod(providesMethod))
           .bindingElement(providesMethod)
+          .ignoreStubGeneration(providesMethod.getAnnotation(IgnoreStubGeneration.class) != null)
           .contributingModule(contributedBy)
           .key(key)
+          .genericParameter(genericParameter)
           .explicitDependencies(dependencies)
           .nullableType(ConfigurationAnnotations.getNullableType(providesMethod))
           .wrappedMapKey(wrapOptionalInEquivalence(getMapKey(providesMethod)))

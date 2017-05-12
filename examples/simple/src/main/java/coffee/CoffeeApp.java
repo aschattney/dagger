@@ -4,6 +4,7 @@ import dagger.Component;
 import dagger.Module;
 import dagger.ProvidesModule;
 import dagger.Subcomponent;
+import factories.DaggerCoffeeApp_Coffee;
 
 import javax.inject.Named;
 import javax.inject.Singleton;
@@ -14,7 +15,7 @@ public class CoffeeApp {
   public interface Coffee {
     CoffeeMaker maker();
     Thermosiphon thermosiphon();
-    Bleu plus(AModule module, BModule moduleB);
+    Bleu.Builder bleu();
   }
 
   @ActivityScope
@@ -22,6 +23,12 @@ public class CoffeeApp {
   public interface Bleu {
     Integer integer();
     Bleu2.Builder someComponent();
+    @Subcomponent.Builder
+    interface Builder {
+      Builder moduleA(AModule module);
+      Builder moduleB(BModule module);
+      Bleu build();
+    }
   }
 
   @Subcomponent(modules = {BModule.class})

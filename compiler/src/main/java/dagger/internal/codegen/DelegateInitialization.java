@@ -31,28 +31,16 @@ public class DelegateInitialization implements InitializationStatement {
     @Override
     public CodeBlock get() {
         final CodeBlock.Builder codeBuilder = CodeBlock.builder();
-        final ImmutableCollection<ResolvedBindings> values = graph.resolvedBindings().values();
-        for (ResolvedBindings resolvedBindings : values) {
+        final ImmutableCollection<ContributionBinding> values = graph.delegateRequirements();
+        for (ContributionBinding binding : values) {
             try {
-
-                if (resolvedBindings.ownedBindings().isEmpty()) {
-                    continue;
-                }
-
-                ContributionBinding binding = resolvedBindings.contributionBinding();
-                if (bindingSupportsTestDelegate(binding) && shouldCreateDelegate(binding)) {
-                    final String delegateFieldName = Util.getDelegateFieldName(resolvedBindings.key());
-                    final ClassName delegateType = getDelegateTypeName(resolvedBindings.key());
-                    final String methodName = "with" + delegateType.simpleName();
-                    codeBuilder.add(".$L($L)\n", methodName, delegateFieldName);
-                }
+                final String delegateFieldName = Util.getDelegateFieldName(binding.key());
+                final ClassName delegateType = getDelegateTypeName(binding.key());
+                final String methodName = Util.getDelegateMethodName(delegateType);
+                codeBuilder.add(".$L($L)\n", methodName, delegateFieldName);
             } catch (Exception e) {
             }
         }
         return codeBuilder.build();
-    }
-
-    private boolean shouldCreateDelegate(ContributionBinding binding) {
-        return descriptor.kind() != ComponentDescriptor.Kind.SUBCOMPONENT || binding.requiresModuleInstance();
     }
 }

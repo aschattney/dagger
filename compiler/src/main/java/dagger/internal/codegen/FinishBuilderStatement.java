@@ -1,5 +1,6 @@
 package dagger.internal.codegen;
 
+import com.google.common.base.Optional;
 import com.squareup.javapoet.CodeBlock;
 
 /**
@@ -17,7 +18,8 @@ public class FinishBuilderStatement implements InitializationStatement{
     public CodeBlock get() {
         final CodeBlock.Builder builder = CodeBlock.builder();
         if (descriptor.kind() == ComponentDescriptor.Kind.SUBCOMPONENT) {
-            return (this.descriptor.builderSpec().isPresent()) ? builder.add(".build())\n").build() : builder.build();
+            final Optional<ComponentDescriptor.BuilderSpec> builderSpec = this.descriptor.builderSpec();
+            return (builderSpec.isPresent()) ? builder.add(".$L())\n", builderSpec.get().buildMethod().getSimpleName().toString()).build() : builder.build();
         }
         return CodeBlock.of(".build())\n");
     }

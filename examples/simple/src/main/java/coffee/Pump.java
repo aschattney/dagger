@@ -1,5 +1,5 @@
 package coffee;
 
-interface Pump {
+public interface Pump {
   void pump();
 }

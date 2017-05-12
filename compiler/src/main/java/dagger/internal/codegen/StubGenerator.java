@@ -26,6 +26,8 @@ public class StubGenerator extends SourceFileGenerator<ProvisionBinding> {
 
     private final Types types;
 
+    private final List<String> generated = new ArrayList<>();
+
     StubGenerator(Filer filer, Elements elements, Types types) {
         super(filer, elements);
         this.types = types;
@@ -43,6 +45,11 @@ public class StubGenerator extends SourceFileGenerator<ProvisionBinding> {
 
     @Override
     Optional<TypeSpec.Builder> write(ClassName generatedTypeName, ProvisionBinding input) {
+        final String o = generatedTypeName.packageName() + "." + generatedTypeName.simpleName();
+        if (generated.contains(o) || !Util.bindingSupportsTestDelegate(input)) {
+            return Optional.absent();
+        }
+        generated.add(o);
         final MethodSpec.Builder methodBuilder = MethodSpec.methodBuilder("get");
         methodBuilder.addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT);
         final TypeName contributedTypeName = ClassName.get(input.contributedType());

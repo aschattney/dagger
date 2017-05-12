@@ -205,13 +205,13 @@ abstract class Key implements Serializable{
       final ClassName name = ClassName.bestGuess(Util.typeToString(returnType));
       final String packageName = name.packageName();
       if (annotation != null) {
-          return ClassName.bestGuess(packageName + "." + capitalizeFirstLetter(annotation.value()) + "Delegate");
+          return ClassName.bestGuess("swagger" + "." + capitalizeFirstLetter(annotation.value()) + "Delegate");
       }else {
         final java.util.Optional<? extends AnnotationMirror> annotationMirror = getAnnotationMirror(bindingMethod);
         if(annotationMirror.isPresent()) {
-          return ClassName.bestGuess(packageName + "." + getCapitalizedAnnotationValue(annotationMirror.get()) + "In" + contributingModule.getSimpleName().toString() + "Delegate");
+          return ClassName.bestGuess("swagger" + "." + getCapitalizedAnnotationValue(annotationMirror.get()) + "In" + contributingModule.getSimpleName().toString() + "Delegate");
         }else {
-          return ClassName.bestGuess(packageName + "." + capitalizeFirstLetter(bindingMethod.getSimpleName().toString()) + "For" + contributingModule.getSimpleName().toString() + "Delegate");
+          return ClassName.bestGuess("swagger" + "." + capitalizeFirstLetter(bindingMethod.getSimpleName().toString()) + "For" + contributingModule.getSimpleName().toString() + "Delegate");
         }
       }
     }

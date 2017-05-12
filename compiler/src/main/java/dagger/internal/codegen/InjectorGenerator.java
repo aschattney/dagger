@@ -1,28 +1,36 @@
 package dagger.internal.codegen;
 
+import com.google.auto.common.MoreTypes;
 import com.google.common.base.Optional;
-import com.squareup.javapoet.ClassName;
-import com.squareup.javapoet.TypeSpec;
+import com.squareup.javapoet.*;
 
 import javax.annotation.processing.Filer;
 import javax.lang.model.element.*;
+import javax.lang.model.type.DeclaredType;
 import javax.lang.model.util.Elements;
+import javax.lang.model.util.Types;
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
-/**
- * Created by Andy on 05.05.2017.
- */
 public class InjectorGenerator extends SourceFileGenerator<DI>{
 
+    private Types types;
+    private Elements elements;
+    private final ComponentDescriptor.Factory componentDescriptorFactory;
+    private final BindingGraph.Factory bindingGraphFactory;
     private TestClassGenerator testClassGenerator;
     private final TestRegistry registry;
+    private Decorator.Factory decoratorFactory;
 
-    InjectorGenerator(Filer filer, Elements elements, TestClassGenerator testClassGenerator, TestRegistry registry) {
+    InjectorGenerator(Filer filer, Types types, Elements elements, ComponentDescriptor.Factory componentDescriptorFactory, BindingGraph.Factory bindingGraphFactory, TestClassGenerator testClassGenerator, TestRegistry registry, Decorator.Factory decoratorFactory) {
         super(filer, elements);
+        this.types = types;
+        this.elements = elements;
+        this.componentDescriptorFactory = componentDescriptorFactory;
+        this.bindingGraphFactory = bindingGraphFactory;
         this.testClassGenerator = testClassGenerator;
         this.registry = registry;
+        this.decoratorFactory = decoratorFactory;
     }
 
     @Override
@@ -32,30 +40,87 @@ public class InjectorGenerator extends SourceFileGenerator<DI>{
 
     @Override
     Optional<? extends Element> getElementForErrorReporting(DI input) {
-        return Optional.of(input.getInjector());
+        return Optional.absent();
     }
 
     @Override
     Optional<TypeSpec.Builder> write(ClassName generatedTypeName, DI input) {
-        final TypeElement injector = input.getInjector();
         final TypeSpec.Builder builder = TypeSpec.classBuilder(generatedTypeName)
-                .superclass(ClassName.get(injector))
                 .addModifiers(Modifier.PUBLIC);
 
-        Map<Key, String> delegateFieldNames = new HashMap<>();
-        Map<Key, ComponentDescriptor> componentDescriptors = new HashMap<>();
-        for (InjectorType injectorType : input.getInjectorTypes()) {
-            final Key key = Key.builder(injectorType.getElement().asType()).build();
-            componentDescriptors.put(key, injectorType.getComponentDescriptor());
+        final Set<TypeElement> components = input.getComponents();
+
+        builder.superclass(ClassName.get(input.getAppClass()));
+
+        final java.util.Optional<ExecutableElement> onCreateMethod = findOnCreateMethod(input.getAppClass());
+        if (!onCreateMethod.isPresent()) {
+            throw new IllegalStateException("onCreate method not found!");
+        }
+        final MethodSpec.Builder overriding = MethodSpec.overriding(onCreateMethod.get());
+        createDecoratorClasses(builder, overriding, components);
+        overriding.addStatement("super.onCreate()");
+
+        //builder.addMethod(overriding.build());
+
+        for (TypeElement component : components) {
+            final TriggerComponentInfo componentInfo =
+                    ComponentInfo.forTrigger(component, componentDescriptorFactory, bindingGraphFactory);
+            componentInfo.process(builder);
         }
 
-        final Map<TypeElement, ProvidingMethodOverrider> methods = input.getMethods();
-        for (Map.Entry<TypeElement, ProvidingMethodOverrider> entry : methods.entrySet()) {
-            final ProvidingMethodOverrider overrider = entry.getValue();
-            overrider.process(builder, generatedTypeName, delegateFieldNames);
-        }
+        builder.addMethod(MethodSpec.methodBuilder("apply")
+                .addModifiers(Modifier.PUBLIC)
+                .returns(void.class)
+                .addStatement("this.onCreate()")
+                .build());
 
         return Optional.of(builder);
+    }
+
+    private void createDecoratorClasses(TypeSpec.Builder builder, MethodSpec.Builder methodBuilder, Set<TypeElement> components) {
+        for (TypeElement component : components) {
+            ComponentDescriptor componentDescriptor = componentDescriptorFactory.forComponent(component);
+            final BindingGraph bindingGraph = bindingGraphFactory.create(componentDescriptor);
+            createDecoratorClass(builder, methodBuilder, bindingGraph);
+        }
+    }
+
+    private void createDecoratorClass(TypeSpec.Builder builder, MethodSpec.Builder methodBuilder, BindingGraph bindingGraph) {
+        final Decorator decorator = decoratorFactory.create();
+        try {
+            decorator.generate(bindingGraph);
+            final ClassName decoratorName = decorator.nameGeneratedType(bindingGraph);
+            String name = Util.lowerCaseFirstLetter(decoratorName.simpleName());
+            final FieldSpec.Builder fieldBuilder = FieldSpec.builder(decoratorName, name, Modifier.PRIVATE);
+            fieldBuilder.addAnnotation(AnnotationSpec.builder(ClassName.bestGuess("android.support.annotation.NonNull")).build());
+            final FieldSpec field = fieldBuilder.initializer("new $T()", decoratorName).build();
+            //methodBuilder.addStatement("this.$N = new $T()", field, decoratorName);
+            builder.addField(field);
+            builder.addMethod(MethodSpec.methodBuilder(name)
+                    .addModifiers(Modifier.PUBLIC)
+                    .returns(decoratorName)
+                    .addStatement("return this.$L", name)
+                    .build());
+        } catch (SourceFileGenerationException e) {
+            throw new IllegalStateException("Exception while generating decorator: " + e);
+        }
+        for (BindingGraph subGraph : bindingGraph.subgraphs()) {
+            createDecoratorClass(builder, methodBuilder, subGraph);
+        }
+    }
+
+    private java.util.Optional<ExecutableElement> findOnCreateMethod(TypeElement applicationClass) {
+        final java.util.Optional<ExecutableElement> onCreateMethod = applicationClass.getEnclosedElements().stream()
+                .filter(e -> e.getKind() == ElementKind.METHOD)
+                .map(e -> (ExecutableElement) e)
+                .filter(e -> e.getSimpleName().toString().equals("onCreate"))
+                .findFirst();
+        final Optional<DeclaredType> declaredTypeOptional = MoreTypes.nonObjectSuperclass(types, elements, MoreTypes.asDeclared(applicationClass.asType()));
+        if (!onCreateMethod.isPresent() && declaredTypeOptional.isPresent()) {
+            return findOnCreateMethod(MoreTypes.asTypeElement(declaredTypeOptional.get()));
+        }
+        else
+            return onCreateMethod;
     }
 
     @Override
@@ -63,29 +128,12 @@ public class InjectorGenerator extends SourceFileGenerator<DI>{
         final Optional<TypeSpec.Builder> builder = write(input.getClassName(), input);
         try {
             registry.addEncodedClass(input.getClassName(), buildJavaFile(input.getClassName(), builder.get()));
+            final Set<TypeElement> components = input.getComponents();
+            testClassGenerator.setComponents(components);
+            testClassGenerator.setInjector(input.getAppClass());
             testClassGenerator.generate(registry);
         } catch (IOException e) {
             throw new IllegalStateException(e);
-        }
-
-    }
-
-    public static class Factory {
-
-        private final Filer filer;
-        private final Elements elements;
-        private final TestClassGenerator generator;
-        private TestRegistry registry;
-
-        public Factory(Filer filer, Elements elements, TestClassGenerator generator, TestRegistry registry) {
-            this.filer = filer;
-            this.elements = elements;
-            this.generator = generator;
-            this.registry = registry;
-        }
-
-        public InjectorGenerator create() {
-            return new InjectorGenerator(filer, elements, generator, registry);
         }
 
     }

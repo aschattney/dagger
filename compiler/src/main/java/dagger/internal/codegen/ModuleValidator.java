@@ -333,12 +333,14 @@ final class ModuleValidator {
           if (!failedMethods.contains(providesMethod)
               && elements.overrides(providesMethod, superclassMethod, subject)) {
             failedMethods.add(providesMethod);
+            /**
             builder.addError(
                 String.format(
                     PROVIDES_METHOD_OVERRIDES_ANOTHER,
                     moduleKind.methodAnnotation().getSimpleName(),
                     methodSignatureFormatter.format(superclassMethod)),
                 providesMethod);
+             **/
           }
         }
         // For each @Provides method in superclass, confirm our methods don't override it.

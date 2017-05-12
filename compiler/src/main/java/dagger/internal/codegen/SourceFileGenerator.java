@@ -17,29 +17,14 @@
 package dagger.internal.codegen;
 
 import static com.google.common.base.Preconditions.checkNotNull;
-import static com.google.common.io.ByteStreams.toByteArray;
-
-import com.google.common.base.Charsets;
 import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
-import com.google.common.io.ByteStreams;
-import com.google.common.io.CharStreams;
 import com.squareup.javapoet.*;
-import com.sun.org.apache.xml.internal.security.utils.Base64;
-
 import javax.annotation.Generated;
 import javax.annotation.processing.Filer;
 import javax.annotation.processing.Messager;
 import javax.lang.model.element.Element;
 import javax.lang.model.util.Elements;
-import javax.tools.JavaFileObject;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.UUID;
 
 /**
  * A template class that provides a framework for properly handling IO while generating source files

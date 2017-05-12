@@ -27,8 +27,6 @@ import javax.inject.Singleton;
 @Singleton // Constraints this component to one-per-application or unscoped bindings.
 @Component(modules = DemoApplicationModule.class)
 public interface ApplicationComponent {
-  // Field injections of any dependencies of the DemoApplication
-  void inject(DemoApplication application);
 
   // Exported for child-components.
   Application application();

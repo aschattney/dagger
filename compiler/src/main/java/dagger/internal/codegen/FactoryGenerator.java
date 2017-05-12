@@ -145,12 +145,14 @@ final class FactoryGenerator extends SourceFileGenerator<ProvisionBinding> {
         break;
       case CLASS_CONSTRUCTOR:
         constructorBuilder = Optional.of(constructorBuilder().addModifiers(PUBLIC));
-        addConstructorParameterAndTypeField(
-                getDelegateTypeName(binding.key()),
-                getDelegateFieldName(binding.key()),
-                factoryBuilder,
-                constructorBuilder.get()
-        );
+        if (Util.bindingSupportsTestDelegate(binding)) {
+          addConstructorParameterAndTypeField(
+                  getDelegateTypeName(binding.key()),
+                  getDelegateFieldName(binding.key()),
+                  factoryBuilder,
+                  constructorBuilder.get()
+          );
+        }
         if (binding.requiresModuleInstance()) {
 
           addConstructorParameterAndTypeField(
@@ -247,10 +249,12 @@ final class FactoryGenerator extends SourceFileGenerator<ProvisionBinding> {
 
     final CodeBlock codeBlock = CodeBlock.of(getDelegateFieldName(binding.key()));
     if (binding.bindingKind().equals(PROVISION)) {
-      final String delegateFieldName = Util.getDelegateFieldName(binding.key());
-      getMethodBuilder.beginControlFlow("if ($L != null)", CodeBlock.of(delegateFieldName));
-      getMethodBuilder.addStatement("return $L.get($L)", CodeBlock.of(delegateFieldName), parametersCodeBlock);
-      getMethodBuilder.nextControlFlow("else");
+      if (Util.bindingSupportsTestDelegate(binding)) {
+        final String delegateFieldName = Util.getDelegateFieldName(binding.key());
+        getMethodBuilder.beginControlFlow("if ($L != null)", CodeBlock.of(delegateFieldName));
+        getMethodBuilder.addStatement("return $L.get($L)", CodeBlock.of(delegateFieldName), parametersCodeBlock);
+        getMethodBuilder.nextControlFlow("else");
+      }
       CodeBlock.Builder providesMethodInvocationBuilder = CodeBlock.builder();
       if (binding.requiresModuleInstance()) {
         providesMethodInvocationBuilder.add("module");
@@ -263,7 +267,10 @@ final class FactoryGenerator extends SourceFileGenerator<ProvisionBinding> {
 
       CodeBlock providesMethodInvocation = providesMethodInvocationBuilder.build();
       getMethodBuilder.addStatement("return $L", providesMethodInvocation);
-      getMethodBuilder.endControlFlow();
+
+      if (Util.bindingSupportsTestDelegate(binding)) {
+        getMethodBuilder.endControlFlow();
+      }
 
       /*if (binding.nullableType().isPresent()
           || compilerOptions.nullableValidationKind().equals(Diagnostic.Kind.WARNING)) {
@@ -279,27 +286,35 @@ final class FactoryGenerator extends SourceFileGenerator<ProvisionBinding> {
       }*/
     } else if (binding.membersInjectionRequest().isPresent()) {
 
-      getMethodBuilder.beginControlFlow("if ($L != null)", codeBlock);
-      getMethodBuilder.addStatement(
-              "return $T.injectMembers($N, $L.get($L))",
-              MembersInjectors.class,
-              fields.get(binding.membersInjectionRequest().get().bindingKey()),
-              codeBlock,
-              parametersCodeBlock);
-      getMethodBuilder.nextControlFlow("else");
+      if (Util.bindingSupportsTestDelegate(binding)) {
+        getMethodBuilder.beginControlFlow("if ($L != null)", codeBlock);
+        getMethodBuilder.addStatement(
+                "return $T.injectMembers($N, $L.get($L))",
+                MembersInjectors.class,
+                fields.get(binding.membersInjectionRequest().get().bindingKey()),
+                codeBlock,
+                parametersCodeBlock);
+        getMethodBuilder.nextControlFlow("else");
+      }
       getMethodBuilder.addStatement(
           "return $T.injectMembers($N, new $T($L))",
           MembersInjectors.class,
           fields.get(binding.membersInjectionRequest().get().bindingKey()),
           providedTypeName,
           parametersCodeBlock);
-      getMethodBuilder.endControlFlow();
+      if (Util.bindingSupportsTestDelegate(binding)) {
+        getMethodBuilder.endControlFlow();
+      }
     } else {
-      getMethodBuilder.beginControlFlow("if ($L != null)", codeBlock);
-      getMethodBuilder.addStatement("return $L.get($L)", codeBlock, parametersCodeBlock);
-      getMethodBuilder.nextControlFlow("else");
+      if (Util.bindingSupportsTestDelegate(binding)) {
+        getMethodBuilder.beginControlFlow("if ($L != null)", codeBlock);
+        getMethodBuilder.addStatement("return $L.get($L)", codeBlock, parametersCodeBlock);
+        getMethodBuilder.nextControlFlow("else");
+      }
       getMethodBuilder.addStatement("return new $T($L)", providedTypeName, parametersCodeBlock);
-      getMethodBuilder.endControlFlow();
+      if (Util.bindingSupportsTestDelegate(binding)) {
+        getMethodBuilder.endControlFlow();
+      }
     }
 
     factoryBuilder.addMethod(getMethodBuilder.build());

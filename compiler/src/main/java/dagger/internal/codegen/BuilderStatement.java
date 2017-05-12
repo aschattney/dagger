@@ -34,17 +34,6 @@ public class BuilderStatement implements InitializationStatement {
         if (descriptor.kind() == ComponentDescriptor.Kind.SUBCOMPONENT) {
             CodeBlock.Builder codeBlockBuilder = CodeBlock.builder();
             final ComponentDescriptor parentDescriptor = descriptor.getParentDescriptor();
-            /*final ImmutableBiMap<ComponentDescriptor, String> subcomponentNamesMap =
-                    new ComponentWriter.UniqueSubcomponentNamesGenerator(graphFactory.create(parentDescriptor)).generate();
-
-            if (parentDescriptor.kind() == ComponentDescriptor.Kind.SUBCOMPONENT) {
-                final ClassName className = ClassName.bestGuess(resolveSubcomponentClassName(parentDescriptor));
-                packageName = className.packageName() + "." + className.simpleName();
-            }else {
-                final ClassName daggerComponentClassName = Util.getDaggerComponentClassName(parentDescriptor.componentDefinitionType());
-                packageName = daggerComponentClassName.packageName() + "." + daggerComponentClassName.simpleName();
-            }
-            final String subComponentClassName = subcomponentNamesMap.get(descriptor) + "Impl";*/
             final String subComponentClassName = resolveClassName(descriptor);
             final ClassName className = ClassName.bestGuess(subComponentClassName);
             codeBlockBuilder.add("(($T)", className);

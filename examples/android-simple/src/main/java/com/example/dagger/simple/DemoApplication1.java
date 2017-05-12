@@ -18,44 +18,37 @@ package com.example.dagger.simple;
 
 import android.app.Application;
 import android.location.LocationManager;
-import com.example.dagger.simple.ui.HomeActivity;
-import dagger.Component;
-import dagger.Injector;
-import dagger.ProvidesComponent;
-import dagger.ProvidesModule;
+import factories.DaggerComponents_ApplicationComponent;
+import injector.Injector;
+import injector.InjectorSpec;
 
 import javax.inject.Inject;
 import javax.inject.Named;
-import javax.inject.Singleton;
 
-@Injector
-public class DemoApplication1 extends Application {
-  
-  @Singleton
-  @Component(modules = {AndroidModule.class, SingletonModule.class})
-  public interface ApplicationComponent {
-    void inject(DemoApplication1 application);
-    void inject(HomeActivity homeActivity);
-    void inject(DemoActivity demoActivity);
-  }
-  
+public class DemoApplication1 extends Application implements InjectorSpec{
+
   @Inject LocationManager locationManager; // for some reason.
   @Inject @Named("apiKey") String someString;
   @Inject @Named("apiKey1") String anotherString;
-  private ApplicationComponent component;
+  private Components.ApplicationComponent component;
+ // private Injector injector = new Injector(this);
 
   @Override public void onCreate() {
     super.onCreate();
-    component = DaggerDemoApplication1_ApplicationComponent.builder()
-        .androidModule(new AndroidModule(this))
-        .singletonModule(new SingletonModule())
-        .build();
-    component().inject(this); // As of now, LocationManager should be injected into this.
+    //component = injector.applicationComponent(new AndroidModule(this), new SingletonModule());
+    //component.inject(this);
   }
 
-  @ProvidesComponent
-  public ApplicationComponent component() {
+  public Components.ApplicationComponent component() {
     return component;
   }
 
+  public DaggerComponents_ApplicationComponent.Builder applicationComponent(DaggerComponents_ApplicationComponent.Builder builder, AndroidModule androidModule, SingletonModule singletonModule) {
+    return builder.androidModule(new AndroidModule(this)).singletonModule(new SingletonModule());
+  }
+
+  @Override
+  public Injector getInjector() {
+    return null;
+  }
 }

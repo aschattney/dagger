@@ -19,17 +19,20 @@ package com.example.dagger.activitygraphs;
 import android.app.Activity;
 import android.app.Application;
 import android.location.LocationManager;
-import com.example.dagger.activitygraphs.ui.DaggerHomeComponent;
 import com.example.dagger.activitygraphs.ui.HomeComponent;
 import dagger.Injector;
 import dagger.Provides;
 import dagger.ProvidesComponent;
 import dagger.ProvidesModule;
+import factories.DaggerAbstractActivityComponent;
+import factories.DaggerApplicationComponent;
+import factories.DaggerFragmentComponent;
+import factories.DaggerHomeComponent;
+import injector.InjectorSpec;
 
 import javax.inject.Inject;
 
-@Injector
-public class DemoApplication extends Application {
+public class DemoApplication extends Application implements InjectorSpec {
   private ApplicationComponent applicationComponent;
 
   // TODO(cgruber): Figure out a better example of something one might inject into the app.
@@ -42,30 +45,35 @@ public class DemoApplication extends Application {
         .build();
   }
 
-  @ProvidesComponent
   public ApplicationComponent component() {
     return applicationComponent;
   }
 
-  @ProvidesComponent
-  public AbstractActivityComponent activityComponent(Activity activity) {
-    return DaggerAbstractActivityComponent.builder()
-            .activityModule(new ActivityModule(activity))
-            .applicationComponent(this.component())
-            .build();
+  @Override
+  public DaggerFragmentComponent.Builder fragmentComponent(DaggerFragmentComponent.Builder builder,
+                                                           AbstractActivityComponent abstractActivityComponent) {
+    return builder.abstractActivityComponent(abstractActivityComponent);
   }
 
-  @ProvidesComponent
-  public FragmentComponent fragmentComponent(AbstractActivityComponent component) {
-      return null;
+  @Override
+  public DaggerAbstractActivityComponent.Builder abstractActivityComponent(DaggerAbstractActivityComponent.Builder builder,
+                                                                           ActivityModule activityModule,
+                                                                           ApplicationComponent applicationComponent) {
+    return builder.applicationComponent(applicationComponent).activityModule(activityModule);
   }
 
-  @ProvidesComponent
-  public HomeComponent homeComponent(Activity activity) {
-    return DaggerHomeComponent.builder()
-            .activityModule(new ActivityModule(activity))
-            .applicationComponent(this.component())
-            .build();
+  @Override
+  public DaggerHomeComponent.Builder homeComponent(DaggerHomeComponent.Builder builder, ActivityModule activityModule, ApplicationComponent applicationComponent) {
+    return null;
   }
 
+  @Override
+  public DaggerApplicationComponent.Builder applicationComponent(DaggerApplicationComponent.Builder builder, DemoApplicationModule demoApplicationModule) {
+    return null;
+  }
+
+  @Override
+  public injector.Injector getInjector() {
+    return null;
+  }
 }

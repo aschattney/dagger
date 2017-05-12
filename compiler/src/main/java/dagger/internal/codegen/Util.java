@@ -280,13 +280,23 @@ final class Util {
                         .findFirst();
                 if (qualifier.isPresent()) {
                     final PackageElement packageElement = getPackage(MoreTypes.asElement(key.type()));
-                    final String classNameString = packageElement.getQualifiedName().toString() + "." + capitalizeFirstLetter(qualifier.get()) + "Delegate";
+                    final String classNameString = "delegates" + "." + capitalizeFirstLetter(qualifier.get()) + "Delegate";
                     return ClassName.bestGuess(classNameString);
                 }
             }
-            return ClassName.bestGuess(typeToString(key.type()) + "Delegate");
+            final TypeName typeName = ClassName.get(key.type());
+            if (typeName instanceof ClassName) {
+                final String s = ((ClassName) typeName).simpleName();
+                return ClassName.bestGuess("delegates" +  "." + s + "Delegate");
+            }
+            final ClassName name = ClassName.bestGuess(typeToString(key.type()));
+            return ClassName.bestGuess("delegates." + name.simpleName() + "Delegate");
         }
         return key.multibindingContributionIdentifier().get().getDelegateTypeName();
+    }
+
+    private static String extractPackageName(TypeMirror type) {
+        return getPackage(MoreTypes.asElement(type)).getSimpleName().toString();
     }
 
     static String getDelegateFieldName(Key key) {
@@ -372,7 +382,7 @@ final class Util {
                     result.append("Of");
                     for (int i = 0; i < typeArguments.size(); i++) {
                         if (i != 0) {
-                            result.append(", ");
+                            result.append("And");
                         }
                         typeToString(typeArguments.get(i), result, '\0', true);
                     }
@@ -484,7 +494,7 @@ final class Util {
         throw new IllegalStateException("value not found");
     }
 
-    private static String capitalizeFirstLetter(String original) {
+    public static String capitalizeFirstLetter(String original) {
         if (original == null || original.length() == 0) {
             return original;
         }
@@ -501,19 +511,17 @@ final class Util {
     public static boolean bindingSupportsTestDelegate(ContributionBinding binding) {
         final ImmutableList<ContributionBinding.Kind> kinds = ImmutableList.of(
                 ContributionBinding.Kind.PROVISION,
-                ContributionBinding.Kind.COMPONENT_PROVISION,
                 ContributionBinding.Kind.INJECTION
         );
         final ContributionBinding.Kind kind = binding.bindingKind();
-        return kinds.contains(kind);
+        return kinds.contains(kind) && !binding.genericParameter() && !binding.ignoreStubGeneration();
     }
 
     private Util() {
     }
 
-    public static void createDelegateFieldAndMethod(ClassName generatedTypeName, TypeSpec.Builder classBuilder, ResolvedBindings resolvedBindings, Map<Key, String> delegateFieldNames) {
+    public static void createDelegateField(TypeSpec.Builder classBuilder, ContributionBinding binding, Map<Key, String> delegateFieldNames) {
         try {
-            ContributionBinding binding = resolvedBindings.contributionBinding();
             if (bindingSupportsTestDelegate(binding)) {
                 final String delegateFieldName = Util.getDelegateFieldName(binding.key());
                 final ClassName delegateType = getDelegateTypeName(binding.key());
@@ -521,7 +529,21 @@ final class Util {
                 delegateFieldNames.put(binding.key(), delegateFieldName);
                 final FieldSpec fieldSpec = builder.build();
                 classBuilder.addField(fieldSpec);
-                final String methodName = "with" + delegateType.simpleName();
+            }
+        } catch (Exception e) {
+        }
+    }
+
+    public static void createDelegateFieldAndMethod(ClassName generatedTypeName, TypeSpec.Builder classBuilder, ContributionBinding binding, Map<Key, String> delegateFieldNames) {
+        try {
+            if (bindingSupportsTestDelegate(binding)) {
+                final String delegateFieldName = Util.getDelegateFieldName(binding.key());
+                final ClassName delegateType = getDelegateTypeName(binding.key());
+                final FieldSpec.Builder builder = FieldSpec.builder(delegateType, delegateFieldName);
+                delegateFieldNames.put(binding.key(), delegateFieldName);
+                final FieldSpec fieldSpec = builder.build();
+                classBuilder.addField(fieldSpec);
+                final String methodName = getDelegateMethodName(delegateType);
                 classBuilder.addMethod(MethodSpec.methodBuilder(methodName)
                         .addModifiers(Modifier.PUBLIC)
                         .returns(generatedTypeName)
@@ -534,10 +556,42 @@ final class Util {
         }
     }
 
+
+    public static void createDelegateFieldAndMethod(ClassName generatedTypeName, TypeSpec.Builder classBuilder, ResolvedBindings resolvedBindings, Map<Key, String> delegateFieldNames) {
+        if (resolvedBindings.isEmpty() || resolvedBindings.ownedBindings().isEmpty()) {
+            return;
+        }
+        try {
+            ContributionBinding binding = resolvedBindings.contributionBinding();
+            if (bindingSupportsTestDelegate(binding)) {
+                final String delegateFieldName = Util.getDelegateFieldName(binding.key());
+                final ClassName delegateType = getDelegateTypeName(binding.key());
+                final FieldSpec.Builder builder = FieldSpec.builder(delegateType, delegateFieldName);
+                delegateFieldNames.put(binding.key(), delegateFieldName);
+                final FieldSpec fieldSpec = builder.build();
+                classBuilder.addField(fieldSpec);
+                final String methodName = getDelegateMethodName(delegateType);
+                classBuilder.addMethod(MethodSpec.methodBuilder(methodName)
+                        .addModifiers(Modifier.PUBLIC)
+                        .returns(generatedTypeName)
+                        .addParameter(delegateType, delegateFieldName)
+                        .addStatement("this.$N = $L", fieldSpec, CodeBlock.of(delegateFieldName))
+                        .addStatement("return this")
+                        .build());
+            }
+        } catch (Exception e) {
+        }
+    }
+
+    public static String getDelegateMethodName(ClassName delegateType) {
+        return "with" + delegateType.simpleName().replaceAll("Delegate$", "");
+    }
+
     public static ClassName getDaggerComponentClassName(ClassName componentDefinitionClassName) {
-        String componentName =
+       String componentName =
                 "Dagger" + Joiner.on('_').join(componentDefinitionClassName.simpleNames());
-        return componentDefinitionClassName.topLevelClassName().peerClass(componentName);
+        componentDefinitionClassName = ClassName.bestGuess("factories." + componentName);
+        return componentDefinitionClassName;//componentDefinitionClassName.topLevelClassName().peerClass(componentName);
     }
 
     public static ClassName getDaggerComponentClassName(Element component) {

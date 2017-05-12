@@ -1,6 +1,6 @@
 package coffee;
 
-interface Heater {
+public interface Heater {
   void on();
   void off();
   boolean isHot();

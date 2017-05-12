@@ -3,7 +3,7 @@ package coffee;
 import dagger.Lazy;
 import javax.inject.Inject;
 
-class CoffeeMaker {
+public class CoffeeMaker {
 
   private final Pump pump;
   @Inject

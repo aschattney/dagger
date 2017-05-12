@@ -3,10 +3,7 @@ package dagger.internal.codegen;
 import com.google.auto.common.BasicAnnotationProcessor;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.SetMultimap;
-import com.squareup.javapoet.JavaFile;
-import com.sun.org.apache.xml.internal.security.exceptions.Base64DecodingException;
 import dagger.Trigger;
-
 import javax.annotation.processing.Filer;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ExecutableElement;
@@ -53,8 +50,6 @@ public class TriggerProcessingStep implements BasicAnnotationProcessor.Processin
                 os.write(decodedClass);
                 os.flush();
                 os.close();
-            } catch (Base64DecodingException e) {
-                e.printStackTrace();
             } catch (IOException e) {
                 e.printStackTrace();
             }

@@ -61,6 +61,10 @@ abstract class ContributionBinding extends Binding implements HasContributionTyp
   /** Returns the type that specifies this' nullability, absent if not nullable. */
   abstract Optional<DeclaredType> nullableType();
 
+  abstract boolean genericParameter();
+
+  abstract boolean ignoreStubGeneration();
+
   abstract Optional<Equivalence.Wrapper<AnnotationMirror>> wrappedMapKey();
 
   final Optional<AnnotationMirror> mapKey() {
@@ -282,6 +286,10 @@ abstract class ContributionBinding extends Binding implements HasContributionTyp
     abstract B contributingModule(TypeElement contributingModule);
 
     abstract B key(Key key);
+
+    abstract B genericParameter(boolean generic);
+
+    abstract B ignoreStubGeneration(boolean ignore);
 
     abstract B explicitDependencies(Iterable<DependencyRequest> dependencies);
 

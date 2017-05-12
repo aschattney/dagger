@@ -16,6 +16,7 @@
 
 package dagger.internal.codegen;
 
+import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.TypeSpec;

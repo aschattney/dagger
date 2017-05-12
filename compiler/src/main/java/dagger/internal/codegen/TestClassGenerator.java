@@ -1,19 +1,26 @@
 package dagger.internal.codegen;
 
+import com.google.auto.common.MoreTypes;
 import com.google.common.base.Optional;
 import com.squareup.javapoet.*;
 import dagger.Trigger;
 
 import javax.annotation.processing.Filer;
 import javax.lang.model.element.Element;
+import javax.lang.model.element.TypeElement;
 import javax.lang.model.util.Elements;
+import java.util.HashSet;
 import java.util.Iterator;
+import java.util.Set;
 import java.util.UUID;
 
 /**
  * Created by Andy on 07.05.2017.
  */
 public class TestClassGenerator extends SourceFileGenerator<TestRegistry> {
+
+    private Set<TypeElement> components;
+    private TypeElement injector;
 
     TestClassGenerator(Filer filer, Elements elements) {
         super(filer, elements);
@@ -46,7 +53,23 @@ public class TestClassGenerator extends SourceFileGenerator<TestRegistry> {
                                 .build()
             );
         }
+
+        builder.addAnnotation(AnnotationSpec.builder(Trigger.class)
+            .addMember("value", CodeBlock.of("$S", "injector"))
+            .addMember("qualifiedName", CodeBlock.of("$S", injector.getQualifiedName().toString()))
+            .build());
+
         return Optional.of(builder);
     }
 
+    public void setComponents(Set<TypeElement> components) {
+        if (components == null) {
+            components = new HashSet<>();
+        }
+        this.components = components;
+    }
+
+    public void setInjector(TypeElement injector) {
+        this.injector = injector;
+    }
 }

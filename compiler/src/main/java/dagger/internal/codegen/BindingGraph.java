@@ -27,6 +27,7 @@ import static dagger.internal.codegen.BindingKey.contribution;
 import static dagger.internal.codegen.ComponentDescriptor.Kind.PRODUCTION_COMPONENT;
 import static dagger.internal.codegen.ComponentDescriptor.isComponentContributionMethod;
 import static dagger.internal.codegen.ComponentDescriptor.isComponentProductionMethod;
+import static dagger.internal.codegen.ContributionBinding.Kind.PROVISION;
 import static dagger.internal.codegen.ContributionBinding.Kind.SYNTHETIC_MULTIBOUND_KINDS;
 import static dagger.internal.codegen.ContributionBinding.Kind.SYNTHETIC_OPTIONAL_BINDING;
 import static dagger.internal.codegen.Key.indexByKey;
@@ -39,6 +40,7 @@ import com.google.auto.common.MoreTypes;
 import com.google.auto.value.AutoValue;
 import com.google.auto.value.extension.memoized.Memoized;
 import com.google.common.base.Optional;
+import com.google.common.base.Predicate;
 import com.google.common.base.VerifyException;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
@@ -69,6 +71,7 @@ import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
+import javax.annotation.Nullable;
 import javax.inject.Inject;
 import javax.inject.Provider;
 import javax.lang.model.element.AnnotationMirror;
@@ -152,6 +155,16 @@ abstract class BindingGraph {
         .filter(in(ownedModuleTypes()))
         .append(componentDescriptor().dependencies())
         .toSet();
+  }
+
+  ImmutableSet<ContributionBinding> delegateRequirements() {
+    return SUBGRAPH_TRAVERSER
+            .preOrderTraversal(this)
+            .transformAndConcat(graph -> graph.resolvedBindings().values())
+            .filter(resolvedBindings -> resolvedBindings != null && resolvedBindings.owningComponent().equals(componentDescriptor()))
+            .transformAndConcat(ResolvedBindings::ownedContributionBindings)
+            .filter(Util::bindingSupportsTestDelegate)
+            .toSet();
   }
   /**
    * Returns the {@link ComponentDescriptor}s for this component and its subcomponents.

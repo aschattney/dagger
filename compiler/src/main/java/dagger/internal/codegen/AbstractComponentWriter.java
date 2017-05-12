@@ -121,6 +121,7 @@ import dagger.releasablereferences.ReleasableReferenceManager;
 import dagger.releasablereferences.TypedReleasableReferenceManager;
 
 import java.util.*;
+import java.util.function.Consumer;
 import javax.inject.Provider;
 import javax.lang.model.element.*;
 import javax.lang.model.type.DeclaredType;
@@ -176,6 +177,7 @@ abstract class AbstractComponentWriter implements HasBindingMembers {
    * indexed by their {@link CanReleaseReferences @CanReleaseReferences} scope.
    */
   private ImmutableMap<Scope, MemberSelect> referenceReleasingProviderManagerFields;
+  private List<MethodSpec> initializationMethods;
 
   AbstractComponentWriter(
       Types types,
@@ -310,6 +312,9 @@ abstract class AbstractComponentWriter implements HasBindingMembers {
     if (graph.componentDescriptor().kind().isTopLevel()) {
       optionalFactories.addMembers(component);
     }
+    for (MethodSpec initializationMethod : initializationMethods) {
+
+    }
     done = true;
     return component;
   }
@@ -330,7 +335,7 @@ abstract class AbstractComponentWriter implements HasBindingMembers {
 
     Optional<BuilderSpec> builderSpec = graph.componentDescriptor().builderSpec();
     if (builderSpec.isPresent()) {
-      componentBuilder.addModifiers(PRIVATE);
+      componentBuilder.addModifiers(PUBLIC);
       addSupertype(componentBuilder, builderSpec.get().builderDefinitionType());
     } else {
       componentBuilder
@@ -368,6 +373,11 @@ abstract class AbstractComponentWriter implements HasBindingMembers {
       componentBuilder.addField(builderField);
       builderFields.put(contributionElement, builderField);
     }
+
+    for (ContributionBinding contributionBinding : graph.delegateRequirements()) {
+      createDelegateFieldAndMethod(builderName(), componentBuilder, contributionBinding, delegateFieldNames);
+    }
+
     return builderFields.build();
   }
 
@@ -581,6 +591,9 @@ abstract class AbstractComponentWriter implements HasBindingMembers {
 
   private void addFrameworkFields() {
     graph.resolvedBindings().values().forEach(this::addField);
+    for (ContributionBinding contributionBinding : graph.delegateRequirements()) {
+      createDelegateField(component, contributionBinding, delegateFieldNames);
+    }
   }
 
   private void addField(ResolvedBindings resolvedBindings) {
@@ -626,7 +639,6 @@ abstract class AbstractComponentWriter implements HasBindingMembers {
     }
     FieldSpec field = contributionField.build();
     component.addField(field);
-    createDelegateFieldAndMethod(name, component, resolvedBindings, delegateFieldNames);
     return field;
   }
 
@@ -875,11 +887,16 @@ abstract class AbstractComponentWriter implements HasBindingMembers {
 
   private void initializeFrameworkTypes() {
     ImmutableList.Builder<CodeBlock> codeBlocks = ImmutableList.builder();
+
+    codeBlocks.add(initDelegateFields());
+
     for (BindingKey bindingKey : graph.resolvedBindings().keySet()) {
       codeBlocks.addAll(initializeFrameworkType(bindingKey).asSet());
     }
     List<List<CodeBlock>> partitions =
         Lists.partition(codeBlocks.build(), INITIALIZATIONS_PER_INITIALIZE_METHOD);
+
+    initializationMethods = new ArrayList<>();
 
     UniqueNameSet methodNames = new UniqueNameSet();
     for (List<CodeBlock> partition : partitions) {
@@ -899,8 +916,21 @@ abstract class AbstractComponentWriter implements HasBindingMembers {
       } else {
         constructor.addStatement("$L()", methodName);
       }
-      component.addMethod(initializeMethod.build());
+      final MethodSpec method = initializeMethod.build();
+      initializationMethods.add(method);
+      component.addMethod(method);
     }
+  }
+
+  private CodeBlock initDelegateFields() {
+    List<CodeBlock> codeBlocks = new ArrayList<>();
+    for (ContributionBinding contributionBinding : graph.delegateRequirements()) {
+      try {
+          final String delegateFieldName = Util.getDelegateFieldName(contributionBinding.key());
+          codeBlocks.add(CodeBlock.of("this.$L = builder.$L;", delegateFieldName, delegateFieldName));
+      }catch(Exception e){}
+    }
+    return CodeBlocks.concat(codeBlocks);
   }
 
   /**
@@ -1147,7 +1177,7 @@ abstract class AbstractComponentWriter implements HasBindingMembers {
           }
           arguments.addAll(getDependencyArguments(binding));
 
-          if (bindingSupportsTestDelegate(binding)) {
+          if (delegateFieldName != null && bindingSupportsTestDelegate(binding)) {
             arguments.add(0, CodeBlock.of(delegateFieldName));
           }
 

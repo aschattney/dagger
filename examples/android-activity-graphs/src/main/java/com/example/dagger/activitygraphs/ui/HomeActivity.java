@@ -23,6 +23,7 @@ import com.example.dagger.activitygraphs.ActivityModule;
 import com.example.dagger.activitygraphs.DemoApplication;
 import com.example.dagger.activitygraphs.SomeClass;
 import dagger.Lazy;
+import factories.DaggerHomeComponent;
 
 import javax.inject.Inject;
 import javax.inject.Named;
