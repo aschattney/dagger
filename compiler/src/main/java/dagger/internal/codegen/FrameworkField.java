@@ -126,4 +126,5 @@ abstract class FrameworkField {
 
   abstract ParameterizedTypeName type();
   abstract String name();
+
 }

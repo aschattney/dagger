@@ -5,8 +5,11 @@ import dagger.Provides;
 import javax.inject.Singleton;
 
 @Module(includes = PumpModule.class)
-class DripCoffeeModule {
+public class DripCoffeeModule {
   @Provides @Singleton Heater provideHeater() {
     return new ElectricHeater();
+  }
+  @Provides @Singleton String provideString() {
+    return "";
   }
 }

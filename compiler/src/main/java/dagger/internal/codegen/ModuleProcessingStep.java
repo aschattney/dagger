@@ -50,13 +50,14 @@ final class ModuleProcessingStep implements ProcessingStep {
       Messager messager,
       ModuleValidator moduleValidator,
       ProvisionBinding.Factory provisionBindingFactory,
-      FactoryGenerator factoryGenerator) {
+      MultipleSourceFileGenerator<ProvisionBinding> multipleSourceFileGenerator) {
     return new ModuleProcessingStep(
         messager,
         Module.class,
         moduleValidator,
-        ImmutableSet.of(
-            new ProvisionModuleMethodFactoryGenerator(provisionBindingFactory, factoryGenerator)));
+        ImmutableSet.<ModuleMethodFactoryGenerator>of(
+            new ProvisionModuleMethodFactoryGenerator(provisionBindingFactory, multipleSourceFileGenerator))
+    );
   }
 
   /**
@@ -67,7 +68,7 @@ final class ModuleProcessingStep implements ProcessingStep {
       Messager messager,
       ModuleValidator moduleValidator,
       ProvisionBinding.Factory provisionBindingFactory,
-      FactoryGenerator factoryGenerator,
+      MultipleSourceFileGenerator<ProvisionBinding> multipleSourceFileGenerator,
       ProductionBinding.Factory productionBindingFactory,
       ProducerFactoryGenerator producerFactoryGenerator) {
     return new ModuleProcessingStep(
@@ -75,7 +76,7 @@ final class ModuleProcessingStep implements ProcessingStep {
         ProducerModule.class,
         moduleValidator,
         ImmutableSet.of(
-            new ProvisionModuleMethodFactoryGenerator(provisionBindingFactory, factoryGenerator),
+            new ProvisionModuleMethodFactoryGenerator(provisionBindingFactory, multipleSourceFileGenerator),
             new ProductionModuleMethodFactoryGenerator(
                 productionBindingFactory, producerFactoryGenerator)));
   }
@@ -146,10 +147,10 @@ final class ModuleProcessingStep implements ProcessingStep {
       implements ModuleMethodFactoryGenerator {
 
     private final ProvisionBinding.Factory provisionBindingFactory;
-    private final FactoryGenerator factoryGenerator;
+    private final MultipleSourceFileGenerator<ProvisionBinding> factoryGenerator;
 
     ProvisionModuleMethodFactoryGenerator(
-        ProvisionBinding.Factory provisionBindingFactory, FactoryGenerator factoryGenerator) {
+        ProvisionBinding.Factory provisionBindingFactory, MultipleSourceFileGenerator<ProvisionBinding> factoryGenerator) {
       this.provisionBindingFactory = provisionBindingFactory;
       this.factoryGenerator = factoryGenerator;
     }

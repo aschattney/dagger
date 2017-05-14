@@ -103,6 +103,7 @@ abstract class ProductionBinding extends ContributionBinding {
   private static Builder builder() {
     return new AutoValue_ProductionBinding.Builder()
         .explicitDependencies(ImmutableList.<DependencyRequest>of())
+        .genericParameter(false)
         .thrownTypes(ImmutableList.<TypeMirror>of());
   }
 

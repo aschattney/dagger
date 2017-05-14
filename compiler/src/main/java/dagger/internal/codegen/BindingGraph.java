@@ -24,6 +24,7 @@ import static dagger.internal.codegen.BindingKey.contribution;
 import static dagger.internal.codegen.ComponentDescriptor.Kind.PRODUCTION_COMPONENT;
 import static dagger.internal.codegen.ComponentDescriptor.isComponentContributionMethod;
 import static dagger.internal.codegen.ComponentDescriptor.isComponentProductionMethod;
+import static dagger.internal.codegen.ContributionBinding.Kind.PROVISION;
 import static dagger.internal.codegen.ContributionBinding.Kind.SYNTHETIC_MULTIBOUND_KINDS;
 import static dagger.internal.codegen.ContributionBinding.Kind.SYNTHETIC_OPTIONAL_BINDING;
 import static dagger.internal.codegen.Key.indexByKey;
@@ -35,6 +36,7 @@ import static javax.lang.model.element.Modifier.ABSTRACT;
 import com.google.auto.common.MoreTypes;
 import com.google.auto.value.AutoValue;
 import com.google.auto.value.extension.memoized.Memoized;
+import com.google.common.base.Predicate;
 import com.google.common.base.VerifyException;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
@@ -56,16 +58,8 @@ import dagger.internal.codegen.ContributionBinding.Kind;
 import dagger.internal.codegen.Key.HasKey;
 import dagger.producers.Produced;
 import dagger.producers.Producer;
-import java.util.ArrayDeque;
-import java.util.Collection;
-import java.util.Deque;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Queue;
-import java.util.Set;
+
+import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
@@ -173,7 +167,19 @@ abstract class BindingGraph {
     }
     return requirements.build();
   }
-  /** Returns the {@link ComponentDescriptor}s for this component and its subcomponents. */
+
+  ImmutableSet<ContributionBinding> delegateRequirements() {
+    return SUBGRAPH_TRAVERSER
+            .preOrderTraversal(this)
+            .transformAndConcat(graph -> graph.resolvedBindings().values())
+            .filter(resolvedBindings -> resolvedBindings != null && resolvedBindings.owningComponent().equals(componentDescriptor()))
+            .transformAndConcat(ResolvedBindings::ownedContributionBindings)
+            .filter(Util::bindingSupportsTestDelegate)
+            .toSet();
+  }
+  /**
+   * Returns the {@link ComponentDescriptor}s for this component and its subcomponents.
+   */
   ImmutableSet<ComponentDescriptor> componentDescriptors() {
     return SUBGRAPH_TRAVERSER
         .preOrderTraversal(this)
@@ -337,6 +343,7 @@ abstract class BindingGraph {
       for (ComponentDescriptor subcomponent :
           Iterables.consumingIterable(requestResolver.subcomponentsToResolve)) {
         if (resolvedSubcomponents.add(subcomponent)) {
+          subcomponent.setParentDescriptor(componentDescriptor);
           subgraphs.add(create(Optional.of(requestResolver), subcomponent));
         }
       }

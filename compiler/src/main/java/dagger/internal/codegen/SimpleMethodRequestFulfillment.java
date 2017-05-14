@@ -111,7 +111,7 @@ final class SimpleMethodRequestFulfillment extends RequestFulfillment {
     ExecutableElement method = asExecutable(provisionBinding.bindingElement().get());
     switch (method.getKind()) {
       case CONSTRUCTOR:
-        return CodeBlock.of("new $T($L)", provisionBinding.key().type(), parametersCodeBlock);
+          return CodeBlock.of("new $T($L)", provisionBinding.key().type(), parametersCodeBlock);
       case METHOD:
         checkState(method.getModifiers().contains(STATIC));
         return CodeBlock.of(

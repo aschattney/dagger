@@ -1,0 +1,134 @@
+package dagger.internal.codegen;
+
+import com.google.common.collect.ImmutableSet;
+import com.squareup.javapoet.*;
+
+import javax.lang.model.element.*;
+import javax.lang.model.type.TypeMirror;
+import java.util.ArrayList;
+import java.util.List;
+
+import static dagger.internal.codegen.AbstractComponentWriter.simpleVariableName;
+import static dagger.internal.codegen.CodeBlocks.makeParametersCodeBlock;
+
+public class GeneratorComponentInfo extends ComponentInfo {
+
+    protected GeneratorComponentInfo(TypeElement component, ComponentDescriptor descriptor, BindingGraph bindingGraph) {
+        super(component, descriptor, bindingGraph);
+    }
+
+    @Override
+    public void process(TypeSpec.Builder builder) {
+        super.process(builder);
+
+        final String name = simpleVariableName(component);
+        final MethodSpec.Builder methodBuilder = MethodSpec.methodBuilder(name)
+                .addModifiers(Modifier.PUBLIC);
+
+        methodBuilder.returns(ClassName.get(component));
+
+        List<ParameterSpec> parameterSpecs = new ArrayList<>();
+        if (descriptor.kind() == ComponentDescriptor.Kind.SUBCOMPONENT) {
+            final TypeElement component = descriptor.getParentDescriptor().componentDefinitionType();
+            parameterSpecs.add(ParameterSpec.builder(ClassName.get(component), simpleVariableName(component)).build());
+        }
+
+        if (descriptor.builderSpec().isPresent()) {
+            for (ComponentDescriptor.BuilderRequirementMethod requirementMethod : descriptor.builderSpec().get().requirementMethods()) {
+                final ComponentRequirement requirement = requirementMethod.requirement();
+                final TypeElement typeElement = requirement.typeElement();
+                if ((requirement.kind() == ComponentRequirement.Kind.MODULE &&
+                        hasNotOnlyNoArgConstructor(typeElement, requirement.autoCreate()))
+                        || requirement.kind() != ComponentRequirement.Kind.MODULE) {
+                    parameterSpecs.add(ParameterSpec.builder(ClassName.get(typeElement), simpleVariableName(typeElement)).build());
+                }
+            }
+        } else {
+            for (ModuleDescriptor moduleDescriptor : descriptor.modules()) {
+                final TypeElement moduleElement = moduleDescriptor.moduleElement();
+                if (hasNotOnlyNoArgConstructor(moduleElement, autoCreate(moduleElement))) {
+                    parameterSpecs.add(ParameterSpec.builder(ClassName.get(moduleElement), simpleVariableName(moduleElement)).build());
+                }
+            }
+
+            for (TypeElement typeElement : descriptor.dependencies()) {
+                parameterSpecs.add(ParameterSpec.builder(ClassName.get(typeElement), simpleVariableName(typeElement)).build());
+            }
+        }
+
+        methodBuilder.addParameters(parameterSpecs);
+
+        CodeBlock builderInit = getBuilderInitStatement(descriptor, descriptor.getParentDescriptor());
+
+        final List<CodeBlock> statementParams = new ArrayList<>();
+
+        List<CodeBlock> moduleConstructorStatements = new ArrayList<>();
+
+        if (descriptor.builderSpec().isPresent()) {
+            for (ComponentDescriptor.BuilderRequirementMethod requirementMethod : descriptor.builderSpec().get().requirementMethods()) {
+                final ComponentRequirement requirement = requirementMethod.requirement();
+                final TypeElement typeElement = requirement.typeElement();
+                final boolean hasNotOnlyNoArgConstructor = hasNotOnlyNoArgConstructor(typeElement, requirement.autoCreate());
+                if ((requirement.kind() == ComponentRequirement.Kind.MODULE &&
+                        hasNotOnlyNoArgConstructor) || requirement.kind() != ComponentRequirement.Kind.MODULE) {
+                    statementParams.add(CodeBlock.of("$L", simpleVariableName(typeElement)));
+                }else if (requirement.kind() == ComponentRequirement.Kind.MODULE && !hasNotOnlyNoArgConstructor) {
+                    final String methodName = requirementMethod.method().getSimpleName().toString();
+                    moduleConstructorStatements.add(CodeBlock.of(".$L(new $T())",
+                            methodName, ClassName.get(requirement.typeElement())));
+                }
+            }
+        } else {
+            for (ModuleDescriptor moduleDescriptor : descriptor.modules()) {
+                final TypeElement typeElement = moduleDescriptor.moduleElement();
+                if (hasNotOnlyNoArgConstructor(typeElement, autoCreate(typeElement))) {
+                    statementParams.add(CodeBlock.of("$L", simpleVariableName(typeElement)));
+                }
+            }
+
+            for (TypeElement typeElement : descriptor.dependencies()) {
+                statementParams.add(CodeBlock.of("$L", simpleVariableName(typeElement)));
+            }
+        }
+
+        CodeBlock modulesCodeBlock = moduleConstructorStatements
+                .stream()
+                .collect(CodeBlocks.joiningCodeBlocks(""));
+
+        if (statementParams.isEmpty()) {
+            methodBuilder.addStatement("return this.app.$L($L)$L.build()", name, builderInit, modulesCodeBlock);
+        } else {
+            methodBuilder.addStatement("return this.app.$L($L, $L)$L.build()",
+                    name, builderInit, makeParametersCodeBlock(statementParams), modulesCodeBlock);
+        }
+
+        builder.addMethod(methodBuilder.build());
+    }
+
+    private CodeBlock getBuilderInitStatement(ComponentDescriptor descriptor, ComponentDescriptor parentDescriptor) {
+        if (descriptor.kind() == ComponentDescriptor.Kind.SUBCOMPONENT) {
+            final ImmutableSet<ComponentDescriptor.ComponentMethodDescriptor> componentMethodDescriptors = parentDescriptor.componentMethods();
+            for (ComponentDescriptor.ComponentMethodDescriptor componentMethodDescriptor : componentMethodDescriptors) {
+                final ExecutableElement executableElement = componentMethodDescriptor.methodElement();
+                TypeMirror typeToSearch = descriptor.componentDefinitionType().asType();
+                if (descriptor.builderSpec().isPresent()) {
+                    typeToSearch = descriptor.builderSpec().get().builderDefinitionType().asType();
+                }
+                if (executableElement.getReturnType().toString().equals(typeToSearch.toString())) {
+                    final String methodName = executableElement.getSimpleName().toString();
+                    if (!descriptor.builderSpec().isPresent()) {
+                        // check if method has parameters ...
+                        //builderModuleStatement.setExecutableElement(executableElement);
+                        //return codeBlockBuilder.add("$L.$L($L))\n", builderName, methodName, builderModuleStatement.get()).build();
+                        break;
+                    } else {
+                        return CodeBlock.of("$L.$L()\n", simpleVariableName(parentDescriptor.componentDefinitionType()), methodName);
+                    }
+                }
+            }
+        }
+        final ClassName componentClassName = Util.getDaggerComponentClassName(ClassName.get(descriptor.componentDefinitionType()));
+        return CodeBlock.of("$T.builder()\n", componentClassName);
+    }
+
+}

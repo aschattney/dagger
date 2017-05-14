@@ -61,6 +61,10 @@ abstract class ContributionBinding extends Binding implements HasContributionTyp
   /** Returns the type that specifies this' nullability, absent if not nullable. */
   abstract Optional<DeclaredType> nullableType();
 
+  abstract boolean genericParameter();
+
+  abstract boolean ignoreStubGeneration();
+
   abstract Optional<Equivalence.Wrapper<AnnotationMirror>> wrappedMapKey();
 
   final Optional<AnnotationMirror> mapKey() {
@@ -213,12 +217,12 @@ abstract class ContributionBinding extends Binding implements HasContributionTyp
         return DELEGATE;
       case PROVISION:
         return dependencies().isEmpty() && !requiresModuleInstance()
-            ? SINGLETON_INSTANCE
+            ? CLASS_CONSTRUCTOR
             : CLASS_CONSTRUCTOR;
       case INJECTION:
       case SYNTHETIC_MULTIBOUND_SET:
       case SYNTHETIC_MULTIBOUND_MAP:
-        return dependencies().isEmpty() ? SINGLETON_INSTANCE : CLASS_CONSTRUCTOR;
+        return dependencies().isEmpty() ? CLASS_CONSTRUCTOR : CLASS_CONSTRUCTOR;
       default:
         return CLASS_CONSTRUCTOR;
     }
@@ -284,6 +288,10 @@ abstract class ContributionBinding extends Binding implements HasContributionTyp
     abstract B contributingModule(TypeElement contributingModule);
 
     abstract B key(Key key);
+
+    abstract B genericParameter(boolean generic);
+
+    abstract B ignoreStubGeneration(boolean ignore);
 
     abstract B explicitDependencies(Iterable<DependencyRequest> dependencies);
 

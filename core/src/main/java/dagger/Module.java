@@ -45,4 +45,6 @@ public @interface Module {
    */
   @Beta
   Class<?>[] subcomponents() default {};
+
+    boolean autoCreate() default true;
 }

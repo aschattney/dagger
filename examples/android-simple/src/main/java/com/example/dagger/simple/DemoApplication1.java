@@ -18,34 +18,38 @@ package com.example.dagger.simple;
 
 import android.app.Application;
 import android.location.LocationManager;
-import com.example.dagger.simple.ui.HomeActivity;
-import dagger.Component;
-import javax.inject.Inject;
-import javax.inject.Singleton;
+import factories.DaggerComponents_ApplicationComponent;
+import injector.Injector;
+import injector.InjectorSpec;
 
-public class DemoApplication extends Application {
-  
-  @Singleton
-  @Component(modules = AndroidModule.class)
-  public interface ApplicationComponent {
-    void inject(DemoApplication application);
-    void inject(HomeActivity homeActivity);
-    void inject(DemoActivity demoActivity);
-  }
-  
+import javax.inject.Inject;
+import javax.inject.Named;
+
+public class DemoApplication1 extends Application implements InjectorSpec{
+
   @Inject LocationManager locationManager; // for some reason.
-  
-  private ApplicationComponent component;
+  @Inject @Named("apiKey") String someString;
+  @Inject @Named("apiKey1") String anotherString;
+  private Components.ApplicationComponent component;
+ // private Injector injector = new Injector(this);
 
   @Override public void onCreate() {
     super.onCreate();
-    component = DaggerDemoApplication_ApplicationComponent.builder()
-        .androidModule(new AndroidModule(this))
-        .build();
-    component().inject(this); // As of now, LocationManager should be injected into this.
+    //component = injector.applicationComponent(new AndroidModule(this), new SingletonModule());
+    //component.inject(this);
   }
 
-  public ApplicationComponent component() {
+  public Components.ApplicationComponent component() {
     return component;
+  }
+
+  @Override
+  public Components.ApplicationComponent.Builder applicationComponent(Components.ApplicationComponent.Builder builder, AndroidModule androidModule) {
+    return builder.androidModule(androidModule);
+  }
+
+  @Override
+  public Injector getInjector() {
+    return null;
   }
 }

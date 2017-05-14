@@ -119,7 +119,7 @@ final class SubcomponentWriter extends AbstractComponentWriter {
 
   @Override
   protected void decorateComponent() {
-    component.addModifiers(PRIVATE, FINAL);
+    component.addModifiers(PUBLIC, FINAL);
     addSupertype(
         component,
         MoreTypes.asTypeElement(

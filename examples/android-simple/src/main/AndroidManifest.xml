@@ -9,7 +9,7 @@
 
   <application
       android:label="app_name"
-      android:name=".DemoApplication">
+      android:name=".DemoApplication1">
     <activity
         android:label="app_name"
         android:name=".ui.HomeActivity">

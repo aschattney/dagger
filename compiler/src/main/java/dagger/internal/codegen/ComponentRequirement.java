@@ -25,6 +25,8 @@ import static dagger.internal.codegen.Util.requiresAPassedInstance;
 import com.google.auto.common.MoreTypes;
 import com.google.auto.value.AutoValue;
 import com.google.common.base.Equivalence;
+import dagger.Module;
+
 import java.util.Optional;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.TypeMirror;
@@ -108,22 +110,28 @@ abstract class ComponentRequirement {
   /** Returns the name for this requirement that could be used as a variable. */
   abstract String variableName();
 
+  abstract boolean autoCreate();
+
   static ComponentRequirement forDependency(TypeMirror type) {
     return new AutoValue_ComponentRequirement(
         Kind.DEPENDENCY,
         MoreTypes.equivalence().wrap(checkNotNull(type)),
         Optional.empty(),
         Optional.empty(),
-        simpleVariableName(MoreTypes.asTypeElement(type)));
+        simpleVariableName(MoreTypes.asTypeElement(type)),
+        false);
   }
 
   static ComponentRequirement forModule(TypeMirror type) {
+    final Module annotation = MoreTypes.asTypeElement(type).getAnnotation(Module.class);
     return new AutoValue_ComponentRequirement(
         Kind.MODULE,
         MoreTypes.equivalence().wrap(checkNotNull(type)),
         Optional.empty(),
         Optional.empty(),
-        simpleVariableName(MoreTypes.asTypeElement(type)));
+        simpleVariableName(MoreTypes.asTypeElement(type)),
+            annotation != null && annotation.autoCreate()
+    );
   }
 
   static ComponentRequirement forBinding(Key key, boolean nullable, String variableName) {
@@ -132,7 +140,8 @@ abstract class ComponentRequirement {
         key.wrappedType(),
         nullable ? Optional.of(NullPolicy.ALLOW) : Optional.empty(),
         Optional.of(key),
-        variableName);
+        variableName,
+        false);
   }
 
   static ComponentRequirement forBinding(ContributionBinding binding) {

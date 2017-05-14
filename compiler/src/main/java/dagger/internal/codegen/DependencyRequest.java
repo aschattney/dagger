@@ -70,7 +70,7 @@ import javax.lang.model.util.SimpleTypeVisitor7;
 @AutoValue
 abstract class DependencyRequest {
 
-  enum Kind {
+    enum Kind {
     /** A default request for an instance.  E.g.: {@code Blah} */
     INSTANCE,
 

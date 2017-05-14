@@ -17,18 +17,17 @@
 package dagger.internal.codegen;
 
 import static com.google.common.base.Preconditions.checkNotNull;
-
 import com.google.common.base.Throwables;
 import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.JavaFile;
 import com.squareup.javapoet.TypeSpec;
-import java.util.Optional;
 import javax.annotation.Generated;
 import javax.annotation.processing.Filer;
 import javax.annotation.processing.Messager;
 import javax.lang.model.element.Element;
 import javax.lang.model.util.Elements;
+import java.util.Optional;
 
 /**
  * A template class that provides a framework for properly handling IO while generating source files
@@ -74,7 +73,8 @@ abstract class SourceFileGenerator<T> {
       return;
     }
     try {
-      buildJavaFile(generatedTypeName, type.get()).writeTo(filer);
+      final JavaFile javaFile = buildJavaFile(generatedTypeName, type.get());
+      javaFile.writeTo(filer);
     } catch (Exception e) {
       // if the code above threw a SFGE, use that
       Throwables.propagateIfPossible(e, SourceFileGenerationException.class);
@@ -84,7 +84,7 @@ abstract class SourceFileGenerator<T> {
     }
   }
 
-  private JavaFile buildJavaFile(
+  protected JavaFile buildJavaFile(
       ClassName generatedTypeName, TypeSpec.Builder typeSpecBuilder) {
     if (generatedAnnotationAvailable) {
       typeSpecBuilder.addAnnotation(GENERATED);

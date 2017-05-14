@@ -20,7 +20,7 @@
   <parent>
     <groupId>com.google.dagger</groupId>
     <artifactId>dagger-parent</artifactId>
-    <version>2.9</version>
+    <version>3.0</version>
   </parent>
 
   <artifactId>dagger-android</artifactId>
@@ -59,6 +59,11 @@
       <groupId>com.android.support</groupId>
       <artifactId>support-annotations</artifactId>
     </dependency>
+      <dependency>
+          <groupId>com.google.android</groupId>
+          <artifactId>android</artifactId>
+          <version>4.1.1.4</version>
+      </dependency>
   </dependencies>
 
   <build>

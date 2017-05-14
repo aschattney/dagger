@@ -1,17 +1,18 @@
 package coffee;
 
 import javax.inject.Inject;
+import javax.inject.Provider;
 
-class Thermosiphon implements Pump {
-  private final Heater heater;
+public class Thermosiphon implements Pump {
+  private final Provider<Heater> heater;
 
   @Inject
-  Thermosiphon(Heater heater) {
+  Thermosiphon(Provider<Heater> heater) {
     this.heater = heater;
   }
 
   @Override public void pump() {
-    if (heater.isHot()) {
+    if (heater.get().isHot()) {
       System.out.println("=> => pumping => =>");
     }
   }

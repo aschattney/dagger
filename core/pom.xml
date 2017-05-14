@@ -20,7 +20,7 @@
   <parent>
     <groupId>com.google.dagger</groupId>
     <artifactId>dagger-parent</artifactId>
-    <version>2.9</version>
+    <version>3.0</version>
   </parent>
 
   <artifactId>dagger</artifactId>
@@ -69,7 +69,7 @@
               <target>1.7</target>
             </configuration>
           </execution>
-          <execution>
+          <!--<execution>
             <id>default-testCompile</id>
             <goals>
               <goal>testCompile</goal>
@@ -78,13 +78,13 @@
               <source>1.8</source>
               <target>1.8</target>
             </configuration>
-          </execution>
+          </execution>-->
         </executions>
       </plugin>
-      <plugin>
+      <!--<plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>animal-sniffer-maven-plugin</artifactId>
-        <version>1.8</version><!-- 1.9+ requires JDK7 on the build machine -->
+        <version>1.8</version>
         <executions>
           <execution>
             <id>sniff-api</id>
@@ -94,11 +94,11 @@
         <configuration>
           <signature>
             <groupId>org.codehaus.mojo.signature</groupId>
-            <artifactId>java16</artifactId>
+            <artifactId>java17</artifactId>
             <version>1.0</version>
           </signature>
         </configuration>
-      </plugin>
+      </plugin>-->
       <plugin>
         <artifactId>maven-javadoc-plugin</artifactId>
         <configuration>
@@ -117,7 +117,7 @@
           </execution>
         </executions>
       </plugin>
-      <plugin>
+      <!--<plugin>
         <artifactId>maven-jar-plugin</artifactId>
         <executions>
           <execution>
@@ -126,6 +126,14 @@
             </goals>
           </execution>
         </executions>
+      </plugin>-->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <configuration>
+          <source>1.8</source>
+          <target>1.8</target>
+        </configuration>
       </plugin>
     </plugins>
   </build>

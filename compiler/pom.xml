@@ -20,7 +20,7 @@
   <parent>
     <groupId>com.google.dagger</groupId>
     <artifactId>dagger-parent</artifactId>
-    <version>2.9</version>
+    <version>3.0</version>
   </parent>
 
   <artifactId>dagger-compiler</artifactId>
@@ -76,13 +76,13 @@
       <artifactId>junit</artifactId>
       <scope>test</scope>
     </dependency>
-    <dependency>
+    <!--<dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>dagger</artifactId>
       <classifier>tests</classifier>
       <version>${project.version}</version>
       <scope>test</scope>
-    </dependency>
+    </dependency>-->
     <dependency>
       <groupId>com.google.testing.compile</groupId>
       <artifactId>compile-testing</artifactId>
@@ -129,20 +129,32 @@
                 <annotationProcessor>com.google.auto.value.processor.AutoValueProcessor</annotationProcessor>
                 <annotationProcessor>com.google.auto.service.processor.AutoServiceProcessor</annotationProcessor>
               </annotationProcessors>
+              <compilerArguments>
+                <!-- enable the next line to have the output of the processor shown on console -->
+                <Xlint/>
+                <Averbose>true</Averbose>
+              </compilerArguments>
+              <!-- set the next to true to enable verbose output of the compiler plugin -->
+              <verbose>true</verbose>
             </configuration>
           </execution>
-          <execution>
+          <!--<execution>
             <id>default-test-compile</id>
             <goals><goal>testCompile</goal></goals>
             <configuration>
               <annotationProcessors>
                 <annotationProcessor>dagger.internal.codegen.ComponentProcessor</annotationProcessor>
               </annotationProcessors>
+              <compilerArguments>
+                <Xlint/>
+                <Averbose>true</Averbose>
+              </compilerArguments>
+              <verbose>true</verbose>
             </configuration>
-          </execution>
+          </execution>-->
         </executions>
       </plugin>
-      <plugin>
+      <!--<plugin>
         <artifactId>maven-invoker-plugin</artifactId>
         <configuration>
           <addTestClassPath>true</addTestClassPath>
@@ -166,7 +178,7 @@
             </goals>
           </execution>
         </executions>
-      </plugin>
+      </plugin>-->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-shade-plugin</artifactId>

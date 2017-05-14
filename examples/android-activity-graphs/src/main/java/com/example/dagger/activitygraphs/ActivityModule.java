@@ -19,6 +19,13 @@ package com.example.dagger.activitygraphs;
 import android.app.Activity;
 import dagger.Module;
 import dagger.Provides;
+import dagger.multibindings.IntoMap;
+import dagger.multibindings.IntoSet;
+import dagger.multibindings.StringKey;
+
+import javax.inject.Named;
+import java.util.Arrays;
+import java.util.List;
 
 /**
  * A module to wrap the Activity state and expose it to the graph.
@@ -37,4 +44,35 @@ public class ActivityModule {
   @Provides @PerActivity Activity activity() {
     return activity;
   }
+
+  @Provides
+  @StringKey("AAA")
+  @IntoMap
+  public String aString() {
+    return "A";
+  }
+
+  @Provides
+  @StringKey("BBB")
+  @IntoMap
+  public String bString() {
+    return "B";
+  }
+
+  @Provides
+  @Named("AnyString")
+  public String cString() {
+    return "C";
+  }
+
+  @Provides
+  public String dString() {
+    return "D";
+  }
+
+  @Provides
+  public List<String> list() {
+    return Arrays.asList("A", "B", "C");
+  }
+
 }

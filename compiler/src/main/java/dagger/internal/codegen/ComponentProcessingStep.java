@@ -25,18 +25,19 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Multimaps;
 import com.google.common.collect.SetMultimap;
 import dagger.Component;
+import dagger.Config;
 import dagger.Subcomponent;
 import dagger.internal.codegen.ComponentDescriptor.Factory;
 import dagger.internal.codegen.ComponentValidator.ComponentValidationReport;
 import dagger.producers.ProductionComponent;
 import dagger.producers.ProductionSubcomponent;
 import java.lang.annotation.Annotation;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import javax.annotation.processing.Messager;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.TypeElement;
-import javax.tools.Diagnostic.Kind;
 
 /**
  * A {@link ProcessingStep} that is responsible for dealing with a component or production component
@@ -55,6 +56,11 @@ final class ComponentProcessingStep implements ProcessingStep {
   private final ComponentDescriptor.Factory componentDescriptorFactory;
   private final BindingGraph.Factory bindingGraphFactory;
   private final ComponentGenerator componentGenerator;
+
+  public static Set<TypeElement> allComponents = new HashSet<>();
+  public static TypeElement appClass;
+
+  public static boolean generatedAllComponents = true;
 
   ComponentProcessingStep(
       ComponentDescriptor.Kind componentKind,
@@ -82,6 +88,7 @@ final class ComponentProcessingStep implements ProcessingStep {
   @Override
   public Set<Class<? extends Annotation>> annotations() {
     return ImmutableSet.of(
+        Config.class,
         Component.class,
         Component.Builder.class,
         ProductionComponent.class,
@@ -95,6 +102,14 @@ final class ComponentProcessingStep implements ProcessingStep {
   @Override
   public final ImmutableSet<Element> process(
       SetMultimap<Class<? extends Annotation>, Element> elementsByAnnotation) {
+
+    if (appClass == null) {
+      final Set<Element> elements = elementsByAnnotation.get(Config.class);
+      if (!elements.isEmpty()) {
+        appClass = MoreElements.asType(elements.iterator().next());
+      }
+    }
+
     ImmutableSet.Builder<Element> rejectedElements = ImmutableSet.builder();
 
     Map<Element, ValidationReport<TypeElement>> builderReportsByComponent =
@@ -116,7 +131,9 @@ final class ComponentProcessingStep implements ProcessingStep {
     Map<Element, ValidationReport<TypeElement>> reportsBySubcomponent =
         processSubcomponents(subcomponentElements, subcomponentBuilderElements);
 
-    for (Element element : elementsByAnnotation.get(componentKind.annotationType())) {
+
+    final Set<Element> elements = elementsByAnnotation.get(componentKind.annotationType());
+    for (Element element : elements) {
       TypeElement componentTypeElement = MoreElements.asType(element);
       try {
         ComponentValidationReport validationReport =
@@ -143,11 +160,19 @@ final class ComponentProcessingStep implements ProcessingStep {
             }
           }
         }
+        allComponents.add(componentTypeElement);
       } catch (TypeNotPresentException e) {
         rejectedElements.add(componentTypeElement);
       }
     }
-    return rejectedElements.build();
+
+    final ImmutableSet<Element> failedElements = rejectedElements.build();
+
+    if (elements.isEmpty() && failedElements.isEmpty()) {
+      generatedAllComponents = true;
+    }
+
+    return failedElements;
   }
 
   private void generateComponent(BindingGraph bindingGraph) {
