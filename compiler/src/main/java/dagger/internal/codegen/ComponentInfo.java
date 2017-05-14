@@ -133,7 +133,11 @@ public abstract class ComponentInfo {
     protected ClassName getBuilderClassName(TypeElement component) {
         ClassName builderClassName;
         if (descriptor.kind() == ComponentDescriptor.Kind.COMPONENT) {
-            builderClassName = Util.getDaggerComponentClassName(ClassName.get(component)).nestedClass("Builder");
+            if (descriptor.builderSpec().isPresent()) {
+                builderClassName = ClassName.get(descriptor.builderSpec().get().builderDefinitionType());
+            }else {
+                builderClassName = Util.getDaggerComponentClassName(ClassName.get(component)).nestedClass("Builder");
+            }
         }else {
             if (descriptor.builderSpec().isPresent()) {
                 builderClassName = ClassName.get(descriptor.builderSpec().get().builderDefinitionType());

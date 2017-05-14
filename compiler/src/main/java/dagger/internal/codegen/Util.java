@@ -48,7 +48,6 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Predicate;
 import java.util.stream.Collector;
 import javax.inject.Named;
 import javax.lang.model.element.*;
@@ -280,7 +279,7 @@ final class Util {
                         .findFirst();
                 if (qualifier.isPresent()) {
                     final PackageElement packageElement = getPackage(MoreTypes.asElement(key.type()));
-                    final String classNameString = "delegates" + "." + capitalizeFirstLetter(qualifier.get()) + "Delegate";
+                    final String classNameString = "delegates" + "." + capitalize(qualifier.get()) + "Delegate";
                     return ClassName.bestGuess(classNameString);
                 }
             }
@@ -487,14 +486,14 @@ final class Util {
             if (entry.getKey().getSimpleName().toString().equals("value")) {
                 final String original = entry.getValue().getValue().toString();
                 if (!original.isEmpty()) {
-                    return capitalizeFirstLetter(original);
+                    return capitalize(original);
                 }
             }
         }
         throw new IllegalStateException("value not found");
     }
 
-    public static String capitalizeFirstLetter(String original) {
+    public static String capitalize(String original) {
         if (original == null || original.length() == 0) {
             return original;
         }

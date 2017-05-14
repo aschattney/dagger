@@ -150,7 +150,8 @@ final class FactoryGenerator extends SourceFileGenerator<ProvisionBinding> {
                   getDelegateTypeName(binding.key()),
                   getDelegateFieldName(binding.key()),
                   factoryBuilder,
-                  constructorBuilder.get()
+                  constructorBuilder.get(),
+                  false
           );
         }
         if (binding.requiresModuleInstance()) {
@@ -159,7 +160,8 @@ final class FactoryGenerator extends SourceFileGenerator<ProvisionBinding> {
               TypeName.get(binding.bindingTypeElement().get().asType()),
               "module",
               factoryBuilder,
-              constructorBuilder.get());
+              constructorBuilder.get(),
+              true);
         }
         for (Map.Entry<BindingKey, FrameworkField> entry : generateBindingFieldsForDependencies(binding).entrySet()) {
           BindingKey bindingKey = entry.getKey();
@@ -169,7 +171,8 @@ final class FactoryGenerator extends SourceFileGenerator<ProvisionBinding> {
                   bindingField.type(),
                   uniqueFieldNames.getUniqueName(bindingField.name()),
                   factoryBuilder,
-                  constructorBuilder.get());
+                  constructorBuilder.get(),
+                  true);
           fieldsBuilder.put(bindingKey, field);
         }
         break;
@@ -347,12 +350,17 @@ final class FactoryGenerator extends SourceFileGenerator<ProvisionBinding> {
       TypeName typeName,
       String variableName,
       TypeSpec.Builder factoryBuilder,
-      MethodSpec.Builder constructorBuilder) {
+      MethodSpec.Builder constructorBuilder,
+      boolean assertCheck) {
     FieldSpec field = FieldSpec.builder(typeName, variableName, PRIVATE, FINAL).build();
     factoryBuilder.addField(field);
     ParameterSpec parameter = ParameterSpec.builder(typeName, variableName).build();
     constructorBuilder.addParameter(parameter);
-    constructorBuilder.addCode("assert $1N != null; this.$2N = $1N;", parameter, field);
+    if (assertCheck) {
+      constructorBuilder.addCode("assert $1N != null; this.$2N = $1N;", parameter, field);
+    }else {
+      constructorBuilder.addCode("this.$2N = $1N;", parameter, field);
+    }
     return field;
   }
 }

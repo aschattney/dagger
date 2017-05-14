@@ -209,10 +209,24 @@ abstract class Key implements Serializable{
       }else {
         final java.util.Optional<? extends AnnotationMirror> annotationMirror = getAnnotationMirror(bindingMethod);
         if(annotationMirror.isPresent()) {
-          return ClassName.bestGuess("swagger" + "." + getCapitalizedAnnotationValue(annotationMirror.get()) + "In" + contributingModule.getSimpleName().toString() + "Delegate");
+          String capitalizedAnnotationValue = getCapitalizedAnnotationValue(annotationMirror.get());
+          if (isInteger(capitalizedAnnotationValue)) {
+            final String annotationName = annotationMirror.get().getAnnotationType().asElement().getSimpleName().toString();
+            capitalizedAnnotationValue = annotationName + capitalizedAnnotationValue;
+          }
+          return ClassName.bestGuess("swagger" + "." + capitalizedAnnotationValue + "In" + contributingModule.getSimpleName().toString() + "Delegate");
         }else {
           return ClassName.bestGuess("swagger" + "." + capitalizeFirstLetter(bindingMethod.getSimpleName().toString()) + "For" + contributingModule.getSimpleName().toString() + "Delegate");
         }
+      }
+    }
+
+    private boolean isInteger(String str) {
+      try{
+        Integer.parseInt(str);
+        return true;
+      } catch (Exception e) {
+        return false;
       }
     }
 

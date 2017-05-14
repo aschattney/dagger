@@ -57,7 +57,7 @@ public class InjectorGenerator extends SourceFileGenerator<DI>{
             throw new IllegalStateException("onCreate method not found!");
         }
         final MethodSpec.Builder overriding = MethodSpec.overriding(onCreateMethod.get());
-        createDecoratorClasses(builder, overriding, components);
+        createDecoratorClasses(builder, overriding, components, input.getAppClass());
         overriding.addStatement("super.onCreate()");
 
         //builder.addMethod(overriding.build());
@@ -68,44 +68,40 @@ public class InjectorGenerator extends SourceFileGenerator<DI>{
             componentInfo.process(builder);
         }
 
-        builder.addMethod(MethodSpec.methodBuilder("apply")
-                .addModifiers(Modifier.PUBLIC)
-                .returns(void.class)
-                .addStatement("this.onCreate()")
-                .build());
-
         return Optional.of(builder);
     }
 
-    private void createDecoratorClasses(TypeSpec.Builder builder, MethodSpec.Builder methodBuilder, Set<TypeElement> components) {
+    private void createDecoratorClasses(TypeSpec.Builder builder, MethodSpec.Builder methodBuilder, Set<TypeElement> components, TypeElement appClass) {
         for (TypeElement component : components) {
             ComponentDescriptor componentDescriptor = componentDescriptorFactory.forComponent(component);
             final BindingGraph bindingGraph = bindingGraphFactory.create(componentDescriptor);
-            createDecoratorClass(builder, methodBuilder, bindingGraph);
+            createDecoratorClass(builder, methodBuilder, bindingGraph, appClass);
         }
     }
 
-    private void createDecoratorClass(TypeSpec.Builder builder, MethodSpec.Builder methodBuilder, BindingGraph bindingGraph) {
-        final Decorator decorator = decoratorFactory.create();
+    private void createDecoratorClass(TypeSpec.Builder builder, MethodSpec.Builder methodBuilder, BindingGraph bindingGraph, TypeElement appClass) {
+        final ClassName appClassName = ClassName.get(appClass);
+        ClassName testAppClassName = appClassName.topLevelClassName().peerClass("Test" + appClassName.simpleName());
+        final Decorator decorator = decoratorFactory.create(testAppClassName);
         try {
             decorator.generate(bindingGraph);
             final ClassName decoratorName = decorator.nameGeneratedType(bindingGraph);
-            String name = Util.lowerCaseFirstLetter(decoratorName.simpleName());
-            final FieldSpec.Builder fieldBuilder = FieldSpec.builder(decoratorName, name, Modifier.PRIVATE);
+            final String fieldName = Util.lowerCaseFirstLetter(decoratorName.simpleName());
+            final String methodName = "decorate" + Util.capitalize(fieldName.replaceAll("Decorator$", ""));
+            final FieldSpec.Builder fieldBuilder = FieldSpec.builder(decoratorName, fieldName, Modifier.PRIVATE);
             fieldBuilder.addAnnotation(AnnotationSpec.builder(ClassName.bestGuess("android.support.annotation.NonNull")).build());
-            final FieldSpec field = fieldBuilder.initializer("new $T()", decoratorName).build();
-            //methodBuilder.addStatement("this.$N = new $T()", field, decoratorName);
+            final FieldSpec field = fieldBuilder.initializer("new $T(this)", decoratorName).build();
             builder.addField(field);
-            builder.addMethod(MethodSpec.methodBuilder(name)
+            builder.addMethod(MethodSpec.methodBuilder(methodName)
                     .addModifiers(Modifier.PUBLIC)
                     .returns(decoratorName)
-                    .addStatement("return this.$L", name)
+                    .addStatement("return this.$L", fieldName)
                     .build());
         } catch (SourceFileGenerationException e) {
             throw new IllegalStateException("Exception while generating decorator: " + e);
         }
         for (BindingGraph subGraph : bindingGraph.subgraphs()) {
-            createDecoratorClass(builder, methodBuilder, subGraph);
+            createDecoratorClass(builder, methodBuilder, subGraph, appClass);
         }
     }
 

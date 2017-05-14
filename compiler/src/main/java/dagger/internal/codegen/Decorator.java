@@ -8,21 +8,31 @@ import javax.lang.model.element.Element;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.util.Elements;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Set;
 
 public class Decorator  extends SourceFileGenerator<BindingGraph>{
 
     private BindingGraph.Factory factory;
+    private ClassName appClass;
+    private TestRegistry testRegistry;
 
-    private Decorator(Filer filer, Elements elements, BindingGraph.Factory factory) {
+    private Decorator(Filer filer, Elements elements, BindingGraph.Factory factory, ClassName appClass, TestRegistry testRegistry) {
         super(filer, elements);
         this.factory = factory;
+        this.appClass = appClass;
+        this.testRegistry = testRegistry;
     }
 
     @Override
     ClassName nameGeneratedType(BindingGraph input) {
+        return getClassName(input);
+    }
+
+    private ClassName getClassName(BindingGraph input) {
         final TypeElement component = input.componentDescriptor().componentDefinitionType();
         return ClassName.bestGuess("factories." + component.getSimpleName().toString() + "Decorator");
     }
@@ -39,14 +49,22 @@ public class Decorator  extends SourceFileGenerator<BindingGraph>{
 
         final String daggerBuilderClassName = TriggerComponentInfo.resolveClassName(factory, input.componentDescriptor());
 
+        builder.addField(appClass, "app", Modifier.PRIVATE);
+
         addDecoratorType(builder, generatedTypeName, daggerBuilderClassName, input);
 
         return Optional.of(builder);
     }
 
     private void addDecoratorType(TypeSpec.Builder builder, ClassName returnType, String className, BindingGraph bindingGraph) {
+
         builder.addModifiers(Modifier.PUBLIC);
-        builder.addMethod(MethodSpec.constructorBuilder().addModifiers(Modifier.PUBLIC).build());
+        builder.addMethod(MethodSpec.constructorBuilder()
+                .addModifiers(Modifier.PUBLIC)
+                .addParameter(appClass, "app")
+                .addStatement("this.app = app")
+                .build());
+
         List<CodeBlock> statements = new ArrayList<>();
         for (ContributionBinding contributionBinding : bindingGraph.delegateRequirements()) {
             Util.createDelegateFieldAndMethod(returnType, builder, contributionBinding, new HashMap<>(1));
@@ -54,6 +72,12 @@ public class Decorator  extends SourceFileGenerator<BindingGraph>{
             final ClassName delegateTypeName = Util.getDelegateTypeName(contributionBinding.key());
             statements.add(CodeBlock.of("builder.$L(this.$L);", Util.getDelegateMethodName(delegateTypeName), delegateFieldName));
         }
+
+        builder.addMethod(MethodSpec.methodBuilder("and")
+                .addModifiers(Modifier.PUBLIC)
+                .addStatement("return app")
+                .returns(appClass)
+                .build());
 
         builder.addMethod(MethodSpec.methodBuilder("decorate")
                 .addModifiers(Modifier.PUBLIC)
@@ -63,21 +87,33 @@ public class Decorator  extends SourceFileGenerator<BindingGraph>{
                 .build());
     }
 
+    @Override
+    void generate(BindingGraph input) throws SourceFileGenerationException {
+        final ClassName generatedTypeName = getClassName(input);
+        final Optional<TypeSpec.Builder> builder = write(generatedTypeName, input);
+        try {
+            testRegistry.addEncodedClass(generatedTypeName, buildJavaFile(generatedTypeName, builder.get()));
+        } catch (IOException e) {
+            throw new IllegalStateException(e);
+        }
+    }
 
     public static class Factory {
 
         private final Filer filer;
         private final Elements elements;
         private final BindingGraph.Factory bindingGraphFactory;
+        private TestRegistry testRegistry;
 
-        Factory(Filer filer, Elements elements, BindingGraph.Factory bindingGraphFactory) {
+        Factory(Filer filer, Elements elements, BindingGraph.Factory bindingGraphFactory, TestRegistry testRegistry) {
             this.filer = filer;
             this.elements = elements;
             this.bindingGraphFactory = bindingGraphFactory;
+            this.testRegistry = testRegistry;
         }
 
-        public Decorator create() {
-            return new Decorator(filer, elements, bindingGraphFactory);
+        public Decorator create(ClassName appClass) {
+            return new Decorator(filer, elements, bindingGraphFactory, appClass, testRegistry);
         }
 
     }
