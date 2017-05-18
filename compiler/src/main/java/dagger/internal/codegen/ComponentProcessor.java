@@ -291,7 +291,8 @@ public final class ComponentProcessor extends BasicAnnotationProcessor {
                     bindingGraphFactory,
                     componentDescriptorFactory,
                     new DependencySpecGenerator(filer, elements, componentDescriptorFactory, bindingGraphFactory),
-                    new DependencyInjectorGenerator(filer, elements, bindingGraphFactory, componentDescriptorFactory)
+                    new DependencyInjectorGenerator(filer, elements, bindingGraphFactory, componentDescriptorFactory),
+                    new ApplicationGenerator(filer, types, elements, bindingGraphFactory, componentDescriptorFactory)
             )
     );
   }

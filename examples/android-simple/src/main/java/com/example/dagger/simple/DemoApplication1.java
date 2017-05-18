@@ -16,40 +16,25 @@
 
 package com.example.dagger.simple;
 
-import android.app.Application;
 import android.location.LocationManager;
-import factories.DaggerComponents_ApplicationComponent;
-import injector.Injector;
-import injector.InjectorSpec;
-
 import javax.inject.Inject;
 import javax.inject.Named;
 
-public class DemoApplication1 extends Application implements InjectorSpec{
+public class DemoApplication1 extends DaggerApplication{
 
   @Inject LocationManager locationManager; // for some reason.
   @Inject @Named("apiKey") String someString;
   @Inject @Named("apiKey1") String anotherString;
   private Components.ApplicationComponent component;
- // private Injector injector = new Injector(this);
 
   @Override public void onCreate() {
     super.onCreate();
-    //component = injector.applicationComponent(new AndroidModule(this), new SingletonModule());
-    //component.inject(this);
+    component = getInjector().applicationComponent(new AndroidModule(this));
+    component.inject(this);
   }
 
   public Components.ApplicationComponent component() {
     return component;
   }
 
-  @Override
-  public Components.ApplicationComponent.Builder applicationComponent(Components.ApplicationComponent.Builder builder, AndroidModule androidModule) {
-    return builder.androidModule(androidModule);
-  }
-
-  @Override
-  public Injector getInjector() {
-    return null;
-  }
 }

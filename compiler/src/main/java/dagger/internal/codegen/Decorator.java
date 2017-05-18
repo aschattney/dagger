@@ -36,7 +36,7 @@ public class Decorator  extends SourceFileGenerator<BindingGraph>{
 
     private ClassName getClassName(BindingGraph input) {
         final TypeElement component = input.componentDescriptor().componentDefinitionType();
-        return ClassName.bestGuess("factories." + component.getSimpleName().toString() + "Decorator");
+        return ClassName.get(component).topLevelClassName().peerClass(component.getSimpleName().toString() + "Decorator");
     }
 
     @Override
@@ -53,12 +53,14 @@ public class Decorator  extends SourceFileGenerator<BindingGraph>{
 
         builder.addField(appClass, "app", Modifier.PRIVATE);
 
-        addDecoratorType(builder, generatedTypeName, daggerBuilderClassName, input);
+        TypeName builderClassName = ClassName.get(input.componentDescriptor().builderSpec().get().builderDefinitionType());
+
+        addDecoratorType(builder, generatedTypeName, daggerBuilderClassName, builderClassName, input);
 
         return Optional.of(builder);
     }
 
-    private void addDecoratorType(TypeSpec.Builder builder, ClassName returnType, String className, BindingGraph bindingGraph) {
+    private void addDecoratorType(TypeSpec.Builder builder, ClassName returnType, String className, TypeName builderClassName, BindingGraph bindingGraph) {
 
         builder.addModifiers(Modifier.PUBLIC);
         builder.addMethod(MethodSpec.constructorBuilder()
@@ -68,12 +70,16 @@ public class Decorator  extends SourceFileGenerator<BindingGraph>{
                 .build());
 
         List<CodeBlock> statements = new ArrayList<>();
+        final ClassName name = ClassName.bestGuess(className);
+        statements.add(CodeBlock.of("$T impl = ($T) builder;", name, name));
         for (ContributionBinding contributionBinding : bindingGraph.delegateRequirements()) {
-            Util.createDelegateFieldAndMethod(returnType, builder, contributionBinding, new HashMap<>(1));
+            Util.createDelegateFieldAndMethod(returnType, builder, contributionBinding, new HashMap<>(1), true);
             final String delegateFieldName = Util.getDelegateFieldName(contributionBinding.key());
             final ClassName delegateTypeName = Util.getDelegateTypeName(contributionBinding.key());
-            statements.add(CodeBlock.of("builder.$L(this.$L);", Util.getDelegateMethodName(delegateTypeName), delegateFieldName));
+            statements.add(CodeBlock.of("impl.$L(this.$L);", Util.getDelegateMethodName(delegateTypeName), delegateFieldName));
         }
+
+        statements.add(CodeBlock.of("return impl;"));
 
         builder.addMethod(MethodSpec.methodBuilder("and")
                 .addModifiers(Modifier.PUBLIC)
@@ -83,9 +89,9 @@ public class Decorator  extends SourceFileGenerator<BindingGraph>{
 
         builder.addMethod(MethodSpec.methodBuilder("decorate")
                 .addModifiers(Modifier.PUBLIC)
-                .addParameter(ClassName.bestGuess(className), "builder")
+                .addParameter(builderClassName, "builder")
                 .addCode("$L", statements.stream().collect(CodeBlocks.joiningCodeBlocks("\n")))
-                .returns(void.class)
+                .returns(builderClassName)
                 .build());
     }
 

@@ -173,7 +173,7 @@ final class ComponentWriter extends AbstractComponentWriter {
 
   @Override
   protected void addFactoryMethods() {
-    if (canInstantiateAllRequirements()) {
+    /*if (canInstantiateAllRequirements()) {
       CharSequence buildMethodName =
           graph.componentDescriptor().builderSpec().isPresent()
               ? graph.componentDescriptor().builderSpec().get().buildMethod().getSimpleName()
@@ -184,7 +184,7 @@ final class ComponentWriter extends AbstractComponentWriter {
               .addModifiers(PUBLIC, STATIC)
               .addStatement("return builder().$L()", buildMethodName)
               .build());
-    }
+    }*/
   }
 
   /** {@code true} if all of the graph's required dependencies can be automatically constructed. */

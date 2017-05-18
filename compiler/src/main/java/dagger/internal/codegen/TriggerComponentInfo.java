@@ -45,7 +45,7 @@ public class TriggerComponentInfo extends ComponentInfo {
 
         parameterSpecs.add(builderParameter);
 
-        if(descriptor.builderSpec().isPresent()) {
+/*        if(descriptor.builderSpec().isPresent()) {
             final ComponentDescriptor.BuilderSpec builderSpec = descriptor.builderSpec().get();
             for (ComponentDescriptor.BuilderRequirementMethod builderRequirementMethod : builderSpec.requirementMethods()) {
                 final ComponentRequirement requirement = builderRequirementMethod.requirement();
@@ -62,11 +62,11 @@ public class TriggerComponentInfo extends ComponentInfo {
                     parameterSpecs.add(ParameterSpec.builder(ClassName.get(typeElement), simpleVariableName(typeElement)).build());
                 }
             }
-        }
+        }*/
 
         methodBuilder.addParameters(parameterSpecs);
 
-        final List<CodeBlock> params = parameterSpecs.stream()
+        /*final List<CodeBlock> params = parameterSpecs.stream()
                 .map(parameterSpec -> CodeBlock.of("$L", parameterSpec.name))
                 .collect(Collectors.toList());
 
@@ -80,7 +80,11 @@ public class TriggerComponentInfo extends ComponentInfo {
 
         methodBuilder.addStatement("this.$L.decorate(componentBuilder)", decoratorName);
 
-        methodBuilder.addStatement("return componentBuilder");
+        methodBuilder.addStatement("return componentBuilder");*/
+
+        final String decoratorName = Util.lowerCaseFirstLetter(component.getSimpleName().toString()) + "Decorator";
+
+        methodBuilder.addStatement("return this.$L.decorate(super.$L(builder))", decoratorName, methodName);
 
         builder.addMethod(methodBuilder.build());
     }

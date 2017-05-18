@@ -106,17 +106,20 @@ public class InjectorGenerator extends SourceFileGenerator<DI>{
     }
 
     private java.util.Optional<ExecutableElement> findOnCreateMethod(TypeElement applicationClass) {
+
         final java.util.Optional<ExecutableElement> onCreateMethod = applicationClass.getEnclosedElements().stream()
                 .filter(e -> e.getKind() == ElementKind.METHOD)
                 .map(e -> (ExecutableElement) e)
                 .filter(e -> e.getSimpleName().toString().equals("onCreate"))
                 .findFirst();
-        final com.google.common.base.Optional<DeclaredType> declaredTypeOptional = MoreTypes.nonObjectSuperclass(types, elements, MoreTypes.asDeclared(applicationClass.asType()));
-        if (!onCreateMethod.isPresent() && declaredTypeOptional.isPresent()) {
-            return findOnCreateMethod(MoreTypes.asTypeElement(declaredTypeOptional.get()));
+        if (!onCreateMethod.isPresent()) {
+            final com.google.common.base.Optional<DeclaredType> declaredTypeOptional = MoreTypes.nonObjectSuperclass(types, elements, MoreTypes.asDeclared(applicationClass.asType()));
+            if (declaredTypeOptional.isPresent()) {
+                return findOnCreateMethod(MoreTypes.asTypeElement(declaredTypeOptional.get()));
+            }
         }
-        else
-            return onCreateMethod;
+
+        return onCreateMethod;
     }
 
     @Override

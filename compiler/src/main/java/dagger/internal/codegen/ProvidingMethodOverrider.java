@@ -61,7 +61,7 @@ public class ProvidingMethodOverrider {
         this.getBindingGraph().resolvedBindings().values().forEach(resolvedBindings -> {
             if (!resolvedBindings.isEmpty() && resolvedBindings.bindingType() == BindingType.PROVISION && Util.bindingSupportsTestDelegate(resolvedBindings.contributionBinding())) {
                 if (!delegateFieldNames.containsKey(resolvedBindings.key())) {
-                    createDelegateFieldAndMethod(generatedTypeName, builder, resolvedBindings, delegateFieldNames);
+                    createDelegateFieldAndMethod(generatedTypeName, builder, resolvedBindings.contributionBinding(), delegateFieldNames, true);
                 }
             }
         });

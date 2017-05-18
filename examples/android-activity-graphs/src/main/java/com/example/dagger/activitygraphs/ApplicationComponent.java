@@ -18,6 +18,7 @@ package com.example.dagger.activitygraphs;
 
 import android.app.Application;
 import android.location.LocationManager;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import dagger.Component;
 import javax.inject.Singleton;
 
@@ -31,4 +32,9 @@ public interface ApplicationComponent {
   // Exported for child-components.
   Application application();
   LocationManager locationManager();
+  @Component.Builder
+  interface Builder {
+    Builder module(DemoApplicationModule module);
+    ApplicationComponent build();
+  }
 }

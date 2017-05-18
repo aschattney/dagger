@@ -342,11 +342,9 @@ abstract class AbstractComponentWriter implements HasBindingMembers {
 
     Optional<BuilderSpec> builderSpec = graph.componentDescriptor().builderSpec();
     if (builderSpec.isPresent()) {
-      componentBuilder.addModifiers(PUBLIC);
       addSupertype(componentBuilder, builderSpec.get().builderDefinitionType());
     } else {
       componentBuilder
-          .addModifiers(PUBLIC)
           .addMethod(constructorBuilder().addModifiers(PRIVATE).build());
     }
 
@@ -384,7 +382,7 @@ abstract class AbstractComponentWriter implements HasBindingMembers {
     }
 
     for (ContributionBinding contributionBinding : graph.delegateRequirements()) {
-      createDelegateFieldAndMethod(builderName(), componentBuilder, contributionBinding, delegateFieldNames);
+      createDelegateFieldAndMethod(builderName(), componentBuilder, contributionBinding, delegateFieldNames, false);
     }
 
     return builderFields.build();

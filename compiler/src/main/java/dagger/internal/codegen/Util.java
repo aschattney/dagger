@@ -540,6 +540,7 @@ final class Util {
                 final String delegateFieldName = Util.getDelegateFieldName(binding.key());
                 final ClassName delegateType = getDelegateTypeName(binding.key());
                 final FieldSpec.Builder builder = FieldSpec.builder(delegateType, delegateFieldName);
+                builder.addModifiers(Modifier.PRIVATE);
                 delegateFieldNames.put(binding.key(), delegateFieldName);
                 final FieldSpec fieldSpec = builder.build();
                 classBuilder.addField(fieldSpec);
@@ -548,18 +549,22 @@ final class Util {
         }
     }
 
-    public static void createDelegateFieldAndMethod(ClassName generatedTypeName, TypeSpec.Builder classBuilder, ContributionBinding binding, Map<Key, String> delegateFieldNames) {
+    public static void createDelegateFieldAndMethod(ClassName generatedTypeName, TypeSpec.Builder classBuilder, ContributionBinding binding, Map<Key, String> delegateFieldNames, boolean publicMethod) {
         try {
             if (bindingSupportsTestDelegate(binding)) {
                 final String delegateFieldName = Util.getDelegateFieldName(binding.key());
                 final ClassName delegateType = getDelegateTypeName(binding.key());
                 final FieldSpec.Builder builder = FieldSpec.builder(delegateType, delegateFieldName);
+                builder.addModifiers(Modifier.PRIVATE);
                 delegateFieldNames.put(binding.key(), delegateFieldName);
                 final FieldSpec fieldSpec = builder.build();
                 classBuilder.addField(fieldSpec);
                 final String methodName = getDelegateMethodName(delegateType);
-                classBuilder.addMethod(MethodSpec.methodBuilder(methodName)
-                        .addModifiers(Modifier.PUBLIC)
+                final MethodSpec.Builder delegateMethodBuilder = MethodSpec.methodBuilder(methodName);
+                if (publicMethod) {
+                    delegateMethodBuilder.addModifiers(Modifier.PUBLIC);
+                }
+                classBuilder.addMethod(delegateMethodBuilder
                         .returns(generatedTypeName)
                         .addParameter(delegateType, delegateFieldName)
                         .addStatement("this.$N = $L", fieldSpec, CodeBlock.of(delegateFieldName))
@@ -604,8 +609,8 @@ final class Util {
     public static ClassName getDaggerComponentClassName(ClassName componentDefinitionClassName) {
        String componentName =
                 "Dagger" + Joiner.on('_').join(componentDefinitionClassName.simpleNames());
-        componentDefinitionClassName = ClassName.bestGuess("factories." + componentName);
-        return componentDefinitionClassName;//componentDefinitionClassName.topLevelClassName().peerClass(componentName);
+        //componentDefinitionClassName = ClassName.bestGuess("factories." + componentName);
+        return componentDefinitionClassName.topLevelClassName().peerClass(componentName);
     }
 
     public static ClassName getDaggerComponentClassName(Element component) {

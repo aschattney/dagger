@@ -35,6 +35,7 @@ public class InjectorProcessingStep implements BasicAnnotationProcessor.Processi
     private final ComponentDescriptor.Factory componentDescriptorFactory;
     private DependencySpecGenerator dependencySpecGenerator;
     private DependencyInjectorGenerator dependencyInjectorGenerator;
+    private ApplicationGenerator applicationGenerator;
     private Map<TypeElement, ExecutableElement> componentMethodMap;
     private Map<TypeElement, ExecutableElement> moduleMethodMap;
     private Map<TypeElement, ExecutableElement> subcomponentMethodMap;
@@ -47,7 +48,8 @@ public class InjectorProcessingStep implements BasicAnnotationProcessor.Processi
                                   ComponentDescriptor.Kind component, BindingGraph.Factory bindingGraphFactory,
                                   ComponentDescriptor.Factory componentDescriptorFactory,
                                   DependencySpecGenerator dependencySpecGenerator,
-                                  DependencyInjectorGenerator dependencyInjectorGenerator) {
+                                  DependencyInjectorGenerator dependencyInjectorGenerator,
+                                  ApplicationGenerator applicationGenerator) {
         this.types = types;
         this.messager = messager;
         this.injectorGenerator = injectorGenerator;
@@ -56,6 +58,7 @@ public class InjectorProcessingStep implements BasicAnnotationProcessor.Processi
         this.componentDescriptorFactory = componentDescriptorFactory;
         this.dependencySpecGenerator = dependencySpecGenerator;
         this.dependencyInjectorGenerator = dependencyInjectorGenerator;
+        this.applicationGenerator = applicationGenerator;
     }
 
     @Override
@@ -118,6 +121,7 @@ public class InjectorProcessingStep implements BasicAnnotationProcessor.Processi
         }
         if (rejectedElements.isEmpty()) {
             final DI di = new DI(appClass, components, injectorTypeList);
+            this.applicationGenerator.generate(di, messager);
             this.dependencyInjectorGenerator.generate(di, messager);
             this.dependencySpecGenerator.generate(components, messager);
             this.injectorGenerator.generate(di, messager);

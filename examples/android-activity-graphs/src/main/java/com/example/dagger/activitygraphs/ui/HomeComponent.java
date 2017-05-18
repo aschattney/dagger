@@ -27,4 +27,10 @@ import dagger.Component;
 public interface HomeComponent extends AbstractActivityComponent {
   void inject(HomeActivity homeActivity);
   void inject(HomeFragment homeFragment);
+  @Component.Builder
+  interface Builder {
+    Builder moduleActivity(ActivityModule activityModule);
+    Builder componentApplication(ApplicationComponent component);
+    HomeComponent build();
+  }
 }

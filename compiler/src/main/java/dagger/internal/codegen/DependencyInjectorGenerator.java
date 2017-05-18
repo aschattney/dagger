@@ -45,7 +45,7 @@ public class DependencyInjectorGenerator extends SourceFileGenerator<DI> {
     @Override
     Optional<TypeSpec.Builder> write(ClassName generatedTypeName, DI input) {
         final TypeSpec.Builder builder = TypeSpec.classBuilder(generatedTypeName).addModifiers(Modifier.PUBLIC);
-        final ClassName appType = ClassName.get(input.getAppClass());
+        final ClassName appType = ClassName.get(input.getAppClass()).topLevelClassName().peerClass("DaggerApplication");
         builder.addMethod(MethodSpec.constructorBuilder()
                 .addModifiers(Modifier.PUBLIC)
                 .addParameter(appType, "app")
@@ -53,7 +53,7 @@ public class DependencyInjectorGenerator extends SourceFileGenerator<DI> {
                 .build());
         builder.addField(appType, "app", Modifier.PRIVATE);
         for (TypeElement typeElement : input.getComponents()) {
-            final ComponentInfo info = ComponentInfo.forGenerator(typeElement, componentDescriptorFactory, bindingGraphFactory);
+            final GeneratorComponentInfo info = ComponentInfo.forGenerator(typeElement, componentDescriptorFactory, bindingGraphFactory);
             info.process(builder);
         }
         return Optional.of(builder);

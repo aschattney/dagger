@@ -13,6 +13,8 @@ public interface Components {
         //void inject(DemoApplication1 application);
         void inject(HomeActivity homeActivity);
         void inject(DemoActivity demoActivity);
+        void inject(DemoApplication1 app);
+
         @Component.Builder
         interface Builder {
             Builder androidModule(AndroidModule module);

@@ -24,15 +24,11 @@ import dagger.Injector;
 import dagger.Provides;
 import dagger.ProvidesComponent;
 import dagger.ProvidesModule;
-import factories.DaggerAbstractActivityComponent;
-import factories.DaggerApplicationComponent;
-import factories.DaggerFragmentComponent;
-import factories.DaggerHomeComponent;
 import injector.InjectorSpec;
 
 import javax.inject.Inject;
 
-public class DemoApplication extends Application implements InjectorSpec {
+public class DemoApplication extends DaggerApplication {
   private ApplicationComponent applicationComponent;
 
   // TODO(cgruber): Figure out a better example of something one might inject into the app.
@@ -41,7 +37,7 @@ public class DemoApplication extends Application implements InjectorSpec {
   @Override public void onCreate() {
     super.onCreate();
     applicationComponent = DaggerApplicationComponent.builder()
-        .demoApplicationModule(new DemoApplicationModule(this))
+        .module(new DemoApplicationModule(this))
         .build();
   }
 
@@ -49,31 +45,4 @@ public class DemoApplication extends Application implements InjectorSpec {
     return applicationComponent;
   }
 
-  @Override
-  public DaggerFragmentComponent.Builder fragmentComponent(DaggerFragmentComponent.Builder builder,
-                                                           AbstractActivityComponent abstractActivityComponent) {
-    return builder.abstractActivityComponent(abstractActivityComponent);
-  }
-
-  @Override
-  public DaggerAbstractActivityComponent.Builder abstractActivityComponent(DaggerAbstractActivityComponent.Builder builder,
-                                                                           ActivityModule activityModule,
-                                                                           ApplicationComponent applicationComponent) {
-    return builder.applicationComponent(applicationComponent).activityModule(activityModule);
-  }
-
-  @Override
-  public DaggerHomeComponent.Builder homeComponent(DaggerHomeComponent.Builder builder, ActivityModule activityModule, ApplicationComponent applicationComponent) {
-    return null;
-  }
-
-  @Override
-  public DaggerApplicationComponent.Builder applicationComponent(DaggerApplicationComponent.Builder builder, DemoApplicationModule demoApplicationModule) {
-    return null;
-  }
-
-  @Override
-  public injector.Injector getInjector() {
-    return null;
-  }
 }

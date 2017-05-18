@@ -4,7 +4,6 @@ import dagger.Component;
 import dagger.Module;
 import dagger.ProvidesModule;
 import dagger.Subcomponent;
-import factories.DaggerCoffeeApp_Coffee;
 
 import javax.inject.Named;
 import javax.inject.Singleton;

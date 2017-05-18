@@ -25,8 +25,14 @@ public class SpecComponentInfo extends ComponentInfo {
     public void process(TypeSpec.Builder builder) {
         super.process(builder);
 
+        final MethodSpec.Builder methodBuilder = buildMethod();
+        methodBuilder.addModifiers(Modifier.ABSTRACT);
+        builder.addMethod(methodBuilder.build());
+    }
+
+    protected MethodSpec.Builder buildMethod() {
         final MethodSpec.Builder methodBuilder = MethodSpec.methodBuilder(simpleVariableName(component))
-                .addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT);
+                .addModifiers(Modifier.PUBLIC);
 
         ClassName builderClassName = getBuilderClassName(component);
         methodBuilder.returns(builderClassName);
@@ -41,22 +47,32 @@ public class SpecComponentInfo extends ComponentInfo {
                 final ComponentRequirement requirement = requirementMethod.requirement();
                 final TypeElement typeElement = requirement.typeElement();
                 if ((requirement.kind() == ComponentRequirement.Kind.MODULE && hasNotOnlyNoArgConstructor(typeElement, requirement.autoCreate())) || requirement.kind() != ComponentRequirement.Kind.MODULE) {
-                    parameterSpecs.add(ParameterSpec.builder(ClassName.get(typeElement), simpleVariableName(typeElement)).build());
+                    //parameterSpecs.add(ParameterSpec.builder(ClassName.get(typeElement), simpleVariableName(typeElement)).build());
                 }
             }
         } else {
             for (ModuleDescriptor moduleDescriptor : descriptor.modules()) {
                 final TypeElement typeElement = moduleDescriptor.moduleElement();
                 if (hasNotOnlyNoArgConstructor(typeElement, autoCreate(typeElement))) {
-                    parameterSpecs.add(ParameterSpec.builder(ClassName.get(typeElement), simpleVariableName(typeElement)).build());
+                    //parameterSpecs.add(ParameterSpec.builder(ClassName.get(typeElement), simpleVariableName(typeElement)).build());
                 }
             }
 
             for (TypeElement typeElement : descriptor.dependencies()) {
-                parameterSpecs.add(ParameterSpec.builder(ClassName.get(typeElement), simpleVariableName(typeElement)).build());
+                //parameterSpecs.add(ParameterSpec.builder(ClassName.get(typeElement), simpleVariableName(typeElement)).build());
             }
         }
 
-        builder.addMethod(methodBuilder.addParameters(parameterSpecs).build());
+        methodBuilder.addParameters(parameterSpecs);
+        return methodBuilder;
+    }
+
+    public List<MethodSpec.Builder> getMethods() {
+        List<MethodSpec.Builder> methodSpecs = new ArrayList<>();
+        for (ComponentInfo info : infos) {
+            methodSpecs.addAll(((SpecComponentInfo)info).getMethods());
+        }
+        methodSpecs.add(buildMethod());
+        return methodSpecs;
     }
 }

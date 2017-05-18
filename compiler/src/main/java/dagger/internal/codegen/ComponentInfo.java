@@ -24,11 +24,11 @@ public abstract class ComponentInfo {
     protected final BindingGraph bindingGraph;
     protected List<ComponentInfo> infos = new ArrayList<>();
 
-    public static ComponentInfo forSpec(TypeElement component, ComponentDescriptor.Factory componentDescriptorFactory, BindingGraph.Factory bindingGraphFactory) {
+    public static SpecComponentInfo forSpec(TypeElement component, ComponentDescriptor.Factory componentDescriptorFactory, BindingGraph.Factory bindingGraphFactory) {
         return createSpecComponentInfo(component, componentDescriptorFactory, bindingGraphFactory);
     }
 
-    public static ComponentInfo forGenerator(TypeElement component, ComponentDescriptor.Factory componentDescriptorFactory, BindingGraph.Factory bindingGraphFactory) {
+    public static GeneratorComponentInfo forGenerator(TypeElement component, ComponentDescriptor.Factory componentDescriptorFactory, BindingGraph.Factory bindingGraphFactory) {
         return createGeneratorComponentInfo(component, componentDescriptorFactory, bindingGraphFactory);
     }
 
@@ -59,33 +59,33 @@ public abstract class ComponentInfo {
         }
     }
 
-    private static ComponentInfo createSpecComponentInfo(TypeElement component,
+    private static SpecComponentInfo createSpecComponentInfo(TypeElement component,
                                                          ComponentDescriptor.Factory componentDescriptorFactory,
                                                          BindingGraph.Factory bindingGraphFactory) {
         final ComponentDescriptor descriptor = componentDescriptorFactory.forComponent(component);
         final BindingGraph bindingGraph = bindingGraphFactory.create(descriptor);
-        final ComponentInfo componentMethodOverrider = new SpecComponentInfo(component, descriptor, bindingGraph);
+        final SpecComponentInfo componentMethodOverrider = new SpecComponentInfo(component, descriptor, bindingGraph);
         createSpecSubcomponentInfo(descriptor, bindingGraphFactory, componentMethodOverrider);
         return componentMethodOverrider;
     }
 
-    private static void createSpecSubcomponentInfo(ComponentDescriptor descriptor, BindingGraph.Factory bindingGraphFactory, ComponentInfo componentMethodOverrider) {
+    private static void createSpecSubcomponentInfo(ComponentDescriptor descriptor, BindingGraph.Factory bindingGraphFactory, SpecComponentInfo componentMethodOverrider) {
         final ImmutableSet<ComponentDescriptor> subcomponents = descriptor.subcomponents();
         for (ComponentDescriptor subcomponentDescriptor : subcomponents) {
             final BindingGraph bindingGraph = bindingGraphFactory.create(subcomponentDescriptor);
-            final ComponentInfo subcomponentOverrider =
+            final SpecComponentInfo subcomponentOverrider =
                     new SpecComponentInfo(subcomponentDescriptor.componentDefinitionType(), subcomponentDescriptor, bindingGraph);
             componentMethodOverrider.add(subcomponentOverrider);
             createSpecSubcomponentInfo(subcomponentDescriptor, bindingGraphFactory, subcomponentOverrider);
         }
     }
 
-    private static ComponentInfo createGeneratorComponentInfo(TypeElement component,
+    private static GeneratorComponentInfo createGeneratorComponentInfo(TypeElement component,
                                                      ComponentDescriptor.Factory componentDescriptorFactory,
                                                      BindingGraph.Factory bindingGraphFactory) {
         final ComponentDescriptor descriptor = componentDescriptorFactory.forComponent(component);
         final BindingGraph bindingGraph = bindingGraphFactory.create(descriptor);
-        final ComponentInfo componentInfo = new GeneratorComponentInfo(component, descriptor, bindingGraph);
+        final GeneratorComponentInfo componentInfo = new GeneratorComponentInfo(component, descriptor, bindingGraph);
         for (BindingGraph subGraph : bindingGraph.subgraphs()) {
             final ComponentDescriptor subDescriptor = subGraph.componentDescriptor();
             componentInfo.add(new GeneratorComponentInfo(subDescriptor.componentDefinitionType(), subDescriptor, subGraph));

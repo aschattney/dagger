@@ -69,11 +69,13 @@ public class GeneratorComponentInfo extends ComponentInfo {
                 final ComponentRequirement requirement = requirementMethod.requirement();
                 final TypeElement typeElement = requirement.typeElement();
                 final boolean hasNotOnlyNoArgConstructor = hasNotOnlyNoArgConstructor(typeElement, requirement.autoCreate());
+                final String methodName = requirementMethod.method().getSimpleName().toString();
                 if ((requirement.kind() == ComponentRequirement.Kind.MODULE &&
                         hasNotOnlyNoArgConstructor) || requirement.kind() != ComponentRequirement.Kind.MODULE) {
-                    statementParams.add(CodeBlock.of("$L", simpleVariableName(typeElement)));
+                    //statementParams.add(CodeBlock.of("$L", simpleVariableName(typeElement)));
+                    moduleConstructorStatements.add(CodeBlock.of(".$L($L)",
+                            methodName, simpleVariableName(typeElement)));
                 }else if (requirement.kind() == ComponentRequirement.Kind.MODULE && !hasNotOnlyNoArgConstructor) {
-                    final String methodName = requirementMethod.method().getSimpleName().toString();
                     moduleConstructorStatements.add(CodeBlock.of(".$L(new $T())",
                             methodName, ClassName.get(requirement.typeElement())));
                 }
@@ -82,12 +84,14 @@ public class GeneratorComponentInfo extends ComponentInfo {
             for (ModuleDescriptor moduleDescriptor : descriptor.modules()) {
                 final TypeElement typeElement = moduleDescriptor.moduleElement();
                 if (hasNotOnlyNoArgConstructor(typeElement, autoCreate(typeElement))) {
-                    statementParams.add(CodeBlock.of("$L", simpleVariableName(typeElement)));
+                    final String variableName = simpleVariableName(typeElement);
+                    moduleConstructorStatements.add(CodeBlock.of(".$L($L)", variableName, variableName));
                 }
             }
 
             for (TypeElement typeElement : descriptor.dependencies()) {
-                statementParams.add(CodeBlock.of("$L", simpleVariableName(typeElement)));
+                final String variableName = simpleVariableName(typeElement);
+                moduleConstructorStatements.add(CodeBlock.of(".$L($L)", variableName, variableName));
             }
         }
 
