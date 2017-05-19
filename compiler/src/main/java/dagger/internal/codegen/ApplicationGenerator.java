@@ -56,12 +56,6 @@ public class ApplicationGenerator extends SourceFileGenerator<DI>{
             for (MethodSpec.Builder methodBuilder : methodBuilders) {
                 List<CodeBlock> blocks = new ArrayList<>();
                 blocks.add(CodeBlock.of("$L", "return builder"));
-                /*final List<ParameterSpec> parameters = methodBuilder.build().parameters;
-                if (parameters.size() > 1) {
-                    for (ParameterSpec parameter : parameters.subList(1, parameters.size() - 1)) {
-                        blocks.add(CodeBlock.of(".$L($L)", parameter.name, parameter.name));
-                    }
-                }*/
                 final CodeBlock collect = blocks.stream().collect(CodeBlocks.joiningCodeBlocks("\n"));
                 methodBuilder.addStatement("$L", collect);
                 final MethodSpec build = methodBuilder.build();
@@ -90,7 +84,7 @@ public class ApplicationGenerator extends SourceFileGenerator<DI>{
         final java.util.Optional<ExecutableElement> onCreateMethod = applicationClass.getEnclosedElements().stream()
                 .filter(e -> e.getKind() == ElementKind.METHOD)
                 .map(e -> (ExecutableElement) e)
-                .filter(e -> e.getSimpleName().toString().equals("onCreate"))
+                .filter(e -> e.getSimpleName().toString().equals("onCreate") && e.getParameters().isEmpty())
                 .findFirst();
         final com.google.common.base.Optional<DeclaredType> declaredTypeOptional = MoreTypes.nonObjectSuperclass(types, elements, MoreTypes.asDeclared(applicationClass.asType()));
         if (!onCreateMethod.isPresent() && declaredTypeOptional.isPresent()) {

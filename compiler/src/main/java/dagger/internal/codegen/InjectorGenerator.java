@@ -52,13 +52,13 @@ public class InjectorGenerator extends SourceFileGenerator<DI>{
 
         builder.superclass(ClassName.get(input.getAppClass()));
 
-        final java.util.Optional<ExecutableElement> onCreateMethod = findOnCreateMethod(input.getAppClass());
+        /*final java.util.Optional<ExecutableElement> onCreateMethod = findOnCreateMethod(input.getAppClass());
         if (!onCreateMethod.isPresent()) {
             throw new IllegalStateException("onCreate method not found!");
         }
-        final MethodSpec.Builder overriding = MethodSpec.overriding(onCreateMethod.get());
-        createDecoratorClasses(builder, overriding, components, input.getAppClass());
-        overriding.addStatement("super.onCreate()");
+        final MethodSpec.Builder overriding = MethodSpec.overriding(onCreateMethod.get());*/
+        createDecoratorClasses(builder, components, input.getAppClass());
+        //overriding.addStatement("super.onCreate()");
 
         //builder.addMethod(overriding.build());
 
@@ -71,21 +71,22 @@ public class InjectorGenerator extends SourceFileGenerator<DI>{
         return Optional.of(builder);
     }
 
-    private void createDecoratorClasses(TypeSpec.Builder builder, MethodSpec.Builder methodBuilder, Set<TypeElement> components, TypeElement appClass) {
+    private void createDecoratorClasses(TypeSpec.Builder builder, Set<TypeElement> components, TypeElement appClass) {
         for (TypeElement component : components) {
             ComponentDescriptor componentDescriptor = componentDescriptorFactory.forComponent(component);
             final BindingGraph bindingGraph = bindingGraphFactory.create(componentDescriptor);
-            createDecoratorClass(builder, methodBuilder, bindingGraph, appClass);
+            createDecoratorClass(builder, bindingGraph, appClass);
         }
     }
 
-    private void createDecoratorClass(TypeSpec.Builder builder, MethodSpec.Builder methodBuilder, BindingGraph bindingGraph, TypeElement appClass) {
+    private void createDecoratorClass(TypeSpec.Builder builder, BindingGraph bindingGraph, TypeElement appClass) {
         final ClassName appClassName = ClassName.get(appClass);
         ClassName testAppClassName = appClassName.topLevelClassName().peerClass("Test" + appClassName.simpleName());
         final Decorator decorator = decoratorFactory.create(testAppClassName);
         try {
             decorator.generate(bindingGraph);
             final ClassName decoratorName = decorator.nameGeneratedType(bindingGraph);
+            final TypeName accessorName = decorator.getAccessorTypeName(testAppClassName, bindingGraph);
             final String fieldName = Util.lowerCaseFirstLetter(decoratorName.simpleName());
             final String methodName = "decorate" + Util.capitalize(fieldName.replaceAll("Decorator$", ""));
             final FieldSpec.Builder fieldBuilder = FieldSpec.builder(decoratorName, fieldName, Modifier.PRIVATE);
@@ -94,14 +95,15 @@ public class InjectorGenerator extends SourceFileGenerator<DI>{
             builder.addField(field);
             builder.addMethod(MethodSpec.methodBuilder(methodName)
                     .addModifiers(Modifier.PUBLIC)
-                    .returns(decoratorName)
+                    .returns(accessorName)
                     .addStatement("return this.$L", fieldName)
                     .build());
+            builder.addType(decorator.getAccessorType(testAppClassName, bindingGraph).build());
         } catch (SourceFileGenerationException e) {
             throw new IllegalStateException("Exception while generating decorator: " + e);
         }
         for (BindingGraph subGraph : bindingGraph.subgraphs()) {
-            createDecoratorClass(builder, methodBuilder, subGraph, appClass);
+            createDecoratorClass(builder, subGraph, appClass);
         }
     }
 

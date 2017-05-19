@@ -614,9 +614,9 @@ abstract class AbstractComponentWriter implements HasBindingMembers {
 
   private void addFrameworkFields() {
     graph.resolvedBindings().values().forEach(this::addField);
-    for (ContributionBinding contributionBinding : graph.delegateRequirements()) {
+    /*for (ContributionBinding contributionBinding : graph.delegateRequirements()) {
       createDelegateField(component, contributionBinding, delegateFieldNames);
-    }
+    }*/
   }
 
   private void addField(ResolvedBindings resolvedBindings) {
@@ -840,18 +840,18 @@ abstract class AbstractComponentWriter implements HasBindingMembers {
               }
               // fall through
             default:
-              CodeBlock.Builder builder = CodeBlock.builder();
+              /*CodeBlock.Builder builder = CodeBlock.builder();
               final boolean supportsTestDelegate = !componentMethod.methodElement().getReturnType().toString().equals(void.class.getName());
               if (supportsTestDelegate) {
                 final String fieldName = getDelegateFieldName(interfaceRequest.key());
                 builder.beginControlFlow("if ($L != null)", CodeBlock.of(fieldName))
                         .add("return $L.get($L)", CodeBlock.of(fieldName), codeBlock)
                         .nextControlFlow("else");
-              }
+              }*/
               interfaceMethod.addStatement("return $L", codeBlock);
-              if (supportsTestDelegate) {
+              /*if (supportsTestDelegate) {
                 builder.endControlFlow();
-              }
+              }*/
 
               break;
           }
@@ -911,7 +911,7 @@ abstract class AbstractComponentWriter implements HasBindingMembers {
   private void initializeFrameworkTypes() {
     ImmutableList.Builder<CodeBlock> codeBlocks = ImmutableList.builder();
 
-    codeBlocks.add(initDelegateFields());
+    //codeBlocks.add(initDelegateFields());
 
     for (BindingKey bindingKey : graph.resolvedBindings().keySet()) {
       initializeFrameworkType(bindingKey).ifPresent(codeBlocks::add);
@@ -945,7 +945,7 @@ abstract class AbstractComponentWriter implements HasBindingMembers {
     }
   }
 
-  private CodeBlock initDelegateFields() {
+  /*private CodeBlock initDelegateFields() {
     List<CodeBlock> codeBlocks = new ArrayList<>();
     for (ContributionBinding contributionBinding : graph.delegateRequirements()) {
       try {
@@ -954,7 +954,7 @@ abstract class AbstractComponentWriter implements HasBindingMembers {
       }catch(Exception e){}
     }
     return CodeBlocks.concat(codeBlocks);
-  }
+  }*/
 
   /**
    * Returns a single code block representing the initialization of the framework type.
@@ -1192,7 +1192,12 @@ abstract class AbstractComponentWriter implements HasBindingMembers {
 
       case BUILDER_BINDING:
         final CodeBlock parameter = getComponentContributionExpression(ComponentRequirement.forBinding(binding));
-        CodeBlock parameterDecision = CodeBlock.of("$L == null ? $L : $L.get()", delegateFieldName, parameter, delegateFieldName);
+        CodeBlock parameterDecision;
+        if (delegateFieldName != null && bindingSupportsTestDelegate(binding)) {
+          parameterDecision = CodeBlock.of("builder.$L == null ? $L : builder.$L.get()", delegateFieldName, parameter, delegateFieldName);
+        }else {
+          parameterDecision = CodeBlock.of("$L", parameter);
+        }
         return CodeBlock.of(
             "$T.$L($L)",
             InstanceFactory.class,
@@ -1212,7 +1217,7 @@ abstract class AbstractComponentWriter implements HasBindingMembers {
           arguments.addAll(getDependencyArguments(binding));
 
           if (delegateFieldName != null && bindingSupportsTestDelegate(binding)) {
-            arguments.add(0, CodeBlock.of(delegateFieldName));
+            arguments.add(0, CodeBlock.of("builder.$L", delegateFieldName));
           }
 
           CodeBlock factoryCreate =

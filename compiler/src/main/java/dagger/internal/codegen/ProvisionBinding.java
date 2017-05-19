@@ -37,8 +37,8 @@ import com.google.common.collect.Sets;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import dagger.internal.codegen.ComponentDescriptor.BuilderRequirementMethod;
 import java.util.Optional;
-import dagger.IgnoreStubGeneration;
-import java.util.Set;
+import dagger.AllowStubGeneration;
+
 import javax.annotation.CheckReturnValue;
 import javax.inject.Inject;
 import javax.inject.Provider;
@@ -159,7 +159,7 @@ abstract class ProvisionBinding extends ContributionBinding {
           ProvisionBinding.builder()
               .contributionType(ContributionType.UNIQUE)
               .bindingElement(constructorElement)
-              .ignoreStubGeneration(constructorElement.getAnnotation(IgnoreStubGeneration.class) != null)
+              .ignoreStubGeneration(constructorElement.getAnnotation(AllowStubGeneration.class) == null)
               .key(key)
               .explicitDependencies(dependencies)
               .membersInjectionRequest(membersInjectionRequest)
@@ -208,7 +208,7 @@ abstract class ProvisionBinding extends ContributionBinding {
       return ProvisionBinding.builder()
           .contributionType(ContributionType.fromBindingMethod(providesMethod))
           .bindingElement(providesMethod)
-          .ignoreStubGeneration(providesMethod.getAnnotation(IgnoreStubGeneration.class) != null)
+          .ignoreStubGeneration(providesMethod.getAnnotation(AllowStubGeneration.class) == null)
           .contributingModule(contributedBy)
           .key(key)
           .genericParameter(genericParameter)
@@ -286,7 +286,7 @@ abstract class ProvisionBinding extends ContributionBinding {
       return ProvisionBinding.builder()
           .contributionType(ContributionType.UNIQUE)
           .bindingElement(builderMethod)
-          .ignoreStubGeneration(builderMethod.getAnnotation(IgnoreStubGeneration.class) != null)
+          .ignoreStubGeneration(builderMethod.getAnnotation(AllowStubGeneration.class) == null)
           .key(method.requirement().key().get())
           .nullableType(ConfigurationAnnotations.getNullableType(parameterElement))
           .bindingKind(Kind.BUILDER_BINDING)
@@ -301,7 +301,7 @@ abstract class ProvisionBinding extends ContributionBinding {
       DeclaredType declaredContainer = asDeclared(contributedBy.asType());
       return ProvisionBinding.builder()
           .contributionType(ContributionType.UNIQUE)
-          .ignoreStubGeneration(subcomponentBuilderMethod.getAnnotation(IgnoreStubGeneration.class) != null)
+          .ignoreStubGeneration(subcomponentBuilderMethod.getAnnotation(AllowStubGeneration.class) == null)
           .bindingElement(subcomponentBuilderMethod)
           .key(
               keyFactory.forSubcomponentBuilderMethod(subcomponentBuilderMethod, declaredContainer))

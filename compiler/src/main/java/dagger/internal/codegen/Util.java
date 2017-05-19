@@ -549,7 +549,24 @@ final class Util {
         }
     }
 
-    public static void createDelegateFieldAndMethod(ClassName generatedTypeName, TypeSpec.Builder classBuilder, ContributionBinding binding, Map<Key, String> delegateFieldNames, boolean publicMethod) {
+    public static void createDelegateMethod(TypeName generatedTypeName, TypeSpec.Builder classBuilder, ContributionBinding binding) {
+        try {
+            if (bindingSupportsTestDelegate(binding)) {
+                final String delegateFieldName = Util.getDelegateFieldName(binding.key());
+                final ClassName delegateType = getDelegateTypeName(binding.key());
+                final String methodName = getDelegateMethodName(delegateType);
+                final MethodSpec.Builder delegateMethodBuilder = MethodSpec.methodBuilder(methodName);
+                delegateMethodBuilder.addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT);
+                classBuilder.addMethod(delegateMethodBuilder
+                        .returns(generatedTypeName)
+                        .addParameter(delegateType, delegateFieldName)
+                        .build());
+            }
+        } catch (Exception e) {
+        }
+    }
+
+    public static void createDelegateFieldAndMethod(TypeName generatedTypeName, TypeSpec.Builder classBuilder, ContributionBinding binding, Map<Key, String> delegateFieldNames, boolean publicMethod) {
         try {
             if (bindingSupportsTestDelegate(binding)) {
                 final String delegateFieldName = Util.getDelegateFieldName(binding.key());
