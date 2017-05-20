@@ -1,6 +1,8 @@
 package dagger.internal.codegen;
 
 import java.util.Optional;
+
+import com.google.common.collect.ImmutableSet;
 import com.squareup.javapoet.*;
 
 import javax.annotation.processing.Filer;
@@ -12,15 +14,13 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Set;
-import java.util.stream.Collector;
-import java.util.stream.Collectors;
 
 public class Decorator  extends SourceFileGenerator<BindingGraph>{
 
     private BindingGraph.Factory factory;
     private ClassName appClass;
     private TestRegistry testRegistry;
+    private boolean hasGenerated = false;
 
     private Decorator(Filer filer, Elements elements, BindingGraph.Factory factory, ClassName appClass, TestRegistry testRegistry) {
         super(filer, elements);
@@ -49,19 +49,25 @@ public class Decorator  extends SourceFileGenerator<BindingGraph>{
         final TypeSpec.Builder builder = TypeSpec.classBuilder(generatedTypeName)
                 .addModifiers(Modifier.PUBLIC);
 
-        final String daggerBuilderClassName = TriggerComponentInfo.resolveClassName(factory, input.componentDescriptor());
+        final String daggerBuilderClassName = TriggerComponentInfo.resolveBuilderName(factory, input.componentDescriptor());
 
         builder.addField(appClass, "app", Modifier.PRIVATE);
-
         TypeName builderClassName = ClassName.get(input.componentDescriptor().builderSpec().get().builderDefinitionType());
+        final ImmutableSet<ContributionBinding> delegateRequirements = input.delegateRequirements();
 
-        addDecoratorType(builder, generatedTypeName, daggerBuilderClassName, builderClassName, input);
-
-        return Optional.of(builder);
+        if (delegateRequirements.isEmpty()) {
+            return Optional.empty();
+        }else {
+            final String componentName = input.componentDescriptor().componentDefinitionType().getSimpleName().toString();
+            addDecoratorType(builder, daggerBuilderClassName, builderClassName, delegateRequirements, componentName);
+            hasGenerated = true;
+            return Optional.of(builder);
+        }
     }
 
     public TypeSpec.Builder getAccessorType(ClassName appClassName, BindingGraph bindingGraph) {
-        ClassName name = this.getAccessorTypeName(appClassName, bindingGraph);
+        final String componentName = bindingGraph.componentDescriptor().componentDefinitionType().getSimpleName().toString();
+        ClassName name = this.getAccessorTypeName(appClassName, componentName);
         final TypeSpec.Builder interfaceBuilder = TypeSpec.interfaceBuilder(name)
                 .addModifiers(Modifier.PUBLIC);
         for (ContributionBinding contributionBinding : bindingGraph.delegateRequirements()) {
@@ -74,7 +80,7 @@ public class Decorator  extends SourceFileGenerator<BindingGraph>{
         return interfaceBuilder;
     }
 
-    private void addDecoratorType(TypeSpec.Builder builder, ClassName returnType, String className, TypeName builderClassName, BindingGraph bindingGraph) {
+    private void addDecoratorType(TypeSpec.Builder builder, String className, TypeName builderClassName, ImmutableSet<ContributionBinding> delegateRequirements, String componentName) {
 
         builder.addModifiers(Modifier.PUBLIC);
         builder.addMethod(MethodSpec.constructorBuilder()
@@ -87,11 +93,10 @@ public class Decorator  extends SourceFileGenerator<BindingGraph>{
         final ClassName name = ClassName.bestGuess(className);
         statements.add(CodeBlock.of("$T impl = ($T) builder;", name, name));
 
-        TypeName interfaceName = this.getAccessorTypeName(appClass, bindingGraph);
-
+        TypeName interfaceName = this.getAccessorTypeName(appClass, componentName);
         builder.addSuperinterface(interfaceName);
 
-        for (ContributionBinding contributionBinding : bindingGraph.delegateRequirements()) {
+        for (ContributionBinding contributionBinding : delegateRequirements) {
             Util.createDelegateFieldAndMethod(interfaceName, builder, contributionBinding, new HashMap<>(1), true);
             final String delegateFieldName = Util.getDelegateFieldName(contributionBinding.key());
             final ClassName delegateTypeName = Util.getDelegateTypeName(contributionBinding.key());
@@ -113,23 +118,27 @@ public class Decorator  extends SourceFileGenerator<BindingGraph>{
                 .returns(builderClassName)
                 .build());
 
-
-
     }
 
     @Override
     void generate(BindingGraph input) throws SourceFileGenerationException {
         final ClassName generatedTypeName = getClassName(input);
         final Optional<TypeSpec.Builder> builder = write(generatedTypeName, input);
-        try {
-            testRegistry.addEncodedClass(generatedTypeName, buildJavaFile(generatedTypeName, builder.get()));
-        } catch (IOException e) {
-            throw new IllegalStateException(e);
+        if (builder.isPresent()) {
+            try {
+                testRegistry.addEncodedClass(generatedTypeName, buildJavaFile(generatedTypeName, builder.get()));
+            } catch (IOException e) {
+                throw new IllegalStateException(e);
+            }
         }
     }
 
-    public ClassName getAccessorTypeName(ClassName app, BindingGraph bindingGraph) {
-        return app.nestedClass(bindingGraph.componentDescriptor().componentDefinitionType().getSimpleName() + "Accessor");
+    public ClassName getAccessorTypeName(ClassName app, String componentName) {
+        return app.nestedClass(componentName + "Accessor");
+    }
+
+    public boolean hasBeenGenerated() {
+        return this.hasGenerated;
     }
 
     public static class Factory {

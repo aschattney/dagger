@@ -12,9 +12,6 @@ import java.util.List;
 
 import static dagger.internal.codegen.AbstractComponentWriter.simpleVariableName;
 
-/**
- * Created by Andy on 12.05.2017.
- */
 public class SpecComponentInfo extends ComponentInfo {
 
     protected SpecComponentInfo(TypeElement component, ComponentDescriptor descriptor, BindingGraph bindingGraph) {
@@ -24,13 +21,12 @@ public class SpecComponentInfo extends ComponentInfo {
     @Override
     public void process(TypeSpec.Builder builder) {
         super.process(builder);
-
         final MethodSpec.Builder methodBuilder = buildMethod();
         methodBuilder.addModifiers(Modifier.ABSTRACT);
         builder.addMethod(methodBuilder.build());
     }
 
-    protected MethodSpec.Builder buildMethod() {
+    private MethodSpec.Builder buildMethod() {
         final MethodSpec.Builder methodBuilder = MethodSpec.methodBuilder(simpleVariableName(component))
                 .addModifiers(Modifier.PUBLIC);
 
@@ -41,27 +37,6 @@ public class SpecComponentInfo extends ComponentInfo {
         ParameterSpec builderParameter = ParameterSpec.builder(builderClassName, "builder").build();
 
         parameterSpecs.add(builderParameter);
-
-        if (descriptor.builderSpec().isPresent()) {
-            for (ComponentDescriptor.BuilderRequirementMethod requirementMethod : descriptor.builderSpec().get().requirementMethods()) {
-                final ComponentRequirement requirement = requirementMethod.requirement();
-                final TypeElement typeElement = requirement.typeElement();
-                if ((requirement.kind() == ComponentRequirement.Kind.MODULE && hasNotOnlyNoArgConstructor(typeElement, requirement.autoCreate())) || requirement.kind() != ComponentRequirement.Kind.MODULE) {
-                    //parameterSpecs.add(ParameterSpec.builder(ClassName.get(typeElement), simpleVariableName(typeElement)).build());
-                }
-            }
-        } else {
-            for (ModuleDescriptor moduleDescriptor : descriptor.modules()) {
-                final TypeElement typeElement = moduleDescriptor.moduleElement();
-                if (hasNotOnlyNoArgConstructor(typeElement, autoCreate(typeElement))) {
-                    //parameterSpecs.add(ParameterSpec.builder(ClassName.get(typeElement), simpleVariableName(typeElement)).build());
-                }
-            }
-
-            for (TypeElement typeElement : descriptor.dependencies()) {
-                //parameterSpecs.add(ParameterSpec.builder(ClassName.get(typeElement), simpleVariableName(typeElement)).build());
-            }
-        }
 
         methodBuilder.addParameters(parameterSpecs);
         return methodBuilder;

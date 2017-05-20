@@ -2,7 +2,6 @@ package dagger.internal.codegen;
 
 import com.google.auto.common.MoreTypes;
 import com.squareup.javapoet.*;
-import dagger.Component;
 
 import javax.annotation.processing.Filer;
 import javax.lang.model.element.*;
@@ -11,17 +10,19 @@ import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
 import java.util.*;
 
-/**
- * Created by Andy on 18.05.2017.
- */
-public class ApplicationGenerator extends SourceFileGenerator<DI>{
+import static dagger.internal.codegen.Util.*;
+
+class ApplicationGenerator extends SourceFileGenerator<DI>{
+
+    private static final String SUPER_ON_CREATE_CALL = "super.onCreate()";
+    public static final CodeBlock CODEBLOCK_RETURN_BUILDER = CodeBlock.of("$L", "return builder");
 
     private Types types;
     private Elements elements;
     private final BindingGraph.Factory bindingGraphFactory;
     private final ComponentDescriptor.Factory componentDescriptorFactory;
 
-    public ApplicationGenerator(Filer filer, Types types, Elements elements, BindingGraph.Factory bindingGraphFactory, ComponentDescriptor.Factory componentDescriptorFactory) {
+    ApplicationGenerator(Filer filer, Types types, Elements elements, BindingGraph.Factory bindingGraphFactory, ComponentDescriptor.Factory componentDescriptorFactory) {
         super(filer, elements);
         this.types = types;
         this.elements = elements;
@@ -31,7 +32,7 @@ public class ApplicationGenerator extends SourceFileGenerator<DI>{
 
     @Override
     ClassName nameGeneratedType(DI input) {
-        return ClassName.get(input.getAppClass()).topLevelClassName().peerClass("DaggerApplication");
+        return ClassName.get(input.getAppClass()).topLevelClassName().peerClass(Util.SIMPKE_NAME_INJECTOR_APPLICATION);
     }
 
     @Override
@@ -42,22 +43,21 @@ public class ApplicationGenerator extends SourceFileGenerator<DI>{
     @Override
     Optional<TypeSpec.Builder> write(ClassName generatedTypeName, DI di) {
         final TypeSpec.Builder builder = TypeSpec.classBuilder(generatedTypeName);
-        TypeName superclass = ClassName.bestGuess("android.app.Application");
+        TypeName superclass = TYPENAME_ANDROID_APPLICATION;
         builder.addModifiers(Modifier.PUBLIC).superclass(superclass);
-        builder.addSuperinterface(ClassName.bestGuess("injector.InjectorSpec"));
+        builder.addSuperinterface(TYPENAME_INJECTOR_SPEC);
         final Set<TypeElement> components = di.getComponents();
 
-        final ClassName injectorType = ClassName.bestGuess("injector.Injector");
-        builder.addField(injectorType, "injector", Modifier.PRIVATE);
+        builder.addField(TYPENAME_INJECTOR, FIELDNAME_INJECTOR, Modifier.PRIVATE);
 
         for (TypeElement component : components) {
             final SpecComponentInfo componentInfo = ComponentInfo.forSpec(component, componentDescriptorFactory, bindingGraphFactory);
             final List<MethodSpec.Builder> methodBuilders = componentInfo.getMethods();
             for (MethodSpec.Builder methodBuilder : methodBuilders) {
                 List<CodeBlock> blocks = new ArrayList<>();
-                blocks.add(CodeBlock.of("$L", "return builder"));
-                final CodeBlock collect = blocks.stream().collect(CodeBlocks.joiningCodeBlocks("\n"));
-                methodBuilder.addStatement("$L", collect);
+                blocks.add(CODEBLOCK_RETURN_BUILDER);
+                final CodeBlock codeBlocks = blocks.stream().collect(CodeBlocks.joiningCodeBlocks("\n"));
+                methodBuilder.addStatement("$L", codeBlocks);
                 final MethodSpec build = methodBuilder.build();
                 builder.addMethod(build);
             }
@@ -66,15 +66,15 @@ public class ApplicationGenerator extends SourceFileGenerator<DI>{
         final Optional<ExecutableElement> onCreateMethod = findOnCreateMethod(di.getAppClass());
         if (onCreateMethod.isPresent()) {
             final MethodSpec.Builder overriding = MethodSpec.overriding(onCreateMethod.get());
-            overriding.addStatement("this.injector = new $T(this)", injectorType);
-            overriding.addStatement("super.onCreate()");
+            overriding.addStatement("this.$L = new $T(this)", FIELDNAME_INJECTOR, TYPENAME_INJECTOR);
+            overriding.addStatement(SUPER_ON_CREATE_CALL);
             builder.addMethod(overriding.build());
         }
 
-        builder.addMethod(MethodSpec.methodBuilder("getInjector")
+        builder.addMethod(MethodSpec.methodBuilder(METHOD_NAME_GET_INJECTOR)
                 .addModifiers(Modifier.PUBLIC)
-                .returns(injectorType)
-                .addStatement("return this.injector")
+                .returns(TYPENAME_INJECTOR)
+                .addStatement(String.format("return this.%s", FIELDNAME_INJECTOR))
                 .build());
 
         return Optional.ofNullable(builder);

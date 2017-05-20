@@ -1,22 +1,16 @@
 package dagger.internal.codegen;
 
-import com.google.auto.common.MoreTypes;
-import com.google.common.collect.ImmutableBiMap;
-import com.google.common.collect.ImmutableSet;
 import com.squareup.javapoet.*;
-import dagger.Component;
-
 import javax.annotation.processing.Filer;
 import javax.lang.model.element.Element;
-import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.util.Elements;
 import java.util.*;
-import java.util.function.Function;
 import java.util.stream.Collectors;
-
-import static dagger.internal.codegen.AbstractComponentWriter.simpleVariableName;
+import static dagger.internal.codegen.Util.METHOD_NAME_GET_INJECTOR;
+import static dagger.internal.codegen.Util.TYPENAME_INJECTOR;
+import static dagger.internal.codegen.Util.TYPENAME_INJECTOR_SPEC;
 
 public class DependencySpecGenerator extends SourceFileGenerator<Set<TypeElement>> {
 
@@ -31,7 +25,7 @@ public class DependencySpecGenerator extends SourceFileGenerator<Set<TypeElement
 
     @Override
     ClassName nameGeneratedType(Set<TypeElement> input) {
-        return ClassName.bestGuess("injector.InjectorSpec");
+        return TYPENAME_INJECTOR_SPEC;
     }
 
     @Override
@@ -54,9 +48,9 @@ public class DependencySpecGenerator extends SourceFileGenerator<Set<TypeElement
             componentInfo.process(builder);
         }
 
-        builder.addMethod(MethodSpec.methodBuilder("getInjector")
+        builder.addMethod(MethodSpec.methodBuilder(METHOD_NAME_GET_INJECTOR)
                 .addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT)
-                .returns(ClassName.bestGuess("injector.Injector"))
+                .returns(TYPENAME_INJECTOR)
                 .build());
 
         return Optional.of(builder);

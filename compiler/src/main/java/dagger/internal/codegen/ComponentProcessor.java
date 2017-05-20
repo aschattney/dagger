@@ -21,17 +21,9 @@ import static dagger.internal.codegen.ModuleProcessingStep.producerModuleProcess
 
 import com.google.auto.common.BasicAnnotationProcessor;
 import com.google.auto.service.AutoService;
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.HashMultiset;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.MultimapBuilder;
 import com.google.googlejavaformat.java.filer.FormattingFiler;
-import com.squareup.javapoet.JavaFile;
-import dagger.Component;
-import dagger.Config;
-import dagger.Injector;
 
-import java.lang.annotation.Annotation;
 import java.util.Arrays;
 import java.util.Set;
 import javax.annotation.processing.Filer;
@@ -39,8 +31,6 @@ import javax.annotation.processing.Messager;
 import javax.annotation.processing.Processor;
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.SourceVersion;
-import javax.lang.model.element.Element;
-import javax.lang.model.element.TypeElement;
 import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
 
@@ -55,18 +45,14 @@ import javax.lang.model.util.Types;
  */
 @AutoService(Processor.class)
 public final class ComponentProcessor extends BasicAnnotationProcessor {
-  private InjectBindingRegistry injectBindingRegistry;
-  private FactoryGenerator factoryGenerator;
-  private MembersInjectorGenerator membersInjectorGenerator;
-  private StubGenerator stubGenerator;
+
   private TestRegistry testRegistry = new TestRegistry();
-  private MultipleSourceFileGenerator<ProvisionBinding> multipleGenerator;
-  private ComponentDescriptor.Factory componentDescriptorFactory;
-  private Types types;
-  private Elements elements;
+
   private Filer filer;
   private Messager messager;
-  private BindingGraph.Factory bindingGraphFactory;
+  private MultipleSourceFileGenerator multipleGenerator;
+  private InjectBindingRegistry injectBindingRegistry;
+  private MembersInjectorGenerator membersInjectorGenerator;
 
   @Override
   public SourceVersion getSupportedSourceVersion() {
@@ -81,8 +67,8 @@ public final class ComponentProcessor extends BasicAnnotationProcessor {
   @Override
   protected Iterable<? extends ProcessingStep> initSteps() {
     messager = processingEnv.getMessager();
-    types = processingEnv.getTypeUtils();
-    elements = processingEnv.getElementUtils();
+    Types types = processingEnv.getTypeUtils();
+    Elements elements = processingEnv.getElementUtils();
     filer = new FormattingFiler(processingEnv.getFiler());
     CompilerOptions compilerOptions = CompilerOptions.create(processingEnv, elements);
 
@@ -149,13 +135,10 @@ public final class ComponentProcessor extends BasicAnnotationProcessor {
             elements, types, moduleValidator, subcomponentValidator, builderValidator);
     MapKeyValidator mapKeyValidator = new MapKeyValidator();
 
-    this.stubGenerator =
-            new StubGenerator(filer, elements, types);
-    this.factoryGenerator =
-        new FactoryGenerator(filer, elements, compilerOptions, injectValidatorWhenGeneratingCode);
-    this.multipleGenerator = new MultipleSourceFileGenerator<>(filer, elements, Arrays.asList(this.stubGenerator, this.factoryGenerator));
-    this.membersInjectorGenerator =
-        new MembersInjectorGenerator(filer, elements, injectValidatorWhenGeneratingCode);
+    StubGenerator stubGenerator = new StubGenerator(filer, elements, types);
+    FactoryGenerator factoryGenerator = new FactoryGenerator(filer, elements, compilerOptions, injectValidatorWhenGeneratingCode);
+    multipleGenerator = new MultipleSourceFileGenerator<>(filer, elements, Arrays.asList(stubGenerator, factoryGenerator));
+    membersInjectorGenerator = new MembersInjectorGenerator(filer, elements, injectValidatorWhenGeneratingCode);
     ComponentGenerator componentGenerator =
         new ComponentGenerator(filer, elements, types, keyFactory, compilerOptions);
     ProducerFactoryGenerator producerFactoryGenerator =
@@ -184,11 +167,10 @@ public final class ComponentProcessor extends BasicAnnotationProcessor {
     OptionalBindingDeclaration.Factory optionalBindingDeclarationFactory =
         new OptionalBindingDeclaration.Factory(keyFactory);
 
-    this.injectBindingRegistry =
-        new InjectBindingRegistry(
-                elements,
-                types,
-                messager,
+    injectBindingRegistry = new InjectBindingRegistry(
+            elements,
+            types,
+            messager,
             injectValidator,
             keyFactory,
             provisionBindingFactory,
@@ -205,15 +187,15 @@ public final class ComponentProcessor extends BasicAnnotationProcessor {
             subcomponentDeclarationFactory,
             optionalBindingDeclarationFactory);
 
-    componentDescriptorFactory = new ComponentDescriptor.Factory(
+    ComponentDescriptor.Factory componentDescriptorFactory = new ComponentDescriptor.Factory(
             elements, types, dependencyRequestFactory, moduleDescriptorFactory);
 
-    bindingGraphFactory = new BindingGraph.Factory(
+    BindingGraph.Factory bindingGraphFactory = new BindingGraph.Factory(
             elements,
-        injectBindingRegistry,
-        keyFactory,
-        provisionBindingFactory,
-        productionBindingFactory);
+            injectBindingRegistry,
+            keyFactory,
+            provisionBindingFactory,
+            productionBindingFactory);
 
     AnnotationCreatorGenerator annotationCreatorGenerator =
         new AnnotationCreatorGenerator(filer, elements);
@@ -267,7 +249,7 @@ public final class ComponentProcessor extends BasicAnnotationProcessor {
                 messager,
             moduleValidator,
             provisionBindingFactory,
-            this.multipleGenerator,
+            multipleGenerator,
             productionBindingFactory,
             producerFactoryGenerator),
         new ComponentProcessingStep(
@@ -286,7 +268,7 @@ public final class ComponentProcessor extends BasicAnnotationProcessor {
             new InjectorProcessingStep(
                     types,
                     messager,
-                    new InjectorGenerator(filer, types, elements, componentDescriptorFactory, bindingGraphFactory, new TestClassGenerator(filer, elements), testRegistry, new Decorator.Factory(filer, elements, bindingGraphFactory, testRegistry)),
+                    new InjectorGenerator(filer, types, elements, componentDescriptorFactory, bindingGraphFactory, new TestClassGenerator.Factory(filer, elements), testRegistry, new Decorator.Factory(filer, elements, bindingGraphFactory, testRegistry)),
                     ComponentDescriptor.Kind.COMPONENT,
                     bindingGraphFactory,
                     componentDescriptorFactory,

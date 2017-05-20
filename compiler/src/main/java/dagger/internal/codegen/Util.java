@@ -724,4 +724,10 @@ final class Util {
         return providingMethods;
     }
 
+    public static final String METHOD_NAME_GET_INJECTOR = "getInjector";
+    public static final ClassName TYPENAME_INJECTOR = ClassName.bestGuess("injector.Injector");
+    public static final String SIMPKE_NAME_INJECTOR_APPLICATION = "DaggerApplication";
+    public static final String FIELDNAME_INJECTOR = "injector";
+    public static final ClassName TYPENAME_INJECTOR_SPEC = ClassName.bestGuess("injector.InjectorSpec");
+    public static final ClassName TYPENAME_ANDROID_APPLICATION = ClassName.bestGuess("android.app.Application");
 }

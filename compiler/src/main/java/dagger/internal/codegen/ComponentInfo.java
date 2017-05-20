@@ -41,9 +41,9 @@ public abstract class ComponentInfo {
                                                          BindingGraph.Factory bindingGraphFactory) {
         final ComponentDescriptor descriptor = componentDescriptorFactory.forComponent(component);
         final BindingGraph bindingGraph = bindingGraphFactory.create(descriptor);
-        final TriggerComponentInfo componentInfo = new TriggerComponentInfo(component, descriptor, bindingGraph, bindingGraphFactory);
+        final TriggerComponentInfo componentInfo = new TriggerComponentInfo(component, descriptor, bindingGraph);
         for (BindingGraph subGraph : bindingGraph.subgraphs()) {
-            componentInfo.add(new TriggerComponentInfo(subGraph.componentType(), subGraph.componentDescriptor(), subGraph, bindingGraphFactory));
+            componentInfo.add(new TriggerComponentInfo(subGraph.componentType(), subGraph.componentDescriptor(), subGraph));
             createTriggerSubcomponentInfo(subGraph, componentInfo, bindingGraphFactory);
         }
         return componentInfo;
@@ -53,7 +53,7 @@ public abstract class ComponentInfo {
         for (BindingGraph subGraph : bindingGraph.subgraphs()) {
             ComponentDescriptor subcomponentDescriptor = subGraph.componentDescriptor();
             final ComponentInfo componentInfo =
-                    new TriggerComponentInfo(subcomponentDescriptor.componentDefinitionType(), subcomponentDescriptor, subGraph, factory);
+                    new TriggerComponentInfo(subcomponentDescriptor.componentDefinitionType(), subcomponentDescriptor, subGraph);
             componentMethodOverrider.add(componentInfo);
             createTriggerSubcomponentInfo(subGraph, componentInfo, factory);
         }

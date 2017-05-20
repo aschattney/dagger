@@ -1,6 +1,5 @@
 package dagger.internal.codegen;
 
-import com.google.auto.common.MoreTypes;
 import java.util.Optional;
 import com.squareup.javapoet.*;
 import dagger.Trigger;
@@ -14,16 +13,14 @@ import java.util.Iterator;
 import java.util.Set;
 import java.util.UUID;
 
-/**
- * Created by Andy on 07.05.2017.
- */
 public class TestClassGenerator extends SourceFileGenerator<TestRegistry> {
 
-    private Set<TypeElement> components;
-    private TypeElement injector;
+    private final TypeElement injector;
+    private UniqueNameSet uniqueNameSet;
 
-    TestClassGenerator(Filer filer, Elements elements) {
+    TestClassGenerator(Filer filer, Elements elements, TypeElement injector) {
         super(filer, elements);
+        this.injector = injector;
     }
 
     @Override
@@ -38,20 +35,23 @@ public class TestClassGenerator extends SourceFileGenerator<TestRegistry> {
 
     @Override
     Optional<TypeSpec.Builder> write(ClassName generatedTypeName, TestRegistry input) {
+        uniqueNameSet = new UniqueNameSet();
         final TypeSpec.Builder builder = TypeSpec.classBuilder(generatedTypeName);
         final Iterator<TestRegistry.EncodedClass> it = input.iterator();
-        UniqueNameSet uniqueNameSet = new UniqueNameSet();
         while(it.hasNext()) {
+
             final TestRegistry.EncodedClass encodedClass = it.next();
-            final String randomString = UUID.randomUUID().toString().replace("-", "_");
-            final String randomMethodName = uniqueNameSet.getUniqueName("Method_" + randomString);
-            builder.addMethod(MethodSpec.methodBuilder(randomMethodName)
-                                .addAnnotation(AnnotationSpec.builder(Trigger.class)
-                                    .addMember("value", CodeBlock.of("$S", encodedClass.encoded))
-                                    .addMember("qualifiedName", CodeBlock.of("$S", encodedClass.qualifiedName))
-                                    .build())
-                                .build()
-            );
+            final String randomMethodName = getRandomMethodName();
+            final AnnotationSpec annotation = AnnotationSpec.builder(Trigger.class)
+                    .addMember("value", CodeBlock.of("$S", encodedClass.encoded))
+                    .addMember("qualifiedName", CodeBlock.of("$S", encodedClass.qualifiedName))
+                    .build();
+
+            final MethodSpec method = MethodSpec.methodBuilder(randomMethodName)
+                    .addAnnotation(annotation)
+                    .build();
+
+            builder.addMethod(method);
         }
 
         builder.addAnnotation(AnnotationSpec.builder(Trigger.class)
@@ -62,14 +62,25 @@ public class TestClassGenerator extends SourceFileGenerator<TestRegistry> {
         return Optional.of(builder);
     }
 
-    public void setComponents(Set<TypeElement> components) {
-        if (components == null) {
-            components = new HashSet<>();
-        }
-        this.components = components;
+    private String getRandomMethodName() {
+        final String randomString = UUID.randomUUID().toString().replace("-", "_");
+        final String randomMethodName = uniqueNameSet.getUniqueName("Method_" + randomString);
+        return randomMethodName;
     }
 
-    public void setInjector(TypeElement injector) {
-        this.injector = injector;
+    public static class Factory {
+
+        private Filer filer;
+        private Elements elements;
+
+        public Factory(Filer filer, Elements elements) {
+            this.filer = filer;
+            this.elements = elements;
+        }
+
+        public TestClassGenerator create(TypeElement injector) {
+            return new TestClassGenerator(filer, elements, injector);
+        }
+
     }
 }

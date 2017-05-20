@@ -72,7 +72,6 @@ public class GeneratorComponentInfo extends ComponentInfo {
                 final String methodName = requirementMethod.method().getSimpleName().toString();
                 if ((requirement.kind() == ComponentRequirement.Kind.MODULE &&
                         hasNotOnlyNoArgConstructor) || requirement.kind() != ComponentRequirement.Kind.MODULE) {
-                    //statementParams.add(CodeBlock.of("$L", simpleVariableName(typeElement)));
                     moduleConstructorStatements.add(CodeBlock.of(".$L($L)",
                             methodName, simpleVariableName(typeElement)));
                 }else if (requirement.kind() == ComponentRequirement.Kind.MODULE && !hasNotOnlyNoArgConstructor) {
