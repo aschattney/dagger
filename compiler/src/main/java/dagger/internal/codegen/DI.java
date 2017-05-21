@@ -1,6 +1,7 @@
 package dagger.internal.codegen;
 
 import com.squareup.javapoet.ClassName;
+import dagger.Config;
 
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ExecutableElement;
@@ -10,18 +11,18 @@ import java.util.Map;
 import java.util.Set;
 
 public class DI {
-    private TypeElement appClass;
     private Set<TypeElement> components;
     private List<InjectorType> injectorTypes;
+    private AppConfig config;
 
-    public DI(TypeElement appClass, Set<TypeElement> components, List<InjectorType> injectorTypes) {
-        this.appClass = appClass;
+    public DI(AppConfig config, Set<TypeElement> components, List<InjectorType> injectorTypes) {
+        this.config = config;
         this.components = components;
         this.injectorTypes = injectorTypes;
     }
 
     public ClassName getClassName() {
-        final ClassName className = ClassName.bestGuess(appClass.asType().toString());
+        final ClassName className = ClassName.bestGuess(this.getAppClass().asType().toString());
         return className.topLevelClassName().peerClass("Test" + className.simpleName());
     }
 
@@ -34,6 +35,8 @@ public class DI {
     }
 
     public TypeElement getAppClass() {
-        return appClass;
+        return config.getAppClass();
     }
+
+    public TypeElement getBaseAppClass() { return config.getBaseAppClass(); }
 }

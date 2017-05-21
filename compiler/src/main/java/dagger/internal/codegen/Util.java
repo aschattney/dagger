@@ -476,37 +476,6 @@ final class Util {
         }
     }
 
-    private static java.util.Optional<? extends AnnotationMirror> getAnnotationMirror(Element element) {
-        final ImmutableList<String> annotations =
-                ImmutableList.of(Named.class.getName(), StringKey.class.getName(), IntKey.class.getName(), LongKey.class.getName(), MapKey.class.getName(), ClassKey.class.getName());
-
-        return element.getAnnotationMirrors().stream()
-                .filter(e -> annotations.contains(e.getAnnotationType().asElement().asType().toString()))
-                .findFirst();
-    }
-
-    private static java.util.Optional<? extends AnnotationMirror> getAnnotationMirror(TypeMirror typeMirror) {
-        final ImmutableList<String> annotations =
-                ImmutableList.of(Named.class.getName(), StringKey.class.getName(), IntKey.class.getName(), LongKey.class.getName(), MapKey.class.getName(), ClassKey.class.getName());
-
-        return typeMirror.getAnnotationMirrors().stream()
-                .filter(e -> annotations.contains(e.getAnnotationType().asElement().asType().toString()))
-                .findFirst();
-    }
-
-    private static String getCapitalizedAnnotationValue(AnnotationMirror annotation) {
-        final Map<? extends ExecutableElement, ? extends AnnotationValue> elementValues = annotation.getElementValues();
-        for (Map.Entry<? extends ExecutableElement, ? extends AnnotationValue> entry : elementValues.entrySet()) {
-            if (entry.getKey().getSimpleName().toString().equals("value")) {
-                final String original = entry.getValue().getValue().toString();
-                if (!original.isEmpty()) {
-                    return capitalize(original);
-                }
-            }
-        }
-        throw new IllegalStateException("value not found");
-    }
-
     public static String capitalize(String original) {
         if (original == null || original.length() == 0) {
             return original;
@@ -532,21 +501,6 @@ final class Util {
     }
 
     private Util() {
-    }
-
-    public static void createDelegateField(TypeSpec.Builder classBuilder, ContributionBinding binding, Map<Key, String> delegateFieldNames) {
-        try {
-            if (bindingSupportsTestDelegate(binding)) {
-                final String delegateFieldName = Util.getDelegateFieldName(binding.key());
-                final ClassName delegateType = getDelegateTypeName(binding.key());
-                final FieldSpec.Builder builder = FieldSpec.builder(delegateType, delegateFieldName);
-                builder.addModifiers(Modifier.PRIVATE);
-                delegateFieldNames.put(binding.key(), delegateFieldName);
-                final FieldSpec fieldSpec = builder.build();
-                classBuilder.addField(fieldSpec);
-            }
-        } catch (Exception e) {
-        }
     }
 
     public static void createDelegateMethod(TypeName generatedTypeName, TypeSpec.Builder classBuilder, ContributionBinding binding) {
@@ -593,32 +547,6 @@ final class Util {
     }
 
 
-    public static void createDelegateFieldAndMethod(ClassName generatedTypeName, TypeSpec.Builder classBuilder, ResolvedBindings resolvedBindings, Map<Key, String> delegateFieldNames) {
-        if (resolvedBindings.isEmpty() || resolvedBindings.ownedBindings().isEmpty()) {
-            return;
-        }
-        try {
-            ContributionBinding binding = resolvedBindings.contributionBinding();
-            if (bindingSupportsTestDelegate(binding)) {
-                final String delegateFieldName = Util.getDelegateFieldName(binding.key());
-                final ClassName delegateType = getDelegateTypeName(binding.key());
-                final FieldSpec.Builder builder = FieldSpec.builder(delegateType, delegateFieldName);
-                delegateFieldNames.put(binding.key(), delegateFieldName);
-                final FieldSpec fieldSpec = builder.build();
-                classBuilder.addField(fieldSpec);
-                final String methodName = getDelegateMethodName(delegateType);
-                classBuilder.addMethod(MethodSpec.methodBuilder(methodName)
-                        .addModifiers(Modifier.PUBLIC)
-                        .returns(generatedTypeName)
-                        .addParameter(delegateType, delegateFieldName)
-                        .addStatement("this.$N = $L", fieldSpec, CodeBlock.of(delegateFieldName))
-                        .addStatement("return this")
-                        .build());
-            }
-        } catch (Exception e) {
-        }
-    }
-
     public static String getDelegateMethodName(ClassName delegateType) {
         return "with" + delegateType.simpleName().replaceAll("Delegate$", "");
     }
@@ -634,100 +562,11 @@ final class Util {
         return getDaggerComponentClassName(ClassName.bestGuess(typeToString(component.asType())));
     }
 
-    public static HashMap<String, ExecutableElement> findProvidingMethodsOfModules(Types typeUtils, Element componentProvider) {
-        HashMap<String, ExecutableElement> providingMethods = new HashMap<>();
-        if (componentProvider.getKind() == ElementKind.CLASS) {
-            TypeElement typeElement = (TypeElement) componentProvider;
-            for (Map.Entry<String, ExecutableElement> e : findProvidingModuleMethodsInternal(typeElement, providingMethods).entrySet()) {
-                if (!providingMethods.containsKey(e.getKey())) providingMethods.put(e.getKey(), e.getValue());
-            }
-            typeElement = (TypeElement) typeUtils.asElement(typeElement.getSuperclass());
-            while (!typeElement.toString().equals(Object.class.getName())) {
-                for (Map.Entry<String, ExecutableElement> e : findProvidingModuleMethodsInternal(typeElement, providingMethods).entrySet()) {
-                    if (!providingMethods.containsKey(e.getKey())) providingMethods.put(e.getKey(), e.getValue());
-                }
-                typeElement = (TypeElement) typeUtils.asElement(typeElement.getSuperclass());
-            }
-        }
-        return providingMethods;
-    }
-
-    public static HashMap<String, ExecutableElement> findProvidingMethodsOfComponents(Types typeUtils, Element componentProvider) {
-        HashMap<String, ExecutableElement> providingMethods = new HashMap<>();
-        if (componentProvider.getKind() == ElementKind.CLASS) {
-            TypeElement typeElement = (TypeElement) componentProvider;
-            for (Map.Entry<String, ExecutableElement> e : findProvidingComponentMethodsInternal(typeElement, providingMethods).entrySet()) {
-                if (!providingMethods.containsKey(e.getKey()))
-                    providingMethods.put(e.getKey(), e.getValue());
-            }
-            typeElement = (TypeElement) typeUtils.asElement(typeElement.getSuperclass());
-            while (!typeElement.toString().equals(Object.class.getName())) {
-                for (Map.Entry<String, ExecutableElement> e : findProvidingComponentMethodsInternal(typeElement, providingMethods).entrySet()) {
-                    if (!providingMethods.containsKey(e.getKey()))
-                        providingMethods.put(e.getKey(), e.getValue());
-                }
-                typeElement = (TypeElement) typeUtils.asElement(typeElement.getSuperclass());
-            }
-        }
-        return providingMethods;
-    }
-
-    public static HashMap<String, ExecutableElement> findProvidingMethods(Types typeUtils, Element componentProvider) {
-        HashMap<String, ExecutableElement> providingMethods = new HashMap<>();
-        if (componentProvider.getKind() == ElementKind.CLASS) {
-            TypeElement typeElement = (TypeElement) componentProvider;
-            for (Map.Entry<String, ExecutableElement> e : findProvidingModuleMethodsInternal(typeElement, providingMethods).entrySet()) {
-                if (!providingMethods.containsKey(e.getKey())) providingMethods.put(e.getKey(), e.getValue());
-            }
-            for (Map.Entry<String, ExecutableElement> e : findProvidingComponentMethodsInternal(typeElement, providingMethods).entrySet()) {
-                if (!providingMethods.containsKey(e.getKey())) providingMethods.put(e.getKey(), e.getValue());
-            }
-            typeElement = (TypeElement) typeUtils.asElement(typeElement.getSuperclass());
-            while (!typeElement.toString().equals(Object.class.getName())) {
-                for (Map.Entry<String, ExecutableElement> e : findProvidingModuleMethodsInternal(typeElement, providingMethods).entrySet()) {
-                    if (!providingMethods.containsKey(e.getKey())) providingMethods.put(e.getKey(), e.getValue());
-                }
-                for (Map.Entry<String, ExecutableElement> e : findProvidingComponentMethodsInternal(typeElement, providingMethods).entrySet()) {
-                    if (!providingMethods.containsKey(e.getKey())) providingMethods.put(e.getKey(), e.getValue());
-                }
-                typeElement = (TypeElement) typeUtils.asElement(typeElement.getSuperclass());
-            }
-        }
-        return providingMethods;
-    }
-
-    private static HashMap<String, ExecutableElement> findProvidingModuleMethodsInternal(TypeElement element, HashMap<String, ExecutableElement> providingMethods) {
-        List<? extends Element> enclosedElements = element.getEnclosedElements();
-        for (Element enclosedElement : enclosedElements) {
-            if (enclosedElement.getKind() == ElementKind.METHOD) {
-                ProvidesModule providesModule = enclosedElement.getAnnotation(ProvidesModule.class);
-                if (providesModule != null) {
-                    ExecutableElement executableElement = (ExecutableElement) enclosedElement;
-                    providingMethods.put(executableElement.getReturnType().toString(), executableElement);
-                }
-            }
-        }
-        return providingMethods;
-    }
-
-    private static HashMap<String, ExecutableElement> findProvidingComponentMethodsInternal(TypeElement element, HashMap<String, ExecutableElement> providingMethods) {
-        List<? extends Element> enclosedElements = element.getEnclosedElements();
-        for (Element enclosedElement : enclosedElements) {
-            if (enclosedElement.getKind() == ElementKind.METHOD) {
-                ProvidesComponent providesComponent = enclosedElement.getAnnotation(ProvidesComponent.class);
-                if (providesComponent != null) {
-                    ExecutableElement executableElement = (ExecutableElement) enclosedElement;
-                    providingMethods.put(executableElement.getReturnType().toString(), executableElement);
-                }
-            }
-        }
-        return providingMethods;
-    }
-
     public static final String METHOD_NAME_GET_INJECTOR = "getInjector";
     public static final ClassName TYPENAME_INJECTOR = ClassName.bestGuess("injector.Injector");
-    public static final String SIMPKE_NAME_INJECTOR_APPLICATION = "DaggerApplication";
+    public static final String SIMPLE_NAME_INJECTOR_APPLICATION = "DaggerApplication";
     public static final String FIELDNAME_INJECTOR = "injector";
     public static final ClassName TYPENAME_INJECTOR_SPEC = ClassName.bestGuess("injector.InjectorSpec");
     public static final ClassName TYPENAME_ANDROID_APPLICATION = ClassName.bestGuess("android.app.Application");
+    public static final ClassName TYPENAME_DAGGER_ANDROID_APPLICATION = TYPENAME_ANDROID_APPLICATION.topLevelClassName().peerClass("DaggerApplication");
 }

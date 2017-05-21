@@ -12,8 +12,10 @@ import static dagger.internal.codegen.Util.lowerCaseFirstLetter;
 
 public class TriggerComponentInfo extends ComponentInfo {
 
-    private BindingGraph bindingGraph;
+    private static final String DECORATOR = "Decorator";
     private static final String METHODNAME_DECORATE = "decorate";
+
+    private BindingGraph bindingGraph;
 
     protected TriggerComponentInfo(TypeElement typeElement, ComponentDescriptor descriptor,
                                    BindingGraph bindingGraph) {
@@ -45,7 +47,7 @@ public class TriggerComponentInfo extends ComponentInfo {
     }
 
     protected String getDecoratorFieldName(TypeElement component) {
-        return lowerCaseFirstLetter(component.getSimpleName().toString()) + "Decorator";
+        return lowerCaseFirstLetter(component.getSimpleName().toString()) + DECORATOR;
     }
 
     protected boolean noActionRequired() {

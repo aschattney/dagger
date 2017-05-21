@@ -24,13 +24,10 @@ import static dagger.internal.codegen.TypeNames.*;
 
 public class StubGenerator extends SourceFileGenerator<ProvisionBinding> {
 
-    private final Types types;
-
     private final List<String> generated = new ArrayList<>();
 
     StubGenerator(Filer filer, Elements elements, Types types) {
         super(filer, elements);
-        this.types = types;
     }
 
     @Override

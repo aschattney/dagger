@@ -168,14 +168,34 @@ abstract class BindingGraph {
     return requirements.build();
   }
 
+  @Memoized
+  ImmutableSet<ComponentRequirement> delegateInstanceRequirements() {
+    ImmutableSet.Builder<ComponentRequirement> requirements = ImmutableSet.builder();
+    if (componentDescriptor().builderSpec().isPresent()) {
+      componentDescriptor()
+              .builderSpec()
+              .get()
+              .requirementMethods()
+              .stream()
+              .map(BuilderRequirementMethod::requirement)
+              .filter(req -> req.kind().equals(ComponentRequirement.Kind.BINDING))
+              .forEach(requirements::add);
+    }
+    return requirements.build();
+  }
+
   ImmutableSet<ContributionBinding> delegateRequirements() {
-    return SUBGRAPH_TRAVERSER
+    final ImmutableSet<ContributionBinding> contributionBindings = SUBGRAPH_TRAVERSER
             .preOrderTraversal(this)
             .transformAndConcat(graph -> graph.resolvedBindings().values())
             .filter(resolvedBindings -> resolvedBindings != null && resolvedBindings.owningComponent().equals(componentDescriptor()))
             .transformAndConcat(ResolvedBindings::ownedContributionBindings)
             .filter(Util::bindingSupportsTestDelegate)
             .toSet();
+
+
+
+    return contributionBindings;
   }
   /**
    * Returns the {@link ComponentDescriptor}s for this component and its subcomponents.

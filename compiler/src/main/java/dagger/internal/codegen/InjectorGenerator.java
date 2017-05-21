@@ -10,21 +10,18 @@ import javax.lang.model.util.Types;
 import java.io.IOException;
 import java.util.*;
 
-public class InjectorGenerator extends SourceFileGenerator<DI>{
+class InjectorGenerator extends SourceFileGenerator<DI>{
 
-    public static final String METHOD_NAME_PREFIX = "decorate";
-    private Types types;
-    private Elements elements;
+    private static final String METHOD_NAME_PREFIX = "decorate";
+
     private final ComponentDescriptor.Factory componentDescriptorFactory;
     private final BindingGraph.Factory bindingGraphFactory;
     private TestClassGenerator.Factory testClassGeneratorFactory;
     private final TestRegistry registry;
     private Decorator.Factory decoratorFactory;
 
-    InjectorGenerator(Filer filer, Types types, Elements elements, ComponentDescriptor.Factory componentDescriptorFactory, BindingGraph.Factory bindingGraphFactory, TestClassGenerator.Factory testClassGeneratorFactoty, TestRegistry registry, Decorator.Factory decoratorFactory) {
+    InjectorGenerator(Filer filer, Elements elements, ComponentDescriptor.Factory componentDescriptorFactory, BindingGraph.Factory bindingGraphFactory, TestClassGenerator.Factory testClassGeneratorFactoty, TestRegistry registry, Decorator.Factory decoratorFactory) {
         super(filer, elements);
-        this.types = types;
-        this.elements = elements;
         this.componentDescriptorFactory = componentDescriptorFactory;
         this.bindingGraphFactory = bindingGraphFactory;
         this.testClassGeneratorFactory = testClassGeneratorFactoty;

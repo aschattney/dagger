@@ -50,7 +50,7 @@ public final class ComponentProcessor extends BasicAnnotationProcessor {
 
   private Filer filer;
   private Messager messager;
-  private MultipleSourceFileGenerator multipleGenerator;
+  private MultipleSourceFileGenerator<ProvisionBinding> multipleGenerator;
   private InjectBindingRegistry injectBindingRegistry;
   private MembersInjectorGenerator membersInjectorGenerator;
 
@@ -268,13 +268,18 @@ public final class ComponentProcessor extends BasicAnnotationProcessor {
             new InjectorProcessingStep(
                     types,
                     messager,
-                    new InjectorGenerator(filer, types, elements, componentDescriptorFactory, bindingGraphFactory, new TestClassGenerator.Factory(filer, elements), testRegistry, new Decorator.Factory(filer, elements, bindingGraphFactory, testRegistry)),
+                    new AppConfig.Factory(elements),
+                    new InjectorGenerator(filer, elements, componentDescriptorFactory,
+                            bindingGraphFactory, new TestClassGenerator.Factory(filer, elements),
+                            testRegistry, new Decorator.Factory(filer, elements, bindingGraphFactory, testRegistry)),
                     ComponentDescriptor.Kind.COMPONENT,
                     bindingGraphFactory,
                     componentDescriptorFactory,
                     new DependencySpecGenerator(filer, elements, componentDescriptorFactory, bindingGraphFactory),
                     new DependencyInjectorGenerator(filer, elements, bindingGraphFactory, componentDescriptorFactory),
-                    new ApplicationGenerator(filer, types, elements, bindingGraphFactory, componentDescriptorFactory)
+                    provisionBindingFactory,
+                    new ApplicationGenerator(filer, types, elements, bindingGraphFactory, componentDescriptorFactory),
+                    stubGenerator
             )
     );
   }

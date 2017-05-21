@@ -32,7 +32,7 @@ class ApplicationGenerator extends SourceFileGenerator<DI>{
 
     @Override
     ClassName nameGeneratedType(DI input) {
-        return ClassName.get(input.getAppClass()).topLevelClassName().peerClass(Util.SIMPKE_NAME_INJECTOR_APPLICATION);
+        return ClassName.get(input.getAppClass()).topLevelClassName().peerClass(Util.SIMPLE_NAME_INJECTOR_APPLICATION);
     }
 
     @Override
@@ -43,7 +43,7 @@ class ApplicationGenerator extends SourceFileGenerator<DI>{
     @Override
     Optional<TypeSpec.Builder> write(ClassName generatedTypeName, DI di) {
         final TypeSpec.Builder builder = TypeSpec.classBuilder(generatedTypeName);
-        TypeName superclass = TYPENAME_ANDROID_APPLICATION;
+        TypeName superclass = ClassName.get(di.getBaseAppClass());
         builder.addModifiers(Modifier.PUBLIC).superclass(superclass);
         builder.addSuperinterface(TYPENAME_INJECTOR_SPEC);
         final Set<TypeElement> components = di.getComponents();

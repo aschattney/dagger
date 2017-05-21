@@ -12,4 +12,5 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
 @Documented
 public @interface Config {
     Class<?> applicationClass();
+    String baseApplicationClass() default "android.app.Application";
 }
