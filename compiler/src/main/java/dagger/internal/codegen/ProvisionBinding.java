@@ -87,7 +87,7 @@ abstract class ProvisionBinding extends ContributionBinding {
   private static Builder builder() {
     return new AutoValue_ProvisionBinding.Builder()
         .genericParameter(false)
-        .ignoreStubGeneration(false)
+        .ignoreStubGeneration(true)
         .explicitDependencies(ImmutableSet.<DependencyRequest>of());
   }
   

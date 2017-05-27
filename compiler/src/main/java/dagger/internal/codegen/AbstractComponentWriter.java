@@ -319,9 +319,6 @@ abstract class AbstractComponentWriter implements HasBindingMembers {
     if (graph.componentDescriptor().kind().isTopLevel()) {
       optionalFactories.addMembers(component);
     }
-    for (MethodSpec initializationMethod : initializationMethods) {
-
-    }
     done = true;
     return component;
   }

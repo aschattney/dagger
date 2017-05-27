@@ -219,6 +219,7 @@ public final class ComponentProcessor extends BasicAnnotationProcessor {
             keyFactory);
 
     return ImmutableList.of(
+        new AppConfigProcessingStep(messager, elements, types, new AppConfig.Validator(elements, types)),
         new MapKeyProcessingStep(
                 messager, types, mapKeyValidator, annotationCreatorGenerator, unwrappedMapKeyGenerator),
         new ForReleasableReferencesValidator(messager),

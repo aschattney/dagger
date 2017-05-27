@@ -14,7 +14,6 @@ public class CoffeeApp {
   public interface Coffee {
     CoffeeMaker maker();
     Thermosiphon thermosiphon();
-    Bleu.Builder bleu();
     @Component.Builder
     interface Builder {
       Builder dripCoffeeModule(DripCoffeeModule module);
@@ -27,7 +26,7 @@ public class CoffeeApp {
   @Subcomponent(modules = {AModule.class, BModule.class})
   public interface Bleu {
     Integer integer();
-    Bleu2.Builder someComponent();
+    SomeCoffee someCoffee();
     @Subcomponent.Builder
     interface Builder {
       Builder moduleA(AModule module);

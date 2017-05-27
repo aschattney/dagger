@@ -7,7 +7,7 @@ public class Thermosiphon implements Pump {
   private final Provider<Heater> heater;
 
   @Inject
-  Thermosiphon(Provider<Heater> heater) {
+  Thermosiphon(Provider<Heater> heater, Provider<CoffeeApp.Bleu.Builder> bleuProvider) {
     this.heater = heater;
   }
 

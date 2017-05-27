@@ -522,6 +522,10 @@ final class ErrorMessages {
       return process(
           "@Component.Builder methods must not have type parameters. Inherited method: %s");
     }
+
+    public String noBuilderPresent() {
+      return process("Each Component and Subcomponent needs a @Component.Builder or @Subcomponent.Builder declaration. Declaration is missing for: %s");
+    }
   }
 
   static final class SubcomponentBuilderMessages extends ComponentBuilderMessages {

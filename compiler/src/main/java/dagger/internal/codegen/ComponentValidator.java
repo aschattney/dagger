@@ -50,11 +50,8 @@ import java.lang.annotation.Annotation;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-import javax.lang.model.element.AnnotationMirror;
-import javax.lang.model.element.Element;
-import javax.lang.model.element.ExecutableElement;
-import javax.lang.model.element.TypeElement;
-import javax.lang.model.element.VariableElement;
+import java.util.stream.Collectors;
+import javax.lang.model.element.*;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.ExecutableType;
 import javax.lang.model.type.TypeMirror;
@@ -149,6 +146,12 @@ final class ComponentValidator {
 
     ImmutableList<DeclaredType> builders =
         enclosedBuilders(subject, componentKind.builderAnnotationType());
+
+    if (builders.isEmpty()) {
+      final String subjectName = subject.getQualifiedName().toString();
+      builder.addError(String.format(ErrorMessages.builderMsgsFor(componentKind).noBuilderPresent(), subjectName));
+    }
+
     if (builders.size() > 1) {
       builder.addError(
           String.format(ErrorMessages.builderMsgsFor(componentKind).moreThanOne(), builders),

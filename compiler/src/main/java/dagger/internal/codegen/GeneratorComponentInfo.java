@@ -29,8 +29,9 @@ public class GeneratorComponentInfo extends ComponentInfo {
 
         List<ParameterSpec> parameterSpecs = new ArrayList<>();
         if (descriptor.kind() == ComponentDescriptor.Kind.SUBCOMPONENT) {
-            final TypeElement component = descriptor.getParentDescriptor().componentDefinitionType();
-            parameterSpecs.add(ParameterSpec.builder(ClassName.get(component), simpleVariableName(component)).build());
+            //final TypeElement component = descriptor.getParentDescriptor().componentDefinitionType();
+            final TypeElement subcomponentTypeBuilder = descriptor.builderSpec().get().builderDefinitionType();
+            parameterSpecs.add(ParameterSpec.builder(ClassName.get(subcomponentTypeBuilder), "builder").build());
         }
 
         if (descriptor.builderSpec().isPresent()) {
@@ -110,6 +111,9 @@ public class GeneratorComponentInfo extends ComponentInfo {
 
     private CodeBlock getBuilderInitStatement(ComponentDescriptor descriptor, ComponentDescriptor parentDescriptor) {
         if (descriptor.kind() == ComponentDescriptor.Kind.SUBCOMPONENT) {
+            if (true) {
+                return CodeBlock.of("$L", "builder");
+            }
             final ImmutableSet<ComponentDescriptor.ComponentMethodDescriptor> componentMethodDescriptors = parentDescriptor.componentMethods();
             for (ComponentDescriptor.ComponentMethodDescriptor componentMethodDescriptor : componentMethodDescriptors) {
                 final ExecutableElement executableElement = componentMethodDescriptor.methodElement();

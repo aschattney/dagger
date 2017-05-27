@@ -106,8 +106,14 @@ public class TriggerComponentInfo extends ComponentInfo {
             return classNameToString(daggerComponentClassName);
         }else if (descriptor.kind() == ComponentDescriptor.Kind.SUBCOMPONENT) {
             final String name = subcomponentNamesMap.get(descriptor);
-            parentClassName = builderImplString(parentClassName, name);
-            return internalResolveClassName(parentClassName, subcomponentNamesMap, descriptor.getParentDescriptor());
+            String newParentClass = builderImplString(parentClassName, name);
+            final String resolvedClassName = internalResolveClassName(newParentClass,
+                    subcomponentNamesMap, descriptor.getParentDescriptor());
+            StringBuilder sb = new StringBuilder(resolvedClassName);
+            sb.append(".");
+            sb.append(name);
+            sb.append("Impl");
+            return sb.toString();
         }else {
             throw new IllegalStateException(String.format("Unknown component kind: %s", descriptor.kind()));
         }
