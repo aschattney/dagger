@@ -39,14 +39,10 @@ public class DependencySpecGenerator extends SourceFileGenerator<Set<TypeElement
         final TypeSpec.Builder builder = TypeSpec.interfaceBuilder(generatedTypeName)
                 .addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT);
 
-        final List<ComponentInfo> info = input
-                .stream()
-                .map(typeElement -> ComponentInfo.forSpec(typeElement, componentDescriptorFactory, bindingGraphFactory))
-                .collect(Collectors.toList());
-
-        for (ComponentInfo componentInfo : info) {
-            componentInfo.process(builder);
-        }
+        input.stream()
+                .flatMap(typeElement -> ComponentInfo.forSpec(typeElement, componentDescriptorFactory, bindingGraphFactory).stream())
+                .collect(Collectors.toList())
+                .forEach(info -> info.process(builder));
 
         builder.addMethod(MethodSpec.methodBuilder(METHOD_NAME_GET_INJECTOR)
                 .addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT)

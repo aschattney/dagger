@@ -1,5 +1,6 @@
 package dagger.internal.codegen;
 
+import java.util.List;
 import java.util.Optional;
 
 import com.squareup.javapoet.*;
@@ -46,8 +47,8 @@ public class DependencyInjectorGenerator extends SourceFileGenerator<DI> {
                 .build());
         builder.addField(appType, APP_FIELDNAME, Modifier.PRIVATE);
         for (TypeElement typeElement : input.getComponents()) {
-            final GeneratorComponentInfo info = ComponentInfo.forGenerator(typeElement, componentDescriptorFactory, bindingGraphFactory);
-            info.process(builder);
+            final List<GeneratorComponentInfo> infos = ComponentInfo.forGenerator(typeElement, componentDescriptorFactory, bindingGraphFactory);
+            infos.forEach(info -> info.process(builder));
         }
 
         final String st =

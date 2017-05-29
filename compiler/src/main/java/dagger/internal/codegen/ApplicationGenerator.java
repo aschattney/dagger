@@ -9,6 +9,7 @@ import javax.lang.model.type.DeclaredType;
 import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
 import java.util.*;
+import java.util.stream.Collectors;
 
 import static dagger.internal.codegen.Util.*;
 
@@ -51,8 +52,20 @@ class ApplicationGenerator extends SourceFileGenerator<DI>{
         builder.addField(TYPENAME_INJECTOR, FIELDNAME_INJECTOR, Modifier.PRIVATE);
 
         for (TypeElement component : components) {
-            final SpecComponentInfo componentInfo = ComponentInfo.forSpec(component, componentDescriptorFactory, bindingGraphFactory);
-            final List<MethodSpec.Builder> methodBuilders = componentInfo.getMethods();
+            final List<SpecComponentInfo> infos = ComponentInfo.forSpec(component, componentDescriptorFactory, bindingGraphFactory);
+            final List<MethodSpec.Builder> methodBuilders = infos.stream()
+                    .flatMap(info -> info.getMethods().stream())
+                    .collect(Collectors.toList());
+            List<String> methodNames = new ArrayList<>();
+            final Iterator<MethodSpec.Builder> it = methodBuilders.iterator();
+            while(it.hasNext()) {
+                final String name = it.next().build().name;
+                if (!methodNames.contains(name)) {
+                    methodNames.add(name);
+                }else {
+                    it.remove();
+                }
+            }
             for (MethodSpec.Builder methodBuilder : methodBuilders) {
                 List<CodeBlock> blocks = new ArrayList<>();
                 blocks.add(CODEBLOCK_RETURN_BUILDER);

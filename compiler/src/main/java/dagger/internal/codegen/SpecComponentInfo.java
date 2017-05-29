@@ -19,15 +19,26 @@ public class SpecComponentInfo extends ComponentInfo {
     }
 
     @Override
-    public void process(TypeSpec.Builder builder) {
-        super.process(builder);
+    protected String getId() {
+        return simpleVariableName(component);
+    }
+
+    @Override
+    public List<String> process(TypeSpec.Builder builder) {
+        List<String> ids = super.process(builder);
+        if (ids.contains(getId())) {
+            return ids;
+        }
         final MethodSpec.Builder methodBuilder = buildMethod();
         methodBuilder.addModifiers(Modifier.ABSTRACT);
-        builder.addMethod(methodBuilder.build());
+        MethodSpec method = methodBuilder.build();
+        builder.addMethod(method);
+        ids.add(getId());
+        return ids;
     }
 
     private MethodSpec.Builder buildMethod() {
-        final MethodSpec.Builder methodBuilder = MethodSpec.methodBuilder(simpleVariableName(component))
+        final MethodSpec.Builder methodBuilder = MethodSpec.methodBuilder(getId())
                 .addModifiers(Modifier.PUBLIC);
 
         ClassName builderClassName = getBuilderClassName(component);
@@ -45,7 +56,7 @@ public class SpecComponentInfo extends ComponentInfo {
     public List<MethodSpec.Builder> getMethods() {
         List<MethodSpec.Builder> methodSpecs = new ArrayList<>();
         for (ComponentInfo info : infos) {
-            methodSpecs.addAll(((SpecComponentInfo)info).getMethods());
+            methodSpecs.addAll(((SpecComponentInfo) info).getMethods());
         }
         methodSpecs.add(buildMethod());
         return methodSpecs;

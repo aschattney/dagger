@@ -1,16 +1,20 @@
 package dagger.internal.codegen;
 
 import java.util.Optional;
+
 import com.squareup.javapoet.*;
 
 import javax.annotation.processing.Filer;
 import javax.lang.model.element.*;
 import javax.lang.model.util.Elements;
-import javax.lang.model.util.Types;
 import java.io.IOException;
 import java.util.*;
+import java.util.stream.Stream;
 
-class InjectorGenerator extends SourceFileGenerator<DI>{
+import static dagger.internal.codegen.SourceFiles.simpleVariableName;
+import static dagger.internal.codegen.Util.distinctByKey;
+
+class InjectorGenerator extends SourceFileGenerator<DI> {
 
     private static final String METHOD_NAME_PREFIX = "decorate";
 
@@ -47,49 +51,54 @@ class InjectorGenerator extends SourceFileGenerator<DI>{
         builder.superclass(ClassName.get(appClass));
         createDecoratorClasses(builder, components, appClass);
         for (TypeElement component : components) {
-            final TriggerComponentInfo componentInfo =
+            final List<TriggerComponentInfo> infos =
                     ComponentInfo.forTrigger(component, componentDescriptorFactory, bindingGraphFactory);
-            componentInfo.process(builder);
+            infos.forEach(info -> info.process(builder));
         }
 
         return Optional.of(builder);
     }
 
     private void createDecoratorClasses(TypeSpec.Builder builder, Set<TypeElement> components, TypeElement appClass) {
-        for (TypeElement component : components) {
-            ComponentDescriptor componentDescriptor = componentDescriptorFactory.forComponent(component);
-            final BindingGraph bindingGraph = bindingGraphFactory.create(componentDescriptor);
-            createDecoratorClass(builder, bindingGraph, appClass);
-        }
-    }
-
-    private void createDecoratorClass(TypeSpec.Builder builder, BindingGraph bindingGraph, TypeElement appClass) {
         final ClassName appClassName = ClassName.get(appClass);
         ClassName testAppClassName = appClassName.topLevelClassName().peerClass("Test" + appClassName.simpleName());
         final Decorator decorator = decoratorFactory.create(testAppClassName);
+
+        components.stream()
+                .map(componentDescriptorFactory::forComponent)
+                .map(bindingGraphFactory::create)
+                .flatMap(this::flatMapAllSubgraphs)
+                .filter(bindingGraph -> bindingGraph.componentDescriptor() != null && !bindingGraph.delegateRequirements().isEmpty())
+                .filter(distinctByKey(graph -> simpleVariableName(graph.componentDescriptor().componentDefinitionType())))
+                .forEach(graph -> createDecoratorClass(builder, graph, decorator, testAppClassName));
+
+    }
+
+    private Stream<BindingGraph> flatMapAllSubgraphs(BindingGraph graph) {
+        return Stream.concat(
+                Stream.of(graph),
+                graph.subgraphs().stream().flatMap(this::flatMapAllSubgraphs));
+    }
+
+    private void createDecoratorClass(TypeSpec.Builder builder, BindingGraph bindingGraph, Decorator decorator, ClassName testAppClassName) {
         try {
             decorator.generate(bindingGraph);
-            if (decorator.hasBeenGenerated()) {
-                final ClassName decoratorName = decorator.nameGeneratedType(bindingGraph);
-                final String componentName = bindingGraph.componentDescriptor().componentDefinitionType().getSimpleName().toString();
-                final TypeName accessorName = decorator.getAccessorTypeName(testAppClassName, componentName);
-                final String fieldName = Util.lowerCaseFirstLetter(decoratorName.simpleName());
-                final String methodName =  METHOD_NAME_PREFIX + Util.capitalize(fieldName.replaceAll("Decorator$", ""));
-                final FieldSpec.Builder fieldBuilder = FieldSpec.builder(decoratorName, fieldName, Modifier.PRIVATE);
-                final FieldSpec field = fieldBuilder.initializer("new $T(this)", decoratorName).build();
-                builder.addField(field);
-                builder.addMethod(MethodSpec.methodBuilder(methodName)
-                        .addModifiers(Modifier.PUBLIC)
-                        .returns(accessorName)
-                        .addStatement("return this.$L", fieldName)
-                        .build());
-                builder.addType(decorator.getAccessorType(testAppClassName, bindingGraph).build());
-            }
+            final ClassName decoratorName = decorator.nameGeneratedType(bindingGraph);
+            final String componentName = bindingGraph.componentDescriptor().componentDefinitionType().getSimpleName().toString();
+            final TypeName accessorName = decorator.getAccessorTypeName(testAppClassName, componentName);
+            final String fieldName = Util.lowerCaseFirstLetter(decoratorName.simpleName());
+            final String methodName = METHOD_NAME_PREFIX + Util.capitalize(fieldName.replaceAll("Decorator$", ""));
+            final FieldSpec.Builder fieldBuilder = FieldSpec.builder(decoratorName, fieldName, Modifier.PRIVATE);
+            final FieldSpec field = fieldBuilder.initializer("new $T(this)", decoratorName).build();
+            builder.addField(field);
+            builder.addMethod(MethodSpec.methodBuilder(methodName)
+                    .addModifiers(Modifier.PUBLIC)
+                    .returns(accessorName)
+                    .addStatement("return this.$L", fieldName)
+                    .build());
+            builder.addType(decorator.getAccessorType(testAppClassName, bindingGraph).build());
         } catch (SourceFileGenerationException e) {
             throw new IllegalStateException("Exception while generating decorator: " + e);
-        }
-        for (BindingGraph subGraph : bindingGraph.subgraphs()) {
-            createDecoratorClass(builder, subGraph, appClass);
         }
     }
 

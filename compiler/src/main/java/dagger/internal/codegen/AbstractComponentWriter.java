@@ -653,7 +653,7 @@ abstract class AbstractComponentWriter implements HasBindingMembers {
                 ? contributionBindingField.type().rawType
                 : contributionBindingField.type(),
             contributionBindingField.name());
-    contributionField.addModifiers(PRIVATE);
+    //contributionField.addModifiers(PRIVATE);
     if (useRawType) {
       contributionField.addAnnotation(AnnotationSpecs.suppressWarnings(RAWTYPES));
     }
@@ -837,6 +837,21 @@ abstract class AbstractComponentWriter implements HasBindingMembers {
               }
               // fall through
             default:
+
+              final MemberSelect memberSelect = memberSelects.get(BindingKey.membersInjection(interfaceRequest.key()));
+              if (memberSelect != null) {
+                final CodeBlock expressionFor = memberSelect.getExpressionFor(name);
+                final Optional<String> variableName = interfaceRequest.overriddenVariableName();
+                String name = variableName.isPresent() ? variableName.get() : "obj";
+                interfaceMethod.addStatement("$T $L = $L", ClassName.get(interfaceRequest.key().type()), name, codeBlock);
+                interfaceMethod.addStatement("$L.injectMembers($L)", expressionFor, name);
+                if (!requestType.getReturnType().getKind().equals(VOID)) {
+                  interfaceMethod.addStatement("return $L", name);
+                }
+              }else {
+                interfaceMethod.addStatement("return $L", codeBlock);
+              }
+
               /*CodeBlock.Builder builder = CodeBlock.builder();
               final boolean supportsTestDelegate = !componentMethod.methodElement().getReturnType().toString().equals(void.class.getName());
               if (supportsTestDelegate) {
@@ -845,7 +860,6 @@ abstract class AbstractComponentWriter implements HasBindingMembers {
                         .add("return $L.get($L)", CodeBlock.of(fieldName), codeBlock)
                         .nextControlFlow("else");
               }*/
-              interfaceMethod.addStatement("return $L", codeBlock);
               /*if (supportsTestDelegate) {
                 builder.endControlFlow();
               }*/

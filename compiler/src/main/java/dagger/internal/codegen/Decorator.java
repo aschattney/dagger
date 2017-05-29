@@ -20,7 +20,6 @@ public class Decorator  extends SourceFileGenerator<BindingGraph>{
     private BindingGraph.Factory factory;
     private ClassName appClass;
     private TestRegistry testRegistry;
-    private boolean hasGenerated = false;
 
     private Decorator(Filer filer, Elements elements, BindingGraph.Factory factory, ClassName appClass, TestRegistry testRegistry) {
         super(filer, elements);
@@ -60,7 +59,6 @@ public class Decorator  extends SourceFileGenerator<BindingGraph>{
         }else {
             final String componentName = input.componentDescriptor().componentDefinitionType().getSimpleName().toString();
             addDecoratorType(builder, daggerBuilderClassName, builderClassName, delegateRequirements, componentName);
-            hasGenerated = true;
             return Optional.of(builder);
         }
     }
@@ -135,10 +133,6 @@ public class Decorator  extends SourceFileGenerator<BindingGraph>{
 
     public ClassName getAccessorTypeName(ClassName app, String componentName) {
         return app.nestedClass(componentName + "Accessor");
-    }
-
-    public boolean hasBeenGenerated() {
-        return this.hasGenerated;
     }
 
     public static class Factory {

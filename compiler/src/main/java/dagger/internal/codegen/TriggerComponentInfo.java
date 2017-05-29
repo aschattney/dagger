@@ -6,6 +6,8 @@ import com.squareup.javapoet.*;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
 
+import java.util.List;
+
 import static dagger.internal.codegen.AbstractComponentWriter.simpleVariableName;
 import static dagger.internal.codegen.Util.lowerCaseFirstLetter;
 
@@ -23,15 +25,14 @@ public class TriggerComponentInfo extends ComponentInfo {
     }
 
     @Override
-    public void process(TypeSpec.Builder builder) {
-        super.process(builder);
+    public List<String> process(TypeSpec.Builder builder) {
+        List<String> ids = super.process(builder);
 
-        if (noActionRequired()) {
-            return;
+        if (noActionRequired(ids)) {
+            return ids;
         }
 
-        final TypeElement component = descriptor.componentDefinitionType();
-        String methodName = simpleVariableName(component);
+        String methodName = getId();
         final MethodSpec.Builder methodBuilder = MethodSpec.methodBuilder(methodName)
                 .addAnnotation(Override.class)
                 .addModifiers(Modifier.PUBLIC);
@@ -43,14 +44,21 @@ public class TriggerComponentInfo extends ComponentInfo {
         final String decoratorName = getDecoratorFieldName(component);
         methodBuilder.addStatement("return this.$L.$L(super.$L(builder))", decoratorName, METHODNAME_DECORATE, methodName);
         builder.addMethod(methodBuilder.build());
+        ids.add(methodName);
+        return ids;
     }
 
     protected String getDecoratorFieldName(TypeElement component) {
         return lowerCaseFirstLetter(component.getSimpleName().toString()) + DECORATOR;
     }
 
-    protected boolean noActionRequired() {
-        return bindingGraph.delegateRequirements().isEmpty();
+    protected boolean noActionRequired(List<String> ids) {
+        return bindingGraph.delegateRequirements().isEmpty() || ids.contains(getId());
+    }
+
+    @Override
+    protected String getId() {
+        return simpleVariableName(descriptor.componentDefinitionType());
     }
 
     protected ParameterSpec getBuilderParameterSpec(ClassName builderClassName) {

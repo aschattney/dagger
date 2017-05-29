@@ -42,6 +42,9 @@ import dagger.multibindings.IntKey;
 import dagger.multibindings.LongKey;
 import dagger.multibindings.StringKey;
 import dagger.producers.Produces;
+
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Predicate;
 import java.util.stream.Collector;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ExecutableElement;
@@ -560,6 +563,11 @@ final class Util {
 
     public static ClassName getDaggerComponentClassName(Element component) {
         return getDaggerComponentClassName(ClassName.bestGuess(typeToString(component.asType())));
+    }
+
+    public static <T> Predicate<T> distinctByKey(Function<? super T, ?> keyExtractor) {
+        Map<Object,Boolean> seen = new ConcurrentHashMap<>();
+        return t -> seen.putIfAbsent(keyExtractor.apply(t), Boolean.TRUE) == null;
     }
 
     public static final String METHOD_NAME_GET_INJECTOR = "getInjector";

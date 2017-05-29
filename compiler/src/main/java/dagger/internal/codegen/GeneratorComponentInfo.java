@@ -18,10 +18,19 @@ public class GeneratorComponentInfo extends ComponentInfo {
     }
 
     @Override
-    public void process(TypeSpec.Builder builder) {
-        super.process(builder);
+    protected String getId() {
+        return simpleVariableName(component);
+    }
 
-        final String name = simpleVariableName(component);
+    @Override
+    public List<String> process(TypeSpec.Builder builder) {
+        List<String> ids = super.process(builder);
+
+        if (ids.contains(getId())) {
+            return ids;
+        }
+
+        String name = getId();
         final MethodSpec.Builder methodBuilder = MethodSpec.methodBuilder(name)
                 .addModifiers(Modifier.PUBLIC);
 
@@ -41,7 +50,7 @@ public class GeneratorComponentInfo extends ComponentInfo {
                 if ((requirement.kind() == ComponentRequirement.Kind.MODULE &&
                         hasNotOnlyNoArgConstructor(typeElement, requirement.autoCreate()))
                         || requirement.kind() != ComponentRequirement.Kind.MODULE) {
-                    parameterSpecs.add(ParameterSpec.builder(ClassName.get(typeElement), simpleVariableName(typeElement)).build());
+                    parameterSpecs.add(ParameterSpec.builder(ClassName.get(typeElement), requirement.variableName()).build());
                 }
             }
         } else {
@@ -74,7 +83,7 @@ public class GeneratorComponentInfo extends ComponentInfo {
                 if ((requirement.kind() == ComponentRequirement.Kind.MODULE &&
                         hasNotOnlyNoArgConstructor) || requirement.kind() != ComponentRequirement.Kind.MODULE) {
                     moduleConstructorStatements.add(CodeBlock.of(".$L($L)",
-                            methodName, simpleVariableName(typeElement)));
+                            methodName, requirement.variableName()));
                 }else if (requirement.kind() == ComponentRequirement.Kind.MODULE && !hasNotOnlyNoArgConstructor) {
                     moduleConstructorStatements.add(CodeBlock.of(".$L(new $T())",
                             methodName, ClassName.get(requirement.typeElement())));
@@ -107,6 +116,8 @@ public class GeneratorComponentInfo extends ComponentInfo {
         }
 
         builder.addMethod(methodBuilder.build());
+        ids.add(name);
+        return ids;
     }
 
     private CodeBlock getBuilderInitStatement(ComponentDescriptor descriptor, ComponentDescriptor parentDescriptor) {

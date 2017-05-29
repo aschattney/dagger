@@ -4,6 +4,7 @@ import com.google.common.collect.ImmutableSet;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.TypeSpec;
 import dagger.Module;
+import dagger.Trigger;
 
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
@@ -11,6 +12,7 @@ import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static dagger.internal.codegen.AbstractComponentWriter.simpleVariableName;
 
@@ -24,84 +26,97 @@ public abstract class ComponentInfo {
     protected final BindingGraph bindingGraph;
     protected List<ComponentInfo> infos = new ArrayList<>();
 
-    public static SpecComponentInfo forSpec(TypeElement component, ComponentDescriptor.Factory componentDescriptorFactory, BindingGraph.Factory bindingGraphFactory) {
-        return createSpecComponentInfo(component, componentDescriptorFactory, bindingGraphFactory);
+    public static List<SpecComponentInfo> forSpec(TypeElement component, ComponentDescriptor.Factory componentDescriptorFactory, BindingGraph.Factory bindingGraphFactory) {
+        return createSpecComponentInfo(component, componentDescriptorFactory, bindingGraphFactory)
+                .stream()
+                .distinct()
+                .collect(Collectors.toList());
     }
 
-    public static GeneratorComponentInfo forGenerator(TypeElement component, ComponentDescriptor.Factory componentDescriptorFactory, BindingGraph.Factory bindingGraphFactory) {
-        return createGeneratorComponentInfo(component, componentDescriptorFactory, bindingGraphFactory);
+    public static List<GeneratorComponentInfo> forGenerator(TypeElement component, ComponentDescriptor.Factory componentDescriptorFactory, BindingGraph.Factory bindingGraphFactory) {
+        return createGeneratorComponentInfo(component, componentDescriptorFactory, bindingGraphFactory)
+                .stream()
+                .distinct()
+                .collect(Collectors.toList());
     }
 
-    public static TriggerComponentInfo forTrigger(TypeElement component, ComponentDescriptor.Factory componentDescriptorFactory, BindingGraph.Factory bindingGraphFactory) {
-        return createTriggerComponentInfo(component, componentDescriptorFactory, bindingGraphFactory);
+    public static List<TriggerComponentInfo> forTrigger(TypeElement component, ComponentDescriptor.Factory componentDescriptorFactory, BindingGraph.Factory bindingGraphFactory) {
+        return createTriggerComponentInfo(component, componentDescriptorFactory, bindingGraphFactory)
+                .stream()
+                .distinct()
+                .collect(Collectors.toList());
     }
 
-    private static TriggerComponentInfo createTriggerComponentInfo(TypeElement component,
-                                                         ComponentDescriptor.Factory componentDescriptorFactory,
-                                                         BindingGraph.Factory bindingGraphFactory) {
+    private static List<TriggerComponentInfo> createTriggerComponentInfo(TypeElement component,
+                                                            ComponentDescriptor.Factory componentDescriptorFactory,
+                                                            BindingGraph.Factory bindingGraphFactory) {
+        List<TriggerComponentInfo> infos = new ArrayList<>();
         final ComponentDescriptor descriptor = componentDescriptorFactory.forComponent(component);
         final BindingGraph bindingGraph = bindingGraphFactory.create(descriptor);
         final TriggerComponentInfo componentInfo = new TriggerComponentInfo(component, descriptor, bindingGraph);
+        infos.add(componentInfo);
         for (BindingGraph subGraph : bindingGraph.subgraphs()) {
-            componentInfo.add(new TriggerComponentInfo(subGraph.componentType(), subGraph.componentDescriptor(), subGraph));
-            createTriggerSubcomponentInfo(subGraph, componentInfo, bindingGraphFactory);
+            infos.add(new TriggerComponentInfo(subGraph.componentType(), subGraph.componentDescriptor(), subGraph));
+            infos.addAll(createTriggerSubcomponentInfo(subGraph));
         }
-        return componentInfo;
+        return infos;
     }
 
-    private static void createTriggerSubcomponentInfo(BindingGraph bindingGraph, ComponentInfo componentMethodOverrider, BindingGraph.Factory factory) {
+    private static List<TriggerComponentInfo> createTriggerSubcomponentInfo(BindingGraph bindingGraph) {
+        List<TriggerComponentInfo> infos = new ArrayList<>();
         for (BindingGraph subGraph : bindingGraph.subgraphs()) {
             ComponentDescriptor subcomponentDescriptor = subGraph.componentDescriptor();
-            final ComponentInfo componentInfo =
+            final TriggerComponentInfo componentInfo =
                     new TriggerComponentInfo(subcomponentDescriptor.componentDefinitionType(), subcomponentDescriptor, subGraph);
-            componentMethodOverrider.add(componentInfo);
-            createTriggerSubcomponentInfo(subGraph, componentInfo, factory);
+            infos.add(componentInfo);
+            infos.addAll(createTriggerSubcomponentInfo(subGraph));
         }
+        return infos;
     }
 
-    private static SpecComponentInfo createSpecComponentInfo(TypeElement component,
+    private static List<SpecComponentInfo> createSpecComponentInfo(TypeElement component,
                                                          ComponentDescriptor.Factory componentDescriptorFactory,
                                                          BindingGraph.Factory bindingGraphFactory) {
+        List<SpecComponentInfo> infos = new ArrayList<>();
         final ComponentDescriptor descriptor = componentDescriptorFactory.forComponent(component);
         final BindingGraph bindingGraph = bindingGraphFactory.create(descriptor);
-        final SpecComponentInfo componentMethodOverrider = new SpecComponentInfo(component, descriptor, bindingGraph);
-        createSpecSubcomponentInfo(descriptor, bindingGraphFactory, componentMethodOverrider);
-        return componentMethodOverrider;
-    }
-
-    private static void createSpecSubcomponentInfo(ComponentDescriptor descriptor, BindingGraph.Factory bindingGraphFactory, SpecComponentInfo componentMethodOverrider) {
-        final ImmutableSet<ComponentDescriptor> subcomponents = descriptor.subcomponents();
-        for (ComponentDescriptor subcomponentDescriptor : subcomponents) {
-            final BindingGraph bindingGraph = bindingGraphFactory.create(subcomponentDescriptor);
-            final SpecComponentInfo subcomponentOverrider =
-                    new SpecComponentInfo(subcomponentDescriptor.componentDefinitionType(), subcomponentDescriptor, bindingGraph);
-            componentMethodOverrider.add(subcomponentOverrider);
-            createSpecSubcomponentInfo(subcomponentDescriptor, bindingGraphFactory, subcomponentOverrider);
+        infos.add(new SpecComponentInfo(component, descriptor, bindingGraph));
+        for (BindingGraph graph : bindingGraph.subgraphs()) {
+            infos.addAll(createSpecSubcomponentInfo(graph.componentDescriptor(), graph));
         }
+        return infos;
     }
 
-    private static GeneratorComponentInfo createGeneratorComponentInfo(TypeElement component,
+    private static List<SpecComponentInfo> createSpecSubcomponentInfo(ComponentDescriptor descriptor, BindingGraph graph) {
+        List<SpecComponentInfo> infos = new ArrayList<>();
+        final SpecComponentInfo info = new SpecComponentInfo(descriptor.componentDefinitionType(), descriptor, graph);
+        infos.add(info);
+        for (BindingGraph subgraph : graph.subgraphs()) {
+            infos.addAll(createSpecSubcomponentInfo(subgraph.componentDescriptor(), subgraph));
+        }
+        return infos;
+    }
+
+    private static List<GeneratorComponentInfo> createGeneratorComponentInfo(TypeElement component,
                                                      ComponentDescriptor.Factory componentDescriptorFactory,
                                                      BindingGraph.Factory bindingGraphFactory) {
+        List<GeneratorComponentInfo> infos = new ArrayList<>();
         final ComponentDescriptor descriptor = componentDescriptorFactory.forComponent(component);
         final BindingGraph bindingGraph = bindingGraphFactory.create(descriptor);
-        final GeneratorComponentInfo componentInfo = new GeneratorComponentInfo(component, descriptor, bindingGraph);
+        infos.add(new GeneratorComponentInfo(component, descriptor, bindingGraph));
         for (BindingGraph subGraph : bindingGraph.subgraphs()) {
-            final ComponentDescriptor subDescriptor = subGraph.componentDescriptor();
-            componentInfo.add(new GeneratorComponentInfo(subDescriptor.componentDefinitionType(), subDescriptor, subGraph));
-            createGeneratorSubcomponentInfo(subGraph, componentInfo);
+            infos.addAll(createGeneratorSubcomponentInfo(subGraph.componentDescriptor(), subGraph));
         }
-        return componentInfo;
+        return infos;
     }
 
-    private static void createGeneratorSubcomponentInfo(BindingGraph bindingGraph, ComponentInfo componentInfo) {
+    private static List<GeneratorComponentInfo> createGeneratorSubcomponentInfo(ComponentDescriptor descriptor, BindingGraph bindingGraph) {
+        List<GeneratorComponentInfo> infos = new ArrayList<>();
+        infos.add(new GeneratorComponentInfo(descriptor.componentDefinitionType(), descriptor, bindingGraph));
         for (BindingGraph subGraph : bindingGraph.subgraphs()) {
-            final ComponentDescriptor subDescriptor = subGraph.componentDescriptor();
-            final ComponentInfo subcomponentInfo =
-                    new GeneratorComponentInfo(subDescriptor.componentDefinitionType(), subDescriptor, subGraph);
-            componentInfo.add(subcomponentInfo);
-            createGeneratorSubcomponentInfo(subGraph, subcomponentInfo);
+            infos.addAll(createGeneratorSubcomponentInfo(subGraph.componentDescriptor(), subGraph));
         }
+        return infos;
     }
 
     protected ComponentInfo(TypeElement component, ComponentDescriptor descriptor, BindingGraph bindingGraph) {
@@ -114,10 +129,14 @@ public abstract class ComponentInfo {
         this.infos.add(info);
     }
 
-    public void process(TypeSpec.Builder builder) {
+    protected abstract String getId();
+
+    public List<String> process(TypeSpec.Builder builder) {
+        List<String> ids = new ArrayList<>();
         for (ComponentInfo info : infos) {
-            info.process(builder);
+            ids.addAll(info.process(builder));
         }
+        return ids;
     }
 
     public TypeElement getComponent() {
@@ -168,5 +187,18 @@ public abstract class ComponentInfo {
             }
         }
         return builderClassName;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (!(obj instanceof ComponentInfo)) {
+            return false;
+        }
+        return obj.getClass().equals(getClass()) && ((ComponentInfo) obj).getId().equals(getId());
+    }
+
+    @Override
+    public int hashCode() {
+        return getId().hashCode();
     }
 }
