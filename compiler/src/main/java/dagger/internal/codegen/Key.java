@@ -16,7 +16,6 @@
 
 package dagger.internal.codegen;
 
-import static com.google.auto.common.MoreElements.asPackage;
 import static com.google.auto.common.MoreElements.isAnnotationPresent;
 import static com.google.auto.common.MoreTypes.asExecutable;
 import static com.google.auto.common.MoreTypes.isType;
@@ -30,7 +29,7 @@ import static dagger.internal.codegen.MapKeys.getUnwrappedMapKeyType;
 import static dagger.internal.codegen.MoreAnnotationMirrors.unwrapOptionalEquivalence;
 import static dagger.internal.codegen.MoreAnnotationMirrors.wrapOptionalInEquivalence;
 import static dagger.internal.codegen.Optionals.firstPresent;
-import static dagger.internal.codegen.Util.toImmutableSet;
+import static dagger.internal.codegen.Util.*;
 import static javax.lang.model.element.ElementKind.METHOD;
 
 import com.google.auto.common.AnnotationMirrors;
@@ -199,64 +198,155 @@ abstract class Key implements Serializable{
 
     public ClassName getDelegateTypeName() {
       final TypeMirror returnType = bindingMethod.getReturnType();
-      final Named annotation = bindingMethod.getAnnotation(Named.class);
-      final ClassName name = ClassName.bestGuess(Util.typeToString(returnType));
-      final String packageName = name.packageName();
-      if (annotation != null) {
-          return ClassName.bestGuess("swagger" + "." + capitalizeFirstLetter(annotation.value()) + "Delegate");
-      }else {
-        final java.util.Optional<? extends AnnotationMirror> annotationMirror = getAnnotationMirror(bindingMethod);
-        if(annotationMirror.isPresent()) {
-          String capitalizedAnnotationValue = getCapitalizedAnnotationValue(annotationMirror.get());
-          if (isInteger(capitalizedAnnotationValue)) {
-            final String annotationName = annotationMirror.get().getAnnotationType().asElement().getSimpleName().toString();
-            capitalizedAnnotationValue = annotationName + capitalizedAnnotationValue;
-          }
-          return ClassName.bestGuess("swagger" + "." + capitalizedAnnotationValue + "In" + contributingModule.getSimpleName().toString() + "Delegate");
-        }else {
-          return ClassName.bestGuess("swagger" + "." + capitalizeFirstLetter(bindingMethod.getSimpleName().toString()) + "For" + contributingModule.getSimpleName().toString() + "Delegate");
+
+      // find qualifier annotations
+      final Optional<? extends AnnotationMirror> qualifier = bindingMethod.getAnnotationMirrors().stream()
+              .filter(this::hasQualifierAnnotation)
+              .findFirst();
+
+      // find mapkey annotations
+      final Optional<? extends AnnotationMirror> mapKey = bindingMethod.getAnnotationMirrors().stream()
+              .filter(this::hasMapKeyAnnotation)
+              .findFirst();
+
+      Optional<String> mapValue = Optional.empty();
+      Optional<String> qualifierValue = Optional.empty();
+
+      String simpleMapKeyName = "";
+      String simpleMapValueName = "";
+      String simpleQualifierName = "";
+      String simpleQualifierValue = "";
+
+      if (mapKey.isPresent()) {
+        mapValue = mapKey.get().getElementValues().entrySet().stream()
+                .filter(e -> e.getKey().getSimpleName().toString().equals("value"))
+                .map(e -> e.getValue().getValue().toString().replace(".", "_"))
+                .findFirst();
+        simpleMapKeyName = MoreAnnotationMirrors.simpleName(qualifier.get()).toString();
+        if (mapValue.isPresent()) {
+          simpleMapValueName = mapValue.get();
         }
       }
-    }
 
-    private boolean isInteger(String str) {
-      try{
-        Integer.parseInt(str);
-        return true;
-      } catch (Exception e) {
-        return false;
+      if (qualifier.isPresent()) {
+        qualifierValue = qualifier.get().getElementValues().entrySet().stream()
+                .filter(e -> e.getKey().getSimpleName().toString().equals("value"))
+                .filter(e -> e.getKey().getReturnType().toString().equals(String.class.getName()))
+                .map(e -> e.getValue().getValue().toString())
+                .findFirst();
+        simpleQualifierName = MoreAnnotationMirrors.simpleName(qualifier.get()).toString();
+        if (qualifierValue.isPresent()) {
+          simpleQualifierValue = qualifierValue.get();
+        }
       }
+
+      StringBuilder sb = new StringBuilder();
+      sb.append(capitalize(simpleMapKeyName));
+      sb.append(capitalize(simpleMapValueName));
+      if (qualifier.isPresent()) {
+        sb.append(capitalize(simpleQualifierName));
+        if (!simpleQualifierValue.isEmpty()) {
+          sb.append(capitalize(simpleQualifierValue));
+        }else {
+          sb.append(capitalize(extractClassName(typeToString(returnType))));
+        }
+      }else {
+        sb.append(capitalize(extractClassName(typeToString(returnType))));
+      }
+
+      return ClassName.bestGuess(String.format("delegates.%sDelegate", sb.toString()));
+
     }
 
     public String getDelegateFieldName() {
       final TypeMirror returnType = bindingMethod.getReturnType();
-      final Named annotation = bindingMethod.getAnnotation(Named.class);
-      if (annotation != null) {
-        return Util.lowerCaseFirstLetter(annotation.value())  + "Delegate";
-      }else {
-        final java.util.Optional<? extends AnnotationMirror> annotationMirror = getAnnotationMirror(returnType);
-        if(annotationMirror.isPresent()) {
-          return Util.lowerCaseFirstLetter(getCapitalizedAnnotationValue(annotationMirror.get())) + "Delegate";
-        }else {
-          return bindingMethod.getSimpleName().toString() + "For" + contributingModule.getSimpleName().toString() + "Delegate";
+
+      // find qualifier annotations
+      final Optional<? extends AnnotationMirror> qualifier = bindingMethod.getAnnotationMirrors().stream()
+              .filter(this::hasQualifierAnnotation)
+              .findFirst();
+
+      // find mapkey annotations
+      final Optional<? extends AnnotationMirror> mapKey = bindingMethod.getAnnotationMirrors().stream()
+              .filter(this::hasMapKeyAnnotation)
+              .findFirst();
+
+      Optional<String> mapValue = Optional.empty();
+      Optional<String> qualifierValue = Optional.empty();
+
+      String simpleMapKeyName = "";
+      String simpleMapValueName = "";
+      String simpleQualifierName = "";
+      String simpleQualifierValue = "";
+
+      if (mapKey.isPresent()) {
+        mapValue = mapKey.get().getElementValues().entrySet().stream()
+                .filter(e -> e.getKey().getSimpleName().contentEquals("value"))
+                .map(e -> e.getValue().getValue().toString().replace(".", "_"))
+                .findFirst();
+        simpleMapKeyName = MoreAnnotationMirrors.simpleName(qualifier.get()).toString();
+        if (mapValue.isPresent()) {
+          simpleMapValueName = mapValue.get();
         }
       }
+
+      if (qualifier.isPresent()) {
+        qualifierValue = qualifier.get().getElementValues().entrySet().stream()
+                .filter(e -> e.getKey().getSimpleName().contentEquals("value"))
+                .filter(e -> e.getKey().getReturnType().toString().equals(String.class.getName()))
+                .map(e -> e.getValue().getValue().toString())
+                .findFirst();
+        simpleQualifierName = MoreAnnotationMirrors.simpleName(qualifier.get()).toString();
+        if (qualifierValue.isPresent()) {
+          simpleQualifierValue = qualifierValue.get();
+        }
+      }
+
+      StringBuilder sb = new StringBuilder();
+      sb.append(lowerCaseFirstLetter(simpleMapKeyName));
+      sb.append(transformValue(simpleMapValueName, sb));
+      if (qualifier.isPresent()) {
+        sb.append(transformValue(simpleQualifierName, sb));
+        if (!simpleQualifierValue.isEmpty()) {
+          sb.append(transformValue(simpleQualifierValue, sb));
+        }else {
+          sb.append(transformValue(extractClassName(typeToString(returnType)), sb));
+        }
+      }else {
+        sb.append(transformValue(extractClassName(typeToString(returnType)), sb));
+      }
+
+      return sb.toString();
+    }
+
+    protected String transformValue(String simpleMapValueName, StringBuilder sb) {
+      return sb.length() == 0 ? lowerCaseFirstLetter(simpleMapValueName) : capitalize(simpleMapValueName);
+    }
+
+    private boolean hasMapKeyAnnotation(AnnotationMirror o) {
+      return o.getAnnotationType().getAnnotationMirrors().stream()
+              .anyMatch(annotation -> annotation.getAnnotationType().toString().equals(MapKey.class.getName()));
+    }
+
+    private boolean hasQualifierAnnotation(AnnotationMirror o) {
+      return o.getAnnotationType().getAnnotationMirrors().stream()
+              .anyMatch(annotation -> annotation.getAnnotationType().toString().equals(Qualifier.class.getName()));
     }
 
     private static String getCapitalizedAnnotationValue(AnnotationMirror annotation) {
       final Map<? extends ExecutableElement, ? extends AnnotationValue> elementValues = annotation.getElementValues();
       for (Map.Entry<? extends ExecutableElement, ? extends AnnotationValue> entry : elementValues.entrySet()) {
-        if (entry.getKey().getSimpleName().toString().equals("value")) {
+        if (entry.getKey().getSimpleName().contentEquals("value")) {
           final String original = entry.getValue().getValue().toString();
           if (!original.isEmpty()) {
-            return capitalizeFirstLetter(original);
+            return capitalize(original);
           }
         }
       }
       throw new IllegalStateException("value not found");
     }
 
-    private static String capitalizeFirstLetter(String original) {
+    private static String capitalize(String original) {
       if (original == null || original.length() == 0) {
         return original;
       }

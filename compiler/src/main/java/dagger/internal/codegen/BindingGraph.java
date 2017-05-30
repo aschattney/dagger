@@ -484,12 +484,11 @@ abstract class BindingGraph {
             ImmutableSet<OptionalBindingDeclaration> optionalBindingDeclarations =
                 optionalBindingDeclarationsBuilder.build();
 
-            ImmutableSet.Builder<Optional<ContributionBinding>> maybeContributionBindings =
-                ImmutableSet.builder();
+            ImmutableSet.Builder<Optional<ContributionBinding>> maybeContributionBindings = ImmutableSet.builder();
             maybeContributionBindings.add(syntheticMapOfValuesBinding(requestKey));
             maybeContributionBindings.add(
-                syntheticMultibinding(
-                    requestKey, multibindingContributions, multibindingDeclarations));
+                syntheticMultibinding(requestKey, multibindingContributions, multibindingDeclarations)
+            );
             syntheticSubcomponentBuilderBinding(subcomponentDeclarations)
                 .ifPresent(
                     binding -> {

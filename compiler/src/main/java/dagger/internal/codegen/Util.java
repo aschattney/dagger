@@ -289,45 +289,94 @@ final class Util {
     }
 
     static ClassName getDelegateTypeName(Key key) {
-        if (!key.multibindingContributionIdentifier().isPresent()) {
-            if (key.qualifier().isPresent()) {
-                final java.util.Optional<String> qualifier = key.qualifier().get().getElementValues().values().stream()
-                        .map((java.util.function.Function<AnnotationValue, String>) annotationValue -> annotationValue.getValue().toString())
-                        .findFirst();
-                if (qualifier.isPresent()) {
-                    final PackageElement packageElement = getPackage(MoreTypes.asElement(key.type()));
-                    final String classNameString = "delegates" + "." + capitalize(qualifier.get()) + "Delegate";
-                    return ClassName.bestGuess(classNameString);
-                }
-            }
-            final TypeName typeName = ClassName.get(key.type());
-            if (typeName instanceof ClassName) {
-                final String s = ((ClassName) typeName).simpleName();
-                return ClassName.bestGuess("delegates" +  "." + s + "Delegate");
-            }
-            final ClassName name = ClassName.bestGuess(typeToString(key.type()));
-            return ClassName.bestGuess("delegates." + name.simpleName() + "Delegate");
-        }
-        return key.multibindingContributionIdentifier().get().getDelegateTypeName();
-    }
 
-    private static String extractPackageName(TypeMirror type) {
-        return getPackage(MoreTypes.asElement(type)).getSimpleName().toString();
+        if (key.multibindingContributionIdentifier().isPresent()) {
+            final Key.MultibindingContributionIdentifier identifier = key.multibindingContributionIdentifier().get();
+            return identifier.getDelegateTypeName();
+        }
+
+        final TypeMirror returnType = key.type();
+
+        // find qualifier annotations
+        final Optional<? extends AnnotationMirror> qualifier = key.qualifier();
+
+        String simpleQualifierName = "";
+        String simpleQualifierValue = "";
+
+        if (qualifier.isPresent()) {
+            Optional<String> qualifierValue = qualifier.get().getElementValues().entrySet().stream()
+                    .filter(e -> e.getKey().getSimpleName().contentEquals("value"))
+                    .filter(e -> e.getKey().getReturnType().toString().equals(String.class.getName()))
+                    .map(e -> e.getValue().getValue().toString())
+                    .findFirst();
+            simpleQualifierName = MoreAnnotationMirrors.simpleName(qualifier.get()).toString();
+            if (qualifierValue.isPresent()) {
+                simpleQualifierValue = qualifierValue.get();
+            }
+        }
+
+        StringBuilder sb = new StringBuilder();
+        if (qualifier.isPresent()) {
+            sb.append(capitalize(simpleQualifierName));
+            if (!simpleQualifierValue.isEmpty()) {
+                sb.append(capitalize(simpleQualifierValue));
+            }else {
+                sb.append(capitalize(extractClassName(typeToString(returnType))));
+            }
+        }else {
+            sb.append(capitalize(extractClassName(typeToString(returnType))));
+        }
+
+        final ClassName name = ClassName.bestGuess(String.format("delegates.%sDelegate", sb.toString()));
+        return name;
     }
 
     static String getDelegateFieldName(Key key) {
-        if (!key.multibindingContributionIdentifier().isPresent()) {
-            if (key.qualifier().isPresent()) {
-                final java.util.Optional<String> qualifier = key.qualifier().get().getElementValues().values().stream()
-                        .map((java.util.function.Function<AnnotationValue, String>) annotationValue -> annotationValue.getValue().toString())
-                        .findFirst();
-                if (qualifier.isPresent()) {
-                    return lowerCaseFirstLetter(qualifier.get()) + "Delegate";
-                }
-            }
-            return toParameterName(extractClassName(typeToString(key.type()))) + "Delegate";
+
+        if (key.multibindingContributionIdentifier().isPresent()) {
+            final Key.MultibindingContributionIdentifier identifier = key.multibindingContributionIdentifier().get();
+            return identifier.getDelegateFieldName();
         }
-        return key.multibindingContributionIdentifier().get().getDelegateFieldName();
+
+        final TypeMirror returnType = key.type();
+
+        // find qualifier annotations
+        final Optional<? extends AnnotationMirror> qualifier = key.qualifier();
+
+        Optional<String> qualifierValue = Optional.empty();
+
+        String simpleQualifierName = "";
+        String simpleQualifierValue = "";
+
+        if (qualifier.isPresent()) {
+            qualifierValue = qualifier.get().getElementValues().entrySet().stream()
+                    .filter(e -> e.getKey().getSimpleName().toString().equals("value"))
+                    .filter(e -> e.getKey().getReturnType().toString().equals(String.class.getName()))
+                    .map(e -> e.getValue().getValue().toString())
+                    .findFirst();
+            simpleQualifierName = MoreAnnotationMirrors.simpleName(qualifier.get()).toString();
+            if (qualifierValue.isPresent()) {
+                simpleQualifierValue = qualifierValue.get();
+            }
+        }
+
+        StringBuilder sb = new StringBuilder();
+        if (qualifier.isPresent()) {
+            sb.append(lowerCaseFirstLetter(simpleQualifierName));
+            if (!simpleQualifierValue.isEmpty()) {
+                sb.append(transformValue(simpleQualifierValue, sb));
+            }else {
+                sb.append(transformValue(extractClassName(typeToString(returnType)), sb));
+            }
+        }else {
+            sb.append(lowerCaseFirstLetter(extractClassName(typeToString(returnType))));
+        }
+
+        return sb.toString();
+    }
+
+    private static String transformValue(String simpleMapValueName, StringBuilder sb) {
+        return sb.length() == 0 ? lowerCaseFirstLetter(simpleMapValueName) : capitalize(simpleMapValueName);
     }
 
     /**
