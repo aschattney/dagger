@@ -29,7 +29,7 @@ import javax.lang.model.element.Element;
 import javax.lang.model.element.ExecutableElement;
 
 /** A step that validates all binding methods that were not validated while processing modules. */
-final class BindingMethodProcessingStep implements ProcessingStep {
+final class BindingMethodProcessingStep implements BasicProcessor.ProcessingStep {
 
   private final Messager messager;
   private final AnyBindingMethodValidator anyBindingMethodValidator;
@@ -47,7 +47,7 @@ final class BindingMethodProcessingStep implements ProcessingStep {
 
   @Override
   public Set<Element> process(
-      SetMultimap<Class<? extends Annotation>, Element> elementsByAnnotation) {
+      SetMultimap<Class<? extends Annotation>, Element> elementsByAnnotation, boolean anyElementsRejected) {
     for (ExecutableElement method : methodsIn(elementsByAnnotation.values())) {
       checkArgument(
           anyBindingMethodValidator.isBindingMethod(method),

@@ -41,7 +41,7 @@ import javax.tools.Diagnostic.Kind;
  * Processing step that verifies that {@link IntoSet}, {@link ElementsIntoSet} and {@link IntoMap}
  * are not present on invalid elements.
  */
-final class MultibindingAnnotationsProcessingStep implements ProcessingStep {
+final class MultibindingAnnotationsProcessingStep implements BasicProcessor.ProcessingStep {
 
   private static final ImmutableSet<Class<? extends Annotation>> VALID_BINDING_ANNOTATIONS =
       ImmutableSet.of(Provides.class, Produces.class, Binds.class);
@@ -59,7 +59,7 @@ final class MultibindingAnnotationsProcessingStep implements ProcessingStep {
 
   @Override
   public Set<Element> process(
-      SetMultimap<Class<? extends Annotation>, Element> elementsByAnnotation) {
+      SetMultimap<Class<? extends Annotation>, Element> elementsByAnnotation, boolean anyElementsRejected) {
     for (Entry<Class<? extends Annotation>, Element> entry : elementsByAnnotation.entries()) {
       Element element = entry.getValue();
       if (!isAnyAnnotationPresent(element, VALID_BINDING_ANNOTATIONS)) {

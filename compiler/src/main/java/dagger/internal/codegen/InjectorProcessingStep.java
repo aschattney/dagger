@@ -23,7 +23,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-public class InjectorProcessingStep implements BasicAnnotationProcessor.ProcessingStep {
+public class InjectorProcessingStep implements BasicProcessor.ProcessingStep {
 
     private Types types;
     private final Messager messager;
@@ -68,7 +68,11 @@ public class InjectorProcessingStep implements BasicAnnotationProcessor.Processi
     }
 
     @Override
-    public Set<Element> process(SetMultimap<Class<? extends Annotation>, Element> elementsByAnnotation) {
+    public Set<Element> process(SetMultimap<Class<? extends Annotation>, Element> elementsByAnnotation, boolean anyElementsRejected) {
+
+        if(anyElementsRejected) {
+            return ImmutableSet.of();
+        }
 
         final Iterator<Element> it = elementsByAnnotation.get(Config.class).iterator();
         if (!it.hasNext()) {

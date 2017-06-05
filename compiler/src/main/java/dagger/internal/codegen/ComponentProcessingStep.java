@@ -45,7 +45,7 @@ import javax.lang.model.element.TypeElement;
  *
  * @author Gregory Kick
  */
-final class ComponentProcessingStep implements ProcessingStep {
+final class ComponentProcessingStep implements BasicProcessor.ProcessingStep {
   private final ComponentDescriptor.Kind componentKind;
   private final Messager messager;
   private final ComponentValidator componentValidator;
@@ -101,7 +101,7 @@ final class ComponentProcessingStep implements ProcessingStep {
 
   @Override
   public final ImmutableSet<Element> process(
-      SetMultimap<Class<? extends Annotation>, Element> elementsByAnnotation) {
+      SetMultimap<Class<? extends Annotation>, Element> elementsByAnnotation, boolean anyElementsRejected) {
 
     if (appClass == null) {
       final Set<Element> elements = elementsByAnnotation.get(Config.class);

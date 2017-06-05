@@ -15,7 +15,7 @@ import java.util.Set;
 /**
  * Created by Andy on 26.05.2017.
  */
-public class AppConfigProcessingStep implements BasicAnnotationProcessor.ProcessingStep{
+public class AppConfigProcessingStep implements BasicProcessor.ProcessingStep {
 
     private final Messager messager;
     private final Elements elements;
@@ -35,7 +35,7 @@ public class AppConfigProcessingStep implements BasicAnnotationProcessor.Process
     }
 
     @Override
-    public Set<Element> process(SetMultimap<Class<? extends Annotation>, Element> set) {
+    public Set<Element> process(SetMultimap<Class<? extends Annotation>, Element> set, boolean anyElementsRejected) {
         final Set<Element> elements = set.get(Config.class);
         validator.validate(elements).printMessagesTo(messager);
         return ImmutableSet.of();

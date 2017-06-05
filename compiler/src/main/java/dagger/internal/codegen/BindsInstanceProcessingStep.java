@@ -46,7 +46,7 @@ import javax.lang.model.element.VariableElement;
  * Processing step that validates that the {@code BindsInstance} annotation is applied to the
  * correct elements.
  */
-final class BindsInstanceProcessingStep implements ProcessingStep {
+final class BindsInstanceProcessingStep implements BasicProcessor.ProcessingStep {
 
   private static final ImmutableSet<Class<? extends Annotation>> COMPONENT_ANNOTATIONS =
       Stream.of(ComponentDescriptor.Kind.values())
@@ -70,7 +70,7 @@ final class BindsInstanceProcessingStep implements ProcessingStep {
 
   @Override
   public Set<Element> process(
-      SetMultimap<Class<? extends Annotation>, Element> elementsByAnnotation) {
+      SetMultimap<Class<? extends Annotation>, Element> elementsByAnnotation, boolean anyElementsRejected) {
     for (Element element : elementsByAnnotation.get(BindsInstance.class)) {
       ExecutableElement method = MoreElements.asExecutable(element);
       ValidationReport.Builder<ExecutableElement> report = ValidationReport.about(method);

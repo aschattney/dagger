@@ -38,7 +38,7 @@ import javax.lang.model.element.Element;
 import javax.lang.model.element.TypeElement;
 
 /** Validates uses of {@link ForReleasableReferences @ForReleasableReferences}. */
-final class ForReleasableReferencesValidator implements ProcessingStep {
+final class ForReleasableReferencesValidator implements BasicProcessor.ProcessingStep {
 
   private final Messager messager;
 
@@ -71,7 +71,7 @@ final class ForReleasableReferencesValidator implements ProcessingStep {
 
   @Override
   public Set<Element> process(
-      SetMultimap<Class<? extends Annotation>, Element> elementsByAnnotation) {
+      SetMultimap<Class<? extends Annotation>, Element> elementsByAnnotation, boolean anyElementsRejected) {
     elementsByAnnotation
         .get(ForReleasableReferences.class)
         .stream()

@@ -40,7 +40,7 @@ import javax.lang.model.element.TypeElement;
  * A {@link ProcessingStep} that validates module classes and generates factories for binding
  * methods.
  */
-final class ModuleProcessingStep implements ProcessingStep {
+final class ModuleProcessingStep implements BasicProcessor.ProcessingStep {
 
   /**
    * A {@link ProcessingStep} for {@code @Module} classes that generates factories for
@@ -110,7 +110,7 @@ final class ModuleProcessingStep implements ProcessingStep {
 
   @Override
   public Set<Element> process(
-      SetMultimap<Class<? extends Annotation>, Element> elementsByAnnotation) {
+      SetMultimap<Class<? extends Annotation>, Element> elementsByAnnotation, boolean anyElementsRejected) {
     List<TypeElement> modules = typesIn(elementsByAnnotation.values());
     moduleValidator.addKnownModules(modules);
     for (TypeElement module : modules) {

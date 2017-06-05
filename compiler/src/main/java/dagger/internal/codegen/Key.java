@@ -220,9 +220,9 @@ abstract class Key implements Serializable{
       if (mapKey.isPresent()) {
         mapValue = mapKey.get().getElementValues().entrySet().stream()
                 .filter(e -> e.getKey().getSimpleName().toString().equals("value"))
-                .map(e -> e.getValue().getValue().toString().replace(".", "_"))
+                .map(e -> Util.extractClassName(e.getValue().getValue().toString().replace(".class", "")))
                 .findFirst();
-        simpleMapKeyName = MoreAnnotationMirrors.simpleName(qualifier.get()).toString();
+        simpleMapKeyName = MoreAnnotationMirrors.simpleName(mapKey.get()).toString();
         if (mapValue.isPresent()) {
           simpleMapValueName = mapValue.get();
         }
@@ -282,9 +282,9 @@ abstract class Key implements Serializable{
       if (mapKey.isPresent()) {
         mapValue = mapKey.get().getElementValues().entrySet().stream()
                 .filter(e -> e.getKey().getSimpleName().contentEquals("value"))
-                .map(e -> e.getValue().getValue().toString().replace(".", "_"))
+                .map(e -> Util.extractClassName(e.getValue().getValue().toString().replace(".class", "")))
                 .findFirst();
-        simpleMapKeyName = MoreAnnotationMirrors.simpleName(qualifier.get()).toString();
+        simpleMapKeyName = MoreAnnotationMirrors.simpleName(mapKey.get()).toString();
         if (mapValue.isPresent()) {
           simpleMapValueName = mapValue.get();
         }
@@ -324,13 +324,11 @@ abstract class Key implements Serializable{
     }
 
     private boolean hasMapKeyAnnotation(AnnotationMirror o) {
-      return o.getAnnotationType().getAnnotationMirrors().stream()
-              .anyMatch(annotation -> annotation.getAnnotationType().toString().equals(MapKey.class.getName()));
+      return MoreElements.isAnnotationPresent(o.getAnnotationType().asElement(), MapKey.class);
     }
 
     private boolean hasQualifierAnnotation(AnnotationMirror o) {
-      return o.getAnnotationType().getAnnotationMirrors().stream()
-              .anyMatch(annotation -> annotation.getAnnotationType().toString().equals(Qualifier.class.getName()));
+      return MoreElements.isAnnotationPresent(o.getAnnotationType().asElement(), Qualifier.class);
     }
 
     private static String getCapitalizedAnnotationValue(AnnotationMirror annotation) {

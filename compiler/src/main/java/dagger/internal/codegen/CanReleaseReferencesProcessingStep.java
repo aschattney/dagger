@@ -34,7 +34,7 @@ import javax.lang.model.element.TypeElement;
  * Processes annotations annotated with {@link CanReleaseReferences}. For each one that is not also
  * a {@link Scope}, generates a class that can create instances at runtime.
  */
-final class CanReleaseReferencesProcessingStep implements ProcessingStep {
+final class CanReleaseReferencesProcessingStep implements BasicProcessor.ProcessingStep {
 
   private final Messager messager;
   private final CanReleaseReferencesValidator canReleaseReferencesValidator;
@@ -56,7 +56,7 @@ final class CanReleaseReferencesProcessingStep implements ProcessingStep {
 
   @Override
   public Set<Element> process(
-      SetMultimap<Class<? extends Annotation>, Element> elementsByAnnotation) {
+      SetMultimap<Class<? extends Annotation>, Element> elementsByAnnotation, boolean anyElementsRejected) {
     for (TypeElement annotatedElement :
         typesIn(elementsByAnnotation.get(CanReleaseReferences.class))) {
       ValidationReport<TypeElement> report =

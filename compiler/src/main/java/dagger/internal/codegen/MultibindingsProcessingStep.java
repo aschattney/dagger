@@ -32,7 +32,7 @@ import javax.lang.model.element.TypeElement;
  * Valdiates types annotated with {@link Multibindings @Multibindings} that haven't already been
  * validated while processing their enclosing modules.
  */
-class MultibindingsProcessingStep implements ProcessingStep {
+class MultibindingsProcessingStep implements BasicProcessor.ProcessingStep {
   private final Messager messager;
   private final MultibindingsValidator multibindingsValidator;
 
@@ -48,7 +48,7 @@ class MultibindingsProcessingStep implements ProcessingStep {
 
   @Override
   public Set<Element> process(
-      SetMultimap<Class<? extends Annotation>, Element> elementsByAnnotation) {
+      SetMultimap<Class<? extends Annotation>, Element> elementsByAnnotation, boolean anyElementsRejected) {
     for (TypeElement element : typesIn(elementsByAnnotation.values())) {
       if (!multibindingsValidator.wasAlreadyValidated(element)) {
         multibindingsValidator.validate(element).printMessagesTo(messager);

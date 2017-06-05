@@ -20,8 +20,12 @@ import static android.content.Context.LOCATION_SERVICE;
 
 import android.app.Application;
 import android.location.LocationManager;
+import dagger.AllowStubGeneration;
 import dagger.Module;
 import dagger.Provides;
+import dagger.multibindings.IntoMap;
+import dagger.multibindings.StringKey;
+
 import javax.inject.Singleton;
 
 /**
@@ -45,5 +49,13 @@ public class DemoApplicationModule {
 
   @Provides @Singleton LocationManager provideLocationManager() {
     return (LocationManager) application.getSystemService(LOCATION_SERVICE);
+  }
+
+  @Provides
+  @StringKey("BLA")
+  @AllowStubGeneration
+  @IntoMap
+  public String prov() {
+    return "";
   }
 }

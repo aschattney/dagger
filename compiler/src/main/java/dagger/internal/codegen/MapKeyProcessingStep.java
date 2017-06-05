@@ -41,7 +41,7 @@ import javax.lang.model.util.Types;
  * @author Chenying Hou
  * @since 2.0
  */
-public class MapKeyProcessingStep implements BasicAnnotationProcessor.ProcessingStep {
+public class MapKeyProcessingStep implements BasicProcessor.ProcessingStep {
   private final Messager messager;
   private final Types types;
   private final MapKeyValidator mapKeyValidator;
@@ -68,7 +68,7 @@ public class MapKeyProcessingStep implements BasicAnnotationProcessor.Processing
 
   @Override
   public Set<Element> process(
-      SetMultimap<Class<? extends Annotation>, Element> elementsByAnnotation) {
+      SetMultimap<Class<? extends Annotation>, Element> elementsByAnnotation, boolean anyElementsRejected) {
     for (TypeElement mapKeyAnnotationType : typesIn(elementsByAnnotation.get(MapKey.class))) {
       ValidationReport<Element> mapKeyReport = mapKeyValidator.validate(mapKeyAnnotationType);
       mapKeyReport.printMessagesTo(messager);

@@ -16,13 +16,28 @@ public class ComponentBuilder<P> {
                                                                                              A injectable,
                                                                                              Config<A, C, T> config) {
         T builder = (T) builders.get(injectable.getClass()).get();
-        C component = config.configure(builder);
+        C component = config.configure(builder).build();
+        component.injectMembers(injectable);
+        return component;
+    }
+
+    public <A, C extends BaseComponent<A>, T extends BaseComponentBuilder<C>> C getComponent(Class<T> clazz,
+                                                                                             A injectable) {
+        T builder = (T) builders.get(injectable.getClass()).get();
+        C component = builder.build();
+        component.injectMembers(injectable);
+        return component;
+    }
+
+    public <A, C extends BaseComponent<A>, T extends BaseComponentBuilder<C>> C getComponent(A injectable) {
+        T builder = (T) builders.get(injectable.getClass()).get();
+        C component = builder.build();
         component.injectMembers(injectable);
         return component;
     }
 
     public interface Config<A, C extends BaseComponent<A>, T extends BaseComponentBuilder<C>> {
-        C configure(T builder);
+        T configure(T builder);
     }
 
 }

@@ -35,7 +35,7 @@ import javax.lang.model.util.ElementKindVisitor6;
  * @author Gregory Kick
  * @since 2.0
  */
-final class InjectProcessingStep implements BasicAnnotationProcessor.ProcessingStep {
+final class InjectProcessingStep implements BasicProcessor.ProcessingStep {
   private final InjectBindingRegistry injectBindingRegistry;
 
   InjectProcessingStep(InjectBindingRegistry factoryRegistrar) {
@@ -49,7 +49,7 @@ final class InjectProcessingStep implements BasicAnnotationProcessor.ProcessingS
 
   @Override
   public Set<Element> process(
-      SetMultimap<Class<? extends Annotation>, Element> elementsByAnnotation) {
+      SetMultimap<Class<? extends Annotation>, Element> elementsByAnnotation, boolean anyElementsRejected) {
     ImmutableSet.Builder<Element> rejectedElements = ImmutableSet.builder();
     // TODO(gak): add some error handling for bad source files
 

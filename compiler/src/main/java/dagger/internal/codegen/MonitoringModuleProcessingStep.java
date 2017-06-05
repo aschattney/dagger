@@ -31,7 +31,7 @@ import javax.lang.model.element.Element;
  * A processing step that is responsible for generating a special module for a
  * {@link ProductionComponent} or {@link ProductionSubcomponent}.
  */
-final class MonitoringModuleProcessingStep implements ProcessingStep {
+final class MonitoringModuleProcessingStep implements BasicProcessor.ProcessingStep {
   private final Messager messager;
   private final MonitoringModuleGenerator monitoringModuleGenerator;
 
@@ -48,7 +48,7 @@ final class MonitoringModuleProcessingStep implements ProcessingStep {
 
   @Override
   public Set<Element> process(
-      SetMultimap<Class<? extends Annotation>, Element> elementsByAnnotation) {
+      SetMultimap<Class<? extends Annotation>, Element> elementsByAnnotation, boolean anyElementsRejected) {
     for (Element element : elementsByAnnotation.values()) {
       monitoringModuleGenerator.generate(MoreElements.asType(element), messager);
     }
