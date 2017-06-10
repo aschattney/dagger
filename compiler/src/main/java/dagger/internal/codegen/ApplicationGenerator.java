@@ -45,14 +45,14 @@ class ApplicationGenerator extends SourceFileGenerator<DI>{
     Optional<TypeSpec.Builder> write(ClassName generatedTypeName, DI di) {
         final TypeSpec.Builder builder = TypeSpec.classBuilder(generatedTypeName);
         TypeName superclass = ClassName.get(di.getBaseAppClass());
-        builder.addModifiers(Modifier.PUBLIC).superclass(superclass);
+        builder.addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT).superclass(superclass);
         builder.addSuperinterface(TYPENAME_INJECTOR_SPEC);
         final Set<TypeElement> components = di.getComponents();
 
         builder.addField(TYPENAME_INJECTOR, FIELDNAME_INJECTOR, Modifier.PRIVATE);
 
         for (TypeElement component : components) {
-            final List<SpecComponentInfo> infos = ComponentInfo.forSpec(component, componentDescriptorFactory, bindingGraphFactory);
+            final List<SpecComponentInfo> infos = ComponentInfo.forSpec(component, componentDescriptorFactory, bindingGraphFactory, di.getAppClass().asType());
             final List<MethodSpec.Builder> methodBuilders = infos.stream()
                     .flatMap(info -> info.getMethods().stream())
                     .collect(Collectors.toList());

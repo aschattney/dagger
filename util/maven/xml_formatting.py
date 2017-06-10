@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import textwrap
+
 DEP_BLOCK = """
 <dependency>
   <groupId>%s</groupId>
@@ -20,9 +22,23 @@ DEP_BLOCK = """
 </dependency>
 """.strip()
 
+CLASSIFIER_DEP_BLOCK = """
+<dependency>
+  <groupId>%s</groupId>
+  <artifactId>%s</artifactId>
+  <version>%s</version>
+  <type>%s</type>
+  <classifier>%s</classifier>
+</dependency>
+""".strip()
+
+
 def maven_dependency_xml(artifact_string):
-  group, artifact, version = artifact_string.split(':')
-  formatted = DEP_BLOCK % (group, artifact, version)
+  if artifact_string.count(':') is 2:
+    format_string = DEP_BLOCK
+  else:
+    format_string = CLASSIFIER_DEP_BLOCK
+  formatted = format_string % tuple(artifact_string.split(':'))
   return '\n'.join(['    %s' %x for x in formatted.split('\n')])
 
 POM_OUTLINE = """<?xml version="1.0" encoding="UTF-8"?>
@@ -90,6 +106,8 @@ POM_OUTLINE = """<?xml version="1.0" encoding="UTF-8"?>
 
 def generate_pom(artifact_string, metadata, deps, version):
   group, artifact, version = artifact_string.split(':')
+
+  deps = deps + metadata.get('manual_dependencies', [])
 
   return POM_OUTLINE.format(
       group=group,

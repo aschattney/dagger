@@ -37,7 +37,9 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
+import com.google.googlejavaformat.Op;
 import com.squareup.javapoet.TypeName;
+import dagger.BindsInstance;
 import dagger.Lazy;
 import dagger.MembersInjector;
 import dagger.Provides;
@@ -267,7 +269,7 @@ abstract class DependencyRequest {
 
     abstract Builder key(Key key);
 
-    abstract Builder requestElement(Element element);
+    abstract Builder requestElement(Optional<Element> element);
 
     abstract Builder isNullable(boolean isNullable);
 
@@ -370,6 +372,16 @@ abstract class DependencyRequest {
       return requests.build();
     }
 
+    DependencyRequest plantDependency(TypeMirror typeMirror) {
+      return DependencyRequest.builder()
+              .kind(Kind.INSTANCE)
+              .key(Key.builder(typeMirror).build())
+              .requestElement(Optional.empty())
+              .isNullable(false)
+              .overriddenVariableName(Optional.of(Util.toParameterName(Util.extractClassName(typeMirror))))
+              .build();
+    }
+
     DependencyRequest forRequiredVariable(VariableElement variableElement) {
       return forRequiredVariable(variableElement, Optional.empty());
     }
@@ -378,7 +390,7 @@ abstract class DependencyRequest {
       checkNotNull(variableElement);
       TypeMirror type = variableElement.asType();
       Optional<AnnotationMirror> qualifier = InjectionAnnotations.getQualifier(variableElement);
-      return newDependencyRequest(variableElement, type, qualifier, name);
+      return newDependencyRequest(Optional.of(variableElement), type, qualifier, name);
     }
 
     DependencyRequest forRequiredResolvedVariable(
@@ -386,7 +398,7 @@ abstract class DependencyRequest {
       checkNotNull(variableElement);
       checkNotNull(resolvedType);
       Optional<AnnotationMirror> qualifier = InjectionAnnotations.getQualifier(variableElement);
-      return newDependencyRequest(variableElement, resolvedType, qualifier, Optional.empty());
+      return newDependencyRequest(Optional.of(variableElement), resolvedType, qualifier, Optional.empty());
     }
 
     DependencyRequest forComponentProvisionMethod(ExecutableElement provisionMethod,
@@ -399,7 +411,7 @@ abstract class DependencyRequest {
           provisionMethod);
       Optional<AnnotationMirror> qualifier = InjectionAnnotations.getQualifier(provisionMethod);
       return newDependencyRequest(
-          provisionMethod, provisionMethodType.getReturnType(), qualifier, Optional.empty());
+          Optional.of(provisionMethod), provisionMethodType.getReturnType(), qualifier, Optional.empty());
     }
 
     DependencyRequest forComponentProductionMethod(ExecutableElement productionMethod,
@@ -417,10 +429,10 @@ abstract class DependencyRequest {
             .kind(Kind.FUTURE)
             .key(keyFactory.forQualifiedType(
                 qualifier, Iterables.getOnlyElement(((DeclaredType) type).getTypeArguments())))
-            .requestElement(productionMethod)
+            .requestElement(Optional.of(productionMethod))
             .build();
       } else {
-        return newDependencyRequest(productionMethod, type, qualifier, Optional.empty());
+        return newDependencyRequest(Optional.of(productionMethod), type, qualifier, Optional.empty());
       }
     }
 
@@ -439,7 +451,7 @@ abstract class DependencyRequest {
       return DependencyRequest.builder()
           .kind(Kind.MEMBERS_INJECTOR)
           .key(keyFactory.forMembersInjectedType(membersInjectedType))
-          .requestElement(membersInjectionMethod)
+          .requestElement(Optional.of(membersInjectionMethod))
           .build();
     }
 
@@ -447,7 +459,7 @@ abstract class DependencyRequest {
       return DependencyRequest.builder()
           .kind(Kind.MEMBERS_INJECTOR)
           .key(keyFactory.forMembersInjectedType(type))
-          .requestElement(type.asElement())
+          .requestElement(Optional.of(type.asElement()))
           .build();
     }
 
@@ -456,7 +468,7 @@ abstract class DependencyRequest {
       return DependencyRequest.builder()
           .kind(Kind.PROVIDER)
           .key(key)
-          .requestElement(MoreTypes.asElement(key.type()))
+          .requestElement(Optional.of(MoreTypes.asElement(key.type())))
           .build();
     }
 
@@ -465,7 +477,7 @@ abstract class DependencyRequest {
       return DependencyRequest.builder()
           .kind(Kind.PROVIDER)
           .key(key)
-          .requestElement(MoreTypes.asElement(key.type()))
+          .requestElement(Optional.of(MoreTypes.asElement(key.type())))
           .overriddenVariableName(Optional.of("monitor"))
           .build();
     }
@@ -488,7 +500,7 @@ abstract class DependencyRequest {
     }
 
     private DependencyRequest newDependencyRequest(
-        Element requestElement,
+        Optional<Element> requestElement,
         TypeMirror type,
         Optional<AnnotationMirror> qualifier,
         Optional<String> name) {
@@ -500,7 +512,7 @@ abstract class DependencyRequest {
           .kind(kindAndType.kind())
           .key(keyFactory.forQualifiedType(qualifier, kindAndType.type()))
           .requestElement(requestElement)
-          .isNullable(allowsNull(kindAndType.kind(), getNullableType(requestElement)))
+          .isNullable(allowsNull(kindAndType.kind(), requestElement.isPresent() ? getNullableType(requestElement.get()) : Optional.empty()))
           .overriddenVariableName(name)
           .build();
     }

@@ -17,6 +17,7 @@
 package com.example.dagger.activitygraphs;
 
 import android.app.Activity;
+import com.example.dagger.activitygraphs.ui.PerActivity;
 import dagger.Component;
 
 /**
@@ -29,7 +30,7 @@ public interface AbstractActivityComponent {
   Activity activity(); // Expose the activity to sub-graphs.
   @Component.Builder
   interface Builder {
-    Builder moduleActivity(ActivityModule module);
+    //Builder moduleActivity(ActivityModule module);
     Builder component(ApplicationComponent component);
     AbstractActivityComponent build();
   }

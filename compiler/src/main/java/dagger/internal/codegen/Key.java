@@ -45,7 +45,6 @@ import com.squareup.javapoet.ClassName;
 import dagger.Binds;
 import dagger.BindsOptionalOf;
 import dagger.MapKey;
-import dagger.Multibindings;
 import dagger.multibindings.*;
 import dagger.producers.Produced;
 import dagger.producers.Producer;
@@ -128,7 +127,7 @@ abstract class Key implements Serializable{
   public abstract int hashCode();
 
   static Builder builder(TypeMirror type) {
-    return new AutoValue_Key.Builder().type(type);
+    return new dagger.internal.codegen.AutoValue_Key.Builder().type(type);
   }
 
   @AutoValue.Builder
@@ -406,7 +405,7 @@ abstract class Key implements Serializable{
   }
 
   boolean isValidMembersInjectionKey() {
-    return !qualifier().isPresent() && !type().getKind().equals(TypeKind.WILDCARD);
+    return !qualifier().isPresent() && type().getKind().equals(TypeKind.DECLARED);
   }
 
   /**
@@ -604,8 +603,7 @@ abstract class Key implements Serializable{
     }
 
     /**
-     * Returns the key for a {@link Multibinds @Multibinds} method or a method in a
-     * {@link Multibindings @Multibindings} interface.
+     * Returns the key for a {@link Multibinds @Multibinds} method.
      *
      * <p>The key's type is either {@code Set<T>} or {@code Map<K, F<V>>}, where {@code F} is either
      * {@link Provider} or {@link Producer}, depending on {@code bindingType}.

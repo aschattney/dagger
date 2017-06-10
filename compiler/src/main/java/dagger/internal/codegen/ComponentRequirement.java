@@ -16,18 +16,27 @@
 
 package dagger.internal.codegen;
 
+import static com.google.auto.common.MoreElements.getLocalAndInheritedMethods;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
+import static dagger.internal.codegen.DaggerElements.isAnyAnnotationPresent;
 import static dagger.internal.codegen.SourceFiles.simpleVariableName;
 import static dagger.internal.codegen.Util.componentCanMakeNewInstances;
-import static dagger.internal.codegen.Util.requiresAPassedInstance;
+import static javax.lang.model.element.Modifier.ABSTRACT;
+import static javax.lang.model.element.Modifier.STATIC;
 
 import com.google.auto.common.MoreTypes;
 import com.google.auto.value.AutoValue;
 import com.google.common.base.Equivalence;
+import com.google.common.collect.ImmutableSet;
+import dagger.Binds;
+import dagger.BindsOptionalOf;
 import dagger.Module;
-
+import dagger.Provides;
+import dagger.multibindings.Multibinds;
+import dagger.producers.Produces;
 import java.util.Optional;
+import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.Elements;
@@ -90,18 +99,50 @@ abstract class ComponentRequirement {
       return overrideNullPolicy().get();
     }
     switch (kind()) {
-      case DEPENDENCY:
-        return NullPolicy.THROW;
       case MODULE:
         return componentCanMakeNewInstances(typeElement())
             ? NullPolicy.NEW
-            : requiresAPassedInstance(elements, types, typeElement())
-                ? NullPolicy.THROW
-                : NullPolicy.ALLOW;
+            : requiresAPassedInstance(elements, types) ? NullPolicy.THROW : NullPolicy.ALLOW;
+      case DEPENDENCY:
       case BINDING:
         return NullPolicy.THROW;
     }
     throw new AssertionError();
+  }
+
+  /**
+   * Returns true if the passed {@link ComponentRequirement} requires a passed instance in order
+   * to be used within a component.
+   */
+  boolean requiresAPassedInstance(Elements elements, Types types) {
+    if (kind().equals(ComponentRequirement.Kind.BINDING)) {
+      // A user has explicitly defined in their component builder they will provide an instance.
+      return true;
+    }
+
+    ImmutableSet<ExecutableElement> methods =
+        getLocalAndInheritedMethods(typeElement(), types, elements);
+    boolean foundInstanceMethod = false;
+    for (ExecutableElement method : methods) {
+      if (method.getModifiers().contains(ABSTRACT)
+          && !isAnyAnnotationPresent(
+              method, Binds.class, Multibinds.class, BindsOptionalOf.class)) {
+        // TODO(ronshapiro): it would be cool to have internal meta-annotations that could describe
+        // these, like @AbstractBindingMethod
+        /* We found an abstract method that isn't a binding method. That automatically means that
+         * a user will have to provide an instance because we don't know which subclass to use. */
+        return true;
+      } else if (!method.getModifiers().contains(STATIC)
+          && isAnyAnnotationPresent(method, Provides.class, Produces.class)) {
+        foundInstanceMethod = true;
+      }
+    }
+
+    if (foundInstanceMethod) {
+      return !componentCanMakeNewInstances(typeElement());
+    }
+
+    return false;
   }
 
   /** The key for this requirement, if one is available. */
@@ -113,7 +154,7 @@ abstract class ComponentRequirement {
   abstract boolean autoCreate();
 
   static ComponentRequirement forDependency(TypeMirror type) {
-    return new AutoValue_ComponentRequirement(
+    return new dagger.internal.codegen.AutoValue_ComponentRequirement(
         Kind.DEPENDENCY,
         MoreTypes.equivalence().wrap(checkNotNull(type)),
         Optional.empty(),
@@ -124,7 +165,7 @@ abstract class ComponentRequirement {
 
   static ComponentRequirement forModule(TypeMirror type) {
     final Module annotation = MoreTypes.asTypeElement(type).getAnnotation(Module.class);
-    return new AutoValue_ComponentRequirement(
+    return new dagger.internal.codegen.AutoValue_ComponentRequirement(
         Kind.MODULE,
         MoreTypes.equivalence().wrap(checkNotNull(type)),
         Optional.empty(),
@@ -135,7 +176,7 @@ abstract class ComponentRequirement {
   }
 
   static ComponentRequirement forBinding(Key key, boolean nullable, String variableName) {
-    return new AutoValue_ComponentRequirement(
+    return new dagger.internal.codegen.AutoValue_ComponentRequirement(
         Kind.BINDING,
         key.wrappedType(),
         nullable ? Optional.of(NullPolicy.ALLOW) : Optional.empty(),

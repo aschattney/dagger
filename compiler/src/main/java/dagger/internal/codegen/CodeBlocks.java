@@ -16,9 +16,12 @@
 
 package dagger.internal.codegen;
 
+import static dagger.internal.codegen.TypeNames.rawTypeName;
 import static java.util.stream.StreamSupport.stream;
 
+import com.google.auto.common.MoreElements;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
+import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.CodeBlock;
 import com.squareup.javapoet.CodeBlock.Builder;
 import com.squareup.javapoet.TypeName;
@@ -53,16 +56,8 @@ final class CodeBlocks {
    * use as type parameters or javadoc method arguments.
    */
   static Collector<TypeName, ?, CodeBlock> toTypeNamesCodeBlock() {
-    return typeNamesIntoCodeBlock(CodeBlock.builder());
-  }
-
-  /**
-   * Adds {@link TypeName} instances to the given {@link CodeBlock.Builder} in a comma-separated
-   * list for use as type parameters or javadoc method arguments.
-   */
-  static Collector<TypeName, ?, CodeBlock> typeNamesIntoCodeBlock(CodeBlock.Builder builder) {
     return Collector.of(
-        () -> new CodeBlockJoiner(", ", builder),
+        () -> new CodeBlockJoiner(", ", CodeBlock.builder()),
         CodeBlockJoiner::addTypeName,
         CodeBlockJoiner::merge,
         CodeBlockJoiner::join);
@@ -141,7 +136,11 @@ final class CodeBlocks {
   /** Returns a javadoc {@literal @link} tag that poins to the given {@link ExecutableElement}. */
   static CodeBlock javadocLinkTo(ExecutableElement executableElement) {
     CodeBlock.Builder builder =
-        CodeBlock.builder().add("{@link $T#", executableElement.getEnclosingElement());
+        CodeBlock.builder()
+            .add(
+                "{@link $T#",
+                rawTypeName(
+                    ClassName.get(MoreElements.asType(executableElement.getEnclosingElement()))));
     switch (executableElement.getKind()) {
       case METHOD:
         builder.add("$L", executableElement.getSimpleName());
@@ -157,13 +156,14 @@ final class CodeBlocks {
         throw new AssertionError(executableElement.toString());
     }
     builder.add("(");
-    executableElement
-        .getParameters()
-        .stream()
-        .map(VariableElement::asType)
-        .map(TypeName::get)
-        .map(TypeNames::rawTypeName)
-        .collect(typeNamesIntoCodeBlock(builder));
+    builder.add(
+        executableElement
+            .getParameters()
+            .stream()
+            .map(VariableElement::asType)
+            .map(TypeName::get)
+            .map(TypeNames::rawTypeName)
+            .collect(toTypeNamesCodeBlock()));
     return builder.add(")}").build();
   }
 

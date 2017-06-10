@@ -16,15 +16,11 @@
 
 package com.example.dagger.activitygraphs;
 
-import android.app.Activity;
-import android.app.Application;
 import android.location.LocationManager;
-import com.example.dagger.activitygraphs.ui.HomeComponent;
 import dagger.Injector;
 import dagger.Provides;
 import dagger.ProvidesComponent;
 import dagger.ProvidesModule;
-import injector.InjectorSpec;
 
 import javax.inject.Inject;
 

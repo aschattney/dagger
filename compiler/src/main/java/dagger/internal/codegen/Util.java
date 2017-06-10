@@ -26,7 +26,6 @@ import static javax.lang.model.element.ElementKind.CONSTRUCTOR;
 import static javax.lang.model.element.Modifier.ABSTRACT;
 import static javax.lang.model.element.Modifier.PRIVATE;
 import static javax.lang.model.element.Modifier.STATIC;
-
 import com.google.auto.common.MoreElements;
 import com.google.auto.common.MoreTypes;
 import com.google.common.base.Function;
@@ -42,9 +41,10 @@ import dagger.multibindings.IntKey;
 import dagger.multibindings.LongKey;
 import dagger.multibindings.StringKey;
 import dagger.producers.Produces;
-
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Predicate;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import java.util.stream.Collector;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ExecutableElement;
@@ -126,9 +126,6 @@ final class Util {
                 return true;
             }
         }
-
-        // TODO(gak): still need checks for visibility
-
         return false;
     }
 
@@ -317,14 +314,14 @@ final class Util {
 
         StringBuilder sb = new StringBuilder();
         if (qualifier.isPresent()) {
-            sb.append(capitalize(simpleQualifierName));
-            if (!simpleQualifierValue.isEmpty()) {
-                sb.append(capitalize(simpleQualifierValue));
+            sb.append(capitalize(simpleQualifierName).trim());
+            if (!simpleQualifierValue.trim().isEmpty()) {
+                sb.append(capitalize(simpleQualifierValue).trim());
             }else {
-                sb.append(capitalize(extractClassName(typeToString(returnType))));
+                sb.append(capitalize(extractClassName(typeToString(returnType))).trim());
             }
         }else {
-            sb.append(capitalize(extractClassName(typeToString(returnType))));
+            sb.append(capitalize(extractClassName(typeToString(returnType))).trim());
         }
 
         final ClassName name = ClassName.bestGuess(String.format("delegates.%sDelegate", sb.toString()));
@@ -371,6 +368,8 @@ final class Util {
         }else {
             sb.append(lowerCaseFirstLetter(extractClassName(typeToString(returnType))));
         }
+
+        sb.append("Delegate");
 
         return sb.toString();
     }
@@ -621,7 +620,7 @@ final class Util {
 
     public static final String METHOD_NAME_GET_INJECTOR = "getInjector";
     public static final ClassName TYPENAME_INJECTOR = ClassName.bestGuess("injector.Injector");
-    public static final String SIMPLE_NAME_INJECTOR_APPLICATION = "DaggerApplication";
+    public static final String SIMPLE_NAME_INJECTOR_APPLICATION = "DaggerHookApplication";
     public static final String FIELDNAME_INJECTOR = "injector";
     public static final ClassName TYPENAME_INJECTOR_SPEC = ClassName.bestGuess("injector.InjectorSpec");
     public static final ClassName TYPENAME_ANDROID_APPLICATION = ClassName.bestGuess("android.app.Application");

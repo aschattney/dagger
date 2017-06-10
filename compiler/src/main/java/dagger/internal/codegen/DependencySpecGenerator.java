@@ -12,7 +12,7 @@ import static dagger.internal.codegen.Util.METHOD_NAME_GET_INJECTOR;
 import static dagger.internal.codegen.Util.TYPENAME_INJECTOR;
 import static dagger.internal.codegen.Util.TYPENAME_INJECTOR_SPEC;
 
-public class DependencySpecGenerator extends SourceFileGenerator<Set<TypeElement>> {
+public class DependencySpecGenerator extends SourceFileGenerator<DI> {
 
     private ComponentDescriptor.Factory componentDescriptorFactory;
     private BindingGraph.Factory bindingGraphFactory;
@@ -24,23 +24,24 @@ public class DependencySpecGenerator extends SourceFileGenerator<Set<TypeElement
     }
 
     @Override
-    ClassName nameGeneratedType(Set<TypeElement> input) {
+    ClassName nameGeneratedType(DI input) {
         return TYPENAME_INJECTOR_SPEC;
     }
 
     @Override
-    Optional<? extends Element> getElementForErrorReporting(Set<TypeElement> input) {
+    Optional<? extends Element> getElementForErrorReporting(DI input) {
         return Optional.empty();
     }
 
     @Override
-    Optional<TypeSpec.Builder> write(ClassName generatedTypeName, Set<TypeElement> input) {
+    Optional<TypeSpec.Builder> write(ClassName generatedTypeName, DI input) {
 
         final TypeSpec.Builder builder = TypeSpec.interfaceBuilder(generatedTypeName)
                 .addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT);
 
-        input.stream()
-                .flatMap(typeElement -> ComponentInfo.forSpec(typeElement, componentDescriptorFactory, bindingGraphFactory).stream())
+        input.getComponents().stream()
+                .flatMap(typeElement -> ComponentInfo.forSpec(typeElement, componentDescriptorFactory, bindingGraphFactory, input.getAppClass().asType())
+                .stream())
                 .collect(Collectors.toList())
                 .forEach(info -> info.process(builder));
 

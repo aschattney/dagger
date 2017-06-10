@@ -70,16 +70,19 @@ public class InjectorProcessingStep implements BasicProcessor.ProcessingStep {
     @Override
     public Set<Element> process(SetMultimap<Class<? extends Annotation>, Element> elementsByAnnotation, boolean anyElementsRejected) {
 
-        if(anyElementsRejected) {
-            return ImmutableSet.of();
-        }
-
         final Iterator<Element> it = elementsByAnnotation.get(Config.class).iterator();
         if (!it.hasNext()) {
-            return ImmutableSet.of();
+            return ImmutableSet.copyOf(elementsByAnnotation.values());
         }
 
-        final Config configAnnotation = it.next().getAnnotation(Config.class);
+        final Element config = it.next();
+        final Config configAnnotation = config.getAnnotation(Config.class);
+
+        if(anyElementsRejected) {
+            return ImmutableSet.copyOf(elementsByAnnotation.values());
+        }
+
+        final AppConfig appConfig = appConfigFactory.create(configAnnotation);
 
         Set<Element> rejectedElements = new LinkedHashSet<>();
 
@@ -90,14 +93,14 @@ public class InjectorProcessingStep implements BasicProcessor.ProcessingStep {
         for (Element element : elementsByAnnotation.get(component.annotationType())) {
             TypeElement componentTypeElement = (TypeElement) element;
             ComponentDescriptor componentDescriptor = componentDescriptorFactory.forComponent(componentTypeElement);
-            BindingGraph bindingGraph = bindingGraphFactory.create(componentDescriptor);
+            BindingGraph bindingGraph = bindingGraphFactory.create(componentDescriptor, appConfig.getAppClass().asType());
             InjectorType injectorType = new InjectorType(componentTypeElement, bindingGraph, componentDescriptor);
             injectorTypeList.add(injectorType);
         }
         if (rejectedElements.isEmpty()) {
             for (TypeElement component : components) {
                 final ComponentDescriptor componentDescriptor = componentDescriptorFactory.forComponent(component);
-                final BindingGraph bindingGraph = bindingGraphFactory.create(componentDescriptor);
+                final BindingGraph bindingGraph = bindingGraphFactory.create(componentDescriptor, appConfig.getAppClass().asType());
                 final ImmutableSet<ComponentDescriptor> componentDescriptors = bindingGraph.componentDescriptors();
                 componentDescriptors
                         .stream()
@@ -106,13 +109,14 @@ public class InjectorProcessingStep implements BasicProcessor.ProcessingStep {
                         .map(ComponentDescriptor.BuilderSpec::requirementMethods)
                         .flatMap(Collection::stream)
                         .filter(method -> method.requirement().kind() == ComponentRequirement.Kind.BINDING)
-                        .forEach(method -> stubGenerator.generate(provisionBindingFactory.forBuilderBinding(method), messager));
+                        .forEach(method -> {
+                            stubGenerator.generate(provisionBindingFactory.forBuilderBinding(method), messager);
+                        });
 
             }
-            final AppConfig appConfig = appConfigFactory.create(configAnnotation);
             final DI di = new DI(appConfig, components, injectorTypeList);
             this.applicationGenerator.generate(di, messager);
-            this.dependencySpecGenerator.generate(components, messager);
+            this.dependencySpecGenerator.generate(di, messager);
             this.dependencyInjectorGenerator.generate(di, messager);
             this.injectorGenerator.generate(di, messager);
         } else {

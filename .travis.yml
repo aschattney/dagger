@@ -13,7 +13,9 @@ addons:
     packages:
       - oracle-java8-installer
       - libstdc++-4.9-dev # https://github.com/nodegit/nodegit/issues/853
-      - bazel=0.4.3
+      - bazel=0.4.5
+      - gcc-4.8
+      - g++-4.8
 
 jdk:
   - &jdk_for_publishing oraclejdk8
@@ -22,28 +24,22 @@ android:
   components:
     - tools
     - tools # Duplicated as per https://github.com/travis-ci/travis-ci/issues/6040#issuecomment-219367943
-    - build-tools-25.0.0
+    - build-tools-25.0.2
     - android-25
     - platform-tools
     - extra-android-m2repository
 
 before_install:
-  - echo "ANDROID_HOME = \"$ANDROID_HOME\"" > WORKSPACE.user.bzl
   - sudo rm -f /etc/mavenrc
   - wget http://www.us.apache.org/dist/maven/maven-3/3.1.1/binaries/apache-maven-3.1.1-bin.tar.gz
-  - tar -zxvf apache-maven-3.1.1-bin.tar.gz
-  - export MAVEN_OPTS="-Xmx512m -XX:MaxPermSize=192m"
-  - export M2_HOME=$PWD/apache-maven-3.1.1
-  - export PATH=$M2_HOME/bin:$PATH
-  - mvn --version
+  - tar -zxf apache-maven-3.1.1-bin.tar.gz
+  - export PATH="$PWD/apache-maven-3.1.1/bin:$PATH"
+  - mkdir travis_bin
+  - ln -s $(which gcc-4.8) travis_bin/gcc
+  - ln -s $(which g++-4.8) travis_bin/g++
+  - export PATH="${PWD}/travis_bin:${PATH}"
 
-install:
-  - bazel build //...
-  - mvn -B -P!standard-with-extra-repos -U install clean --fail-never --quiet -DskipTests=true -Dinvoker.skip=true
-
-script:
-  - bazel test --test_output errors //...
-  - mvn -B -P!standard-with-extra-repos -U verify --fail-at-end -Dsource.skip=true -Dmaven.javadoc.skip=true
+script: bazel test --test_output errors //...
 
 env:
   global:
@@ -60,7 +56,3 @@ branches:
   only:
     - master
     - /^release.*$/
-
-cache:
-  directories:
-    - $HOME/.m2

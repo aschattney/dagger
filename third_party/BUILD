@@ -16,7 +16,7 @@ package(default_visibility = ["//visibility:public"])
 
 java_library(
     name = "jsr_250",
-    exports = ["@javax_annotations_jsr250_api//jar"],
+    exports = ["@javax_annotation_jsr250_api//jar"],
 )
 
 java_library(
@@ -36,18 +36,32 @@ java_library(
 
 java_library(
     name = "error_prone_annotations",
-    tags = ["compile_time_dep"],
+    tags = ["maven:compile_only"],
     exports = ["@com_google_errorprone_error_prone_annotations//jar"],
 )
 
 java_library(
     name = "junit",
-    exports = ["@junit_junit//jar"],
+    testonly = 1,
+    exports = [
+        "@junit_junit//jar",
+        "@org_hamcrest_hamcrest_core//jar",
+    ],
 )
 
 java_library(
     name = "truth",
+    testonly = 1,
     exports = ["@com_google_truth_truth//jar"],
+)
+
+java_library(
+    name = "truth8",
+    testonly = 1,
+    exports = [
+        ":truth",
+        "@com_google_truth_extensions_truth_java8_extension//jar",
+    ],
 )
 
 java_library(
@@ -57,11 +71,13 @@ java_library(
 
 java_library(
     name = "guava_testlib",
+    testonly = 1,
     exports = ["@com_google_guava_guava_testlib//jar"],
 )
 
 java_library(
     name = "auto_common",
+    tags = ["maven:shaded"],
     exports = ["@com_google_auto_auto_common//jar"],
 )
 
@@ -95,7 +111,7 @@ java_library(
         ":auto_value_processor",
         ":auto_annotation_processor",
     ],
-    tags = ["compile_time_dep"],
+    tags = ["maven:compile_only"],
     exports = [
         ":jsr_250",
         "@com_google_auto_value_auto_value//jar",
@@ -136,7 +152,7 @@ java_plugin(
 java_library(
     name = "auto_service",
     exported_plugins = [":auto_service_processor"],
-    tags = ["compile_time_dep"],
+    tags = ["maven:compile_only"],
     exports = ["@com_google_auto_service_auto_service//jar"],
 )
 
@@ -164,6 +180,41 @@ java_library(
         "@org_hamcrest_hamcrest_core//jar",
         "@org_objenesis_objenesis//jar",
     ],
+)
+
+java_library(
+    name = "grpc",
+    exports = ["@io_grpc_grpc_all//jar"],
+)
+
+java_library(
+    name = "grpc_core",
+    exports = ["@io_grpc_grpc_core//jar"],
+)
+
+java_library(
+    name = "grpc_netty",
+    exports = ["@io_grpc_grpc_netty//jar"],
+)
+
+java_library(
+    name = "grpc_context",
+    exports = ["@io_grpc_grpc_context//jar"],
+)
+
+java_library(
+    name = "grpc_protobuf",
+    exports = ["@io_grpc_grpc_protobuf//jar"],
+)
+
+java_library(
+    name = "grpc_stub",
+    exports = ["@io_grpc_grpc_stub//jar"],
+)
+
+java_library(
+    name = "protobuf",
+    exports = ["@com_google_protobuf_protobuf_java//jar"],
 )
 
 java_library(

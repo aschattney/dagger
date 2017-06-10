@@ -44,9 +44,39 @@ at compile time.
 ### Maven
 
 In a Maven project, include the `dagger` artifact in the dependencies section
-of your `pom.xml` and the `dagger-compiler` artifact as either an `optional` or
-`provided` dependency:
+of your `pom.xml` and the `dagger-compiler` artifact as an
+`annotationProcessorPaths` value of the `maven-compiler-plugin`:
 
+```xml
+<dependencies>
+  <dependency>
+    <groupId>com.google.dagger</groupId>
+    <artifactId>dagger</artifactId>
+    <version>2.x</version>
+  </dependency>
+</dependencies>
+<build>
+  <plugins>
+    <plugin>
+      <groupId>org.apache.maven.plugins</groupId>
+      <artifactId>maven-compiler-plugin</artifactId>
+      <version>3.6.1</version>
+      <configuration>
+        <annotationProcessorPaths>
+          <path>
+            <groupId>com.google.dagger</groupId>
+            <artifactId>dagger-compiler</artifactId>
+            <version>2.x</version>
+          </path>
+        </annotationProcessorPaths>
+      </configuration>
+    </plugin>
+  </plugins>
+</build>
+```
+
+If you are using a version of the `maven-compiler-plugin` lower than `3.5`, add
+the `dagger-compiler` artifact with the `provided` scope:
 ```xml
 <dependencies>
   <dependency>
@@ -58,7 +88,7 @@ of your `pom.xml` and the `dagger-compiler` artifact as either an `optional` or
     <groupId>com.google.dagger</groupId>
     <artifactId>dagger-compiler</artifactId>
     <version>2.x</version>
-    <optional>true</optional>
+    <scope>provided</scope>
   </dependency>
 </dependencies>
 ```
@@ -80,7 +110,7 @@ parallelizable execution graphs), then add this to your maven configuration:
 ```groovy
 // Add plugin https://plugins.gradle.org/plugin/net.ltgt.apt
 plugins {
-  id "net.ltgt.apt" version "0.5"
+  id "net.ltgt.apt" version "0.10"
 }
 
 // Add Dagger dependencies
@@ -97,6 +127,14 @@ dependencies {
   compile 'com.google.dagger:dagger:2.x'
   annotationProcessor 'com.google.dagger:dagger-compiler:2.x'
 }
+```
+
+If you're using classes in `dagger.android` you'll also want to include:
+
+```groovy
+compile 'com.google.dagger:dagger-android:2.x'
+compile 'com.google.dagger:dagger-android-support:2.x' // if you use the support libraries
+annotationProcessor 'com.google.dagger:dagger-android-processor:2.x'
 ```
 
 If you're using a version of the Android gradle plugin below `2.2`, see
@@ -155,13 +193,12 @@ the GitHub project's master branch.
     See the License for the specific language governing permissions and
     limitations under the License.
 
-
-[20api]: http://google.github.io/dagger/api/2.0/
+[20api]: https://google.github.io/dagger/api/2.0/
 [community]: https://plus.google.com/communities/111933036769103367883
 [dagger-snap]: https://oss.sonatype.org/content/repositories/snapshots/com/google/dagger/
-[databinding]: https://developer.android.com/topic/libraries/data-binding/index.html
+[databinding]: https://developer.android.com/topic/libraries/data-binding/
 [gaktalk]: https://www.youtube.com/watch?v=oK_XtfXPkqw
-[latestapi]: http://google.github.io/dagger/api/latest/
+[latestapi]: https://google.github.io/dagger/api/latest/
 [mavenbadge-svg]: https://maven-badges.herokuapp.com/maven-central/com.google.dagger/dagger/badge.svg
 [mavenbadge]: https://maven-badges.herokuapp.com/maven-central/com.google.dagger/dagger
 [mavensearch]: http://search.maven.org/#search%7Cga%7C1%7Cg%3A%22com.google.dagger%22
@@ -169,4 +206,4 @@ the GitHub project's master branch.
 [proposal]: https://github.com/square/dagger/issues/366
 [square]: http://github.com/square/dagger/
 [squarecommunity]: https://plus.google.com/communities/109244258569782858265
-[website]: http://google.github.io/dagger
+[website]: https://google.github.io/dagger

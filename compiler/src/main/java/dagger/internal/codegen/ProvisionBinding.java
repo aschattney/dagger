@@ -294,28 +294,31 @@ abstract class ProvisionBinding extends ContributionBinding {
     }
 
     ProvisionBinding forSubcomponentBuilderMethod(
-        ExecutableElement subcomponentBuilderMethod, TypeElement contributedBy) {
+            ExecutableElement subcomponentBuilderMethod, TypeElement contributedBy, TypeMirror application) {
       checkNotNull(subcomponentBuilderMethod);
       checkArgument(subcomponentBuilderMethod.getKind().equals(METHOD));
       checkArgument(subcomponentBuilderMethod.getParameters().isEmpty());
       DeclaredType declaredContainer = asDeclared(contributedBy.asType());
+      final DependencyRequest request = dependencyRequestFactory.plantDependency(application);
       return ProvisionBinding.builder()
           .contributionType(ContributionType.UNIQUE)
           .ignoreStubGeneration(subcomponentBuilderMethod.getAnnotation(AllowStubGeneration.class) == null)
           .bindingElement(subcomponentBuilderMethod)
-          .key(
-              keyFactory.forSubcomponentBuilderMethod(subcomponentBuilderMethod, declaredContainer))
+          .key(keyFactory.forSubcomponentBuilderMethod(subcomponentBuilderMethod, declaredContainer))
           .bindingKind(Kind.SUBCOMPONENT_BUILDER)
+          .explicitDependencies(request)
           .build();
     }
 
     ProvisionBinding syntheticSubcomponentBuilder(
-        ImmutableSet<SubcomponentDeclaration> subcomponentDeclarations) {
+            ImmutableSet<SubcomponentDeclaration> subcomponentDeclarations, TypeMirror application) {
       SubcomponentDeclaration subcomponentDeclaration = subcomponentDeclarations.iterator().next();
+      final DependencyRequest request = dependencyRequestFactory.plantDependency(application);
       return ProvisionBinding.builder()
           .contributionType(ContributionType.UNIQUE)
           .key(subcomponentDeclaration.key())
           .bindingKind(Kind.SUBCOMPONENT_BUILDER)
+          .explicitDependencies(request)
           .build();
     }
 

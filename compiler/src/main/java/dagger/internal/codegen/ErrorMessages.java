@@ -23,12 +23,13 @@ import static java.util.stream.Collectors.toList;
 
 import com.google.auto.common.MoreElements;
 import com.google.auto.common.MoreTypes;
-import dagger.Multibindings;
+import com.google.common.base.Joiner;
 import dagger.multibindings.Multibinds;
 import dagger.releasablereferences.CanReleaseReferences;
 import dagger.releasablereferences.ForReleasableReferences;
 import java.lang.annotation.Annotation;
 import java.util.Collection;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javax.lang.model.element.AnnotationMirror;
@@ -418,16 +419,20 @@ final class ErrorMessages {
   static class ComponentBuilderMessages {
     static final ComponentBuilderMessages INSTANCE = new ComponentBuilderMessages();
 
-    protected String process(String s) { return s; }
+    protected String process(String s) {
+      return s;
+    }
 
-    /** Errors for component builders. */
+    /**
+     * Errors for component builders.
+     */
     final String moreThanOne() {
       return process("@Component has more than one @Component.Builder: %s");
     }
 
     final String cxtorOnlyOneAndNoArgs() {
       return process("@Component.Builder classes must have exactly one constructor,"
-          + " and it must not have any parameters");
+              + " and it must not have any parameters");
     }
 
     final String generics() {
@@ -456,43 +461,42 @@ final class ErrorMessages {
 
     final String missingBuildMethod() {
       return process("@Component.Builder types must have exactly one no-args method that "
-          + " returns the @Component type");
+              + " returns the @Component type");
     }
 
     final String manyMethodsForType() {
       return process("@Component.Builder types must not have more than one setter method per type,"
-          + " but %s is set by %s");
+              + " but %s is set by %s");
     }
 
     final String extraSetters() {
       return process(
-          "@Component.Builder has setters for modules or components that aren't required: %s");
+              "@Component.Builder has setters for modules or components that aren't required: %s");
     }
 
     final String missingSetters() {
       return process(
-          "@Component.Builder is missing setters for required modules or components: %s");
+              "@Component.Builder is missing setters for required modules or components: %s");
     }
 
     final String twoBuildMethods() {
       return process("@Component.Builder types must have exactly one zero-arg method, and that"
-          + " method must return the @Component type. Already found: %s");
+              + " method must return the @Component type. Already found: %s");
     }
 
     final String inheritedTwoBuildMethods() {
       return process("@Component.Builder types must have exactly one zero-arg method, and that"
-          + " method must return the @Component type. Found %s and %s");
+              + " method must return the @Component type. Found %s and %s");
     }
 
     final String buildMustReturnComponentType() {
       return process(
-          "@Component.Builder methods that have no arguments must return the @Component type");
+              "@Component.Builder methods that have no arguments must return the @Component type or a "
+                      + "supertype of the @Component");
     }
 
     final String inheritedBuildMustReturnComponentType() {
-      return process(
-          "@Component.Builder methods that have no arguments must return the @Component type"
-          + " Inherited method: %s");
+      return process(buildMustReturnComponentType() + ". Inherited method: %s");
     }
 
     final String methodsMustTakeOneArg() {
@@ -501,17 +505,17 @@ final class ErrorMessages {
 
     final String inheritedMethodsMustTakeOneArg() {
       return process(
-          "@Component.Builder methods must not have more than one argument. Inherited method: %s");
+              "@Component.Builder methods must not have more than one argument. Inherited method: %s");
     }
 
     final String methodsMustReturnVoidOrBuilder() {
       return process("@Component.Builder setter methods must return void, the builder,"
-          + " or a supertype of the builder");
+              + " or a supertype of the builder");
     }
 
     final String inheritedMethodsMustReturnVoidOrBuilder() {
       return process("@Component.Builder setter methods must return void, the builder,"
-          + "or a supertype of the builder. Inherited method: %s");
+              + "or a supertype of the builder. Inherited method: %s");
     }
 
     final String methodsMayNotHaveTypeParameters() {
@@ -520,11 +524,28 @@ final class ErrorMessages {
 
     final String inheritedMethodsMayNotHaveTypeParameters() {
       return process(
-          "@Component.Builder methods must not have type parameters. Inherited method: %s");
+              "@Component.Builder methods must not have type parameters. Inherited method: %s");
     }
 
     public String noBuilderPresent() {
       return process("Each Component and Subcomponent needs a @Component.Builder or @Subcomponent.Builder declaration. Declaration is missing for: %s");
+    }
+
+    final String buildMethodReturnsSupertypeWithMissingMethods(
+            TypeElement component,
+            TypeElement componentBuilder,
+            TypeMirror returnType,
+            ExecutableElement buildMethod,
+            Set<ExecutableElement> additionalMethods) {
+      return String.format(
+              "%1$s.%2$s() returns %3$s, but %4$s declares additional component method(s): %5$s. In "
+                      + "order to provide type-safe access to these methods, override %2$s() to return "
+                      + "%4$s",
+              componentBuilder.getQualifiedName(),
+              buildMethod.getSimpleName(),
+              returnType,
+              component.getQualifiedName(),
+              Joiner.on(", ").join(additionalMethods));
     }
   }
 
@@ -569,28 +590,7 @@ final class ErrorMessages {
     }
   }
 
-  /** Error messages related to {@link Multibindings @Multibindings}. */
-  static final class MultibindingsMessages {
-    static final String MUST_BE_INTERFACE = "@Multibindings can be applied only to interfaces";
-
-    static final String MUST_NOT_HAVE_TYPE_PARAMETERS =
-        "@Multibindings types must not have type parameters";
-
-    static final String MUST_BE_IN_MODULE =
-        "@Multibindings types must be nested within a @Module or @ProducerModule";
-
-    static String tooManyMethodsForKey(String formattedKey) {
-      return String.format(
-          "Too many @Multibindings methods for %s", stripCommonTypePrefixes(formattedKey));
-    }
-
-    private MultibindingsMessages() {}
-  }
-
-  /**
-   * Error messages related to {@link Multibinds @Multibinds} methods and methods in
-   * {@link Multibindings} interfaces.
-   */
+  /** Error messages related to {@link Multibinds @Multibinds} methods. */
   static final class MultibindsMessages {
     static final String METHOD_MUST_RETURN_MAP_OR_SET =
         "@%s methods must return Map<K, V> or Set<T>";

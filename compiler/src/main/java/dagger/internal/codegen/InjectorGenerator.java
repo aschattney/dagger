@@ -52,7 +52,7 @@ class InjectorGenerator extends SourceFileGenerator<DI> {
         createDecoratorClasses(builder, components, appClass);
         for (TypeElement component : components) {
             final List<TriggerComponentInfo> infos =
-                    ComponentInfo.forTrigger(component, componentDescriptorFactory, bindingGraphFactory);
+                    ComponentInfo.forTrigger(component, componentDescriptorFactory, bindingGraphFactory, input.getAppClass().asType());
             infos.forEach(info -> info.process(builder));
         }
 
@@ -62,11 +62,11 @@ class InjectorGenerator extends SourceFileGenerator<DI> {
     private void createDecoratorClasses(TypeSpec.Builder builder, Set<TypeElement> components, TypeElement appClass) {
         final ClassName appClassName = ClassName.get(appClass);
         ClassName testAppClassName = appClassName.topLevelClassName().peerClass("Test" + appClassName.simpleName());
-        final Decorator decorator = decoratorFactory.create(testAppClassName);
+        final Decorator decorator = decoratorFactory.create(testAppClassName, appClass.asType());
 
         components.stream()
                 .map(componentDescriptorFactory::forComponent)
-                .map(bindingGraphFactory::create)
+                .map(descriptor -> bindingGraphFactory.create(descriptor, appClass.asType()))
                 .flatMap(this::flatMapAllSubgraphs)
                 .filter(bindingGraph -> bindingGraph.componentDescriptor() != null && !bindingGraph.delegateRequirements().isEmpty())
                 .filter(distinctByKey(graph -> simpleVariableName(graph.componentDescriptor().componentDefinitionType())))

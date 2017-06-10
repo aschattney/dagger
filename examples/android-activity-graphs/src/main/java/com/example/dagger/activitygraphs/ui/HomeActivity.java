@@ -19,7 +19,7 @@ package com.example.dagger.activitygraphs.ui;
 import android.location.LocationManager;
 import android.os.Bundle;
 import android.support.v4.app.FragmentActivity;
-import com.example.dagger.activitygraphs.ActivityModule;
+//import com.example.dagger.activitygraphs.ActivityModule;
 import com.example.dagger.activitygraphs.DemoApplication;
 import com.example.dagger.activitygraphs.SomeClass;
 import dagger.Lazy;
@@ -47,10 +47,10 @@ public class HomeActivity extends FragmentActivity {
 
   HomeComponent component() {
     if (component == null) {
-      component = DaggerHomeComponent.builder()
+      /*component = DaggerHomeComponent.builder()
           .componentApplication(((DemoApplication) getApplication()).component())
           .moduleActivity(new ActivityModule(this))
-          .build();
+          .build();*/
     }
     return component;
   }
@@ -61,7 +61,7 @@ public class HomeActivity extends FragmentActivity {
 
     if (savedInstanceState == null) {
       getSupportFragmentManager().beginTransaction()
-          .add(android.R.id.content, new HomeFragment())
+          //.add(android.R.id.content, new HomeFragment())
           .commit();
     }
 

@@ -12,16 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Every user should create a WORKSPACE.user.bzl file and declare the path to their $ANDROID_HOME
-# directory. If you don't want to compile //android, you can remove the android related targets in
-# the WORKSPACE
-load("/WORKSPACE.user", "ANDROID_HOME")
-
 android_sdk_repository(
     name = "androidsdk",
     api_level = 25,
     build_tools_version = "25.0.2",
-    path = ANDROID_HOME,
 )
 
 bind(
@@ -30,7 +24,7 @@ bind(
 )
 
 maven_jar(
-    name = "javax_annotations_jsr250_api",
+    name = "javax_annotation_jsr250_api",
     artifact = "javax.annotation:jsr250-api:1.0",
     sha1 = "5025422767732a1ab45d93abfea846513d742dcf",
 )
@@ -55,8 +49,8 @@ maven_jar(
 
 maven_jar(
     name = "com_google_guava_guava",
-    artifact = "com.google.guava:guava:21.0-rc1",
-    sha1 = "ea4681eb116c7335370adaad583010e0681cc53b",
+    artifact = "com.google.guava:guava:21.0",
+    sha1 = "3a3d111be1be1b745edfa7d91678a12d7ed38709",
 )
 
 maven_jar(
@@ -73,8 +67,8 @@ maven_jar(
 
 maven_jar(
     name = "com_google_googlejavaformat_google_java_format",
-    artifact = "com.google.googlejavaformat:google-java-format:1.2",
-    sha1 = "c897dff7c217667d797bc9bf9d54416e776e9917",
+    artifact = "com.google.googlejavaformat:google-java-format:1.3",
+    sha1 = "949e85e75b3160ce1446aa99d806d5b509631b02",
 )
 
 maven_jar(
@@ -133,8 +127,8 @@ maven_jar(
 
 maven_jar(
     name = "org_hamcrest_hamcrest_core",
-    artifact = "org.hamcrest:hamcrest-core:1.1",
-    sha1 = "860340562250678d1a344907ac75754e259cdb14",
+    artifact = "org.hamcrest:hamcrest-core:1.3",
+    sha1 = "42a25dc3219429f0e5d060061f71acb49bf010a0",
 )
 
 maven_jar(
@@ -150,7 +144,73 @@ maven_jar(
 )
 
 maven_jar(
+    name = "com_google_truth_extensions_truth_java8_extension",
+    artifact = "com.google.truth.extensions:truth-java8-extension:0.30",
+    sha1 = "f3bb5e49001a9b575bcdef9aa8417b6d1ef35509",
+)
+
+maven_jar(
     name = "com_squareup_javapoet",
     artifact = "com.squareup:javapoet:1.7.0",
     sha1 = "4fdcf1fc27c1a8f55d1109df986c923152f07759",
 )
+
+maven_jar(
+    name = "io_grpc_grpc_core",
+    artifact = "io.grpc:grpc-core:1.2.0",
+    sha1 = "f12a213e2b59a0615df2cc9bed35dc15fd2fee37",
+)
+
+maven_jar(
+    name = "io_grpc_grpc_netty",
+    artifact = "io.grpc:grpc-netty:1.2.0",
+    sha1 = "e2682d2dc052898f87433e7a6d03d104ef98df74",
+)
+
+maven_jar(
+    name = "io_grpc_grpc_context",
+    artifact = "io.grpc:grpc-context:1.2.0",
+    sha1 = "1932db544cbb427bc18f902c7ebbb3f7e44991df",
+)
+
+maven_jar(
+    name = "io_grpc_grpc_protobuf",
+    artifact = "io.grpc:grpc-protobuf:1.2.0",
+    sha1 = "2676852d2dbd20155d9b1a940a456eae5b7445f0",
+)
+
+maven_jar(
+    name = "io_grpc_grpc_stub",
+    artifact = "io.grpc:grpc-stub:1.2.0",
+    sha1 = "964dda53b3085bfd17c7aaf51495f9efc8bda36c",
+)
+
+maven_jar(
+    name = "io_grpc_grpc_all",
+    artifact = "io.grpc:grpc-all:1.2.0",
+    sha1 = "f32006a1245dfa2d68bf92a1b4cc01831889c95b",
+)
+
+maven_jar(
+    name = "com_google_protobuf_protobuf_java",
+    artifact = "com.google.protobuf:protobuf-java:3.2.0",
+    sha1 = "62ccf171a106ff6791507f2d5364c275f9a3131d",
+)
+
+http_archive(
+    name = "com_google_protobuf",
+    sha256 = "ff771a662fb6bd4d3cc209bcccedef3e93980a49f71df1e987f6afa3bcdcba3a",
+    strip_prefix = "protobuf-b4b0e304be5a68de3d0ee1af9b286f958750f5e4",
+    urls = ["https://github.com/google/protobuf/archive/b4b0e304be5a68de3d0ee1af9b286f958750f5e4.zip"],
+)
+
+http_archive(
+    name = "com_google_protobuf_java",
+    sha256 = "ff771a662fb6bd4d3cc209bcccedef3e93980a49f71df1e987f6afa3bcdcba3a",
+    strip_prefix = "protobuf-b4b0e304be5a68de3d0ee1af9b286f958750f5e4",
+    urls = ["https://github.com/google/protobuf/archive/b4b0e304be5a68de3d0ee1af9b286f958750f5e4.zip"],
+)
+
+load("//tools:jarjar.bzl", "jarjar_deps")
+
+jarjar_deps()

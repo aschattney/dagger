@@ -1,11 +1,7 @@
 package coffee;
 
-import dagger.Component;
-import dagger.Module;
-import dagger.ProvidesModule;
-import dagger.Subcomponent;
+import dagger.*;
 
-import javax.inject.Named;
 import javax.inject.Singleton;
 
 public class CoffeeApp {
@@ -16,6 +12,7 @@ public class CoffeeApp {
     Thermosiphon thermosiphon();
     @Component.Builder
     interface Builder {
+      @BindsInstance Builder app(App app);
       Builder dripCoffeeModule(DripCoffeeModule module);
       Coffee build();
     }

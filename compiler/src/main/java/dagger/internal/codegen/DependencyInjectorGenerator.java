@@ -46,8 +46,8 @@ public class DependencyInjectorGenerator extends SourceFileGenerator<DI> {
                 .addStatement(String.format("this.%s = %s", APP_FIELDNAME, APP_FIELDNAME))
                 .build());
         builder.addField(appType, APP_FIELDNAME, Modifier.PRIVATE);
-        for (TypeElement typeElement : input.getComponents()) {
-            final List<GeneratorComponentInfo> infos = ComponentInfo.forGenerator(typeElement, componentDescriptorFactory, bindingGraphFactory);
+        /*for (TypeElement typeElement : input.getComponents()) {
+            final List<GeneratorComponentInfo> infos = ComponentInfo.forGenerator(typeElement, componentDescriptorFactory, bindingGraphFactory, input.getAppClass().asType());
             infos.forEach(info -> info.process(builder));
         }
 
@@ -63,7 +63,7 @@ public class DependencyInjectorGenerator extends SourceFileGenerator<DI> {
                 .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
                 .addParameter(ClassName.bestGuess("android.app.Application"), "app")
                 .returns(Util.TYPENAME_INJECTOR)
-                .build());
+                .build());*/
 
         return Optional.of(builder);
     }

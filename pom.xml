@@ -38,6 +38,8 @@
     <module>gwt</module>
     <!-- examples are handled in a default profile (see below) -->
     <module>producers</module>
+    <module>android-support</module>
+    <module>android-compiler</module>
   </modules>
 
   <properties>
@@ -92,6 +94,7 @@
         <groupId>com.google.code.findbugs</groupId>
         <artifactId>jsr305</artifactId>
         <version>3.0.1</version>
+        <optional>true</optional>
       </dependency>
       <dependency>
         <groupId>com.google.guava</groupId>

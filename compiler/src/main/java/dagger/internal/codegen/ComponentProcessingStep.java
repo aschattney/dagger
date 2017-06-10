@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimaps;
 import com.google.common.collect.SetMultimap;
+import com.squareup.javapoet.ClassName;
 import dagger.Component;
 import dagger.Config;
 import dagger.Subcomponent;
@@ -32,12 +33,12 @@ import dagger.internal.codegen.ComponentValidator.ComponentValidationReport;
 import dagger.producers.ProductionComponent;
 import dagger.producers.ProductionSubcomponent;
 import java.lang.annotation.Annotation;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import javax.annotation.processing.Messager;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.TypeElement;
+import javax.lang.model.type.MirroredTypeException;
+import javax.lang.model.type.TypeMirror;
 
 /**
  * A {@link ProcessingStep} that is responsible for dealing with a component or production component
@@ -55,12 +56,14 @@ final class ComponentProcessingStep implements BasicProcessor.ProcessingStep {
   private final BindingGraphValidator bindingGraphValidator;
   private final ComponentDescriptor.Factory componentDescriptorFactory;
   private final BindingGraph.Factory bindingGraphFactory;
-  private final ComponentGenerator componentGenerator;
+  private final ComponentGenerator.Factory componentGeneratorFactory;
 
   public static Set<TypeElement> allComponents = new HashSet<>();
   public static TypeElement appClass;
 
   public static boolean generatedAllComponents = true;
+  private final AppConfig.Factory appConfigFactory;
+  private static AppConfig appConfig;
 
   ComponentProcessingStep(
       ComponentDescriptor.Kind componentKind,
@@ -72,7 +75,8 @@ final class ComponentProcessingStep implements BasicProcessor.ProcessingStep {
       BindingGraphValidator bindingGraphValidator,
       Factory componentDescriptorFactory,
       BindingGraph.Factory bindingGraphFactory,
-      ComponentGenerator componentGenerator) {
+      ComponentGenerator.Factory componentGeneratorFactory,
+      AppConfig.Factory appConfigFactory) {
     this.componentKind = componentKind;
     this.messager = messager;
     this.componentValidator = componentValidator;
@@ -82,7 +86,8 @@ final class ComponentProcessingStep implements BasicProcessor.ProcessingStep {
     this.bindingGraphValidator = bindingGraphValidator;
     this.componentDescriptorFactory = componentDescriptorFactory;
     this.bindingGraphFactory = bindingGraphFactory;
-    this.componentGenerator = componentGenerator;
+    this.componentGeneratorFactory = componentGeneratorFactory;
+    this.appConfigFactory = appConfigFactory;
   }
 
   @Override
@@ -106,7 +111,12 @@ final class ComponentProcessingStep implements BasicProcessor.ProcessingStep {
     if (appClass == null) {
       final Set<Element> elements = elementsByAnnotation.get(Config.class);
       if (!elements.isEmpty()) {
-        appClass = MoreElements.asType(elements.iterator().next());
+        final Iterator<Element> it = elements.iterator();
+        if (it.hasNext()) {
+          final Element e = it.next();
+          appConfig = appConfigFactory.create(e.getAnnotation(Config.class));
+          appClass = MoreElements.asType(e);
+        }
       }
     }
 
@@ -151,7 +161,7 @@ final class ComponentProcessingStep implements BasicProcessor.ProcessingStep {
               componentHierarchyValidator.validate(componentDescriptor);
           hierarchyReport.printMessagesTo(messager);
           if (hierarchyReport.isClean()) {
-            BindingGraph bindingGraph = bindingGraphFactory.create(componentDescriptor);
+            BindingGraph bindingGraph = bindingGraphFactory.create(componentDescriptor, appConfig.getAppClass().asType());
             ValidationReport<TypeElement> graphReport =
                 bindingGraphValidator.validate(bindingGraph);
             graphReport.printMessagesTo(messager);
@@ -176,7 +186,9 @@ final class ComponentProcessingStep implements BasicProcessor.ProcessingStep {
   }
 
   private void generateComponent(BindingGraph bindingGraph) {
-    componentGenerator.generate(bindingGraph, messager);
+    final AppConfig appConfig = appConfigFactory.create(appClass.getAnnotation(Config.class));
+    final TypeMirror appClass = appConfig.getAppClass().asType();
+    componentGeneratorFactory.createComponentGenerator(appClass).generate(bindingGraph, messager);
   }
 
   private ImmutableSet<Element> getElementsFromAnnotations(

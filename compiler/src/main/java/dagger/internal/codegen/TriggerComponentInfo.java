@@ -65,10 +65,9 @@ public class TriggerComponentInfo extends ComponentInfo {
         return ParameterSpec.builder(builderClassName, "builder").build();
     }
 
-    public static String resolveBuilderName(BindingGraph.Factory bindingGraphFactory, ComponentDescriptor descriptor) {
+    public static String resolveBuilderName(BindingGraph graph, BindingGraph parentGraph) {
 
-        ComponentDescriptor topDescriptor = getTopDescriptor(descriptor);
-        final BindingGraph parentGraph = bindingGraphFactory.create(topDescriptor);
+        final ComponentDescriptor descriptor = graph.componentDescriptor();
         final ImmutableBiMap<ComponentDescriptor, String> subcomponentNamesMap =
                 new ComponentWriter.UniqueSubcomponentNamesGenerator(parentGraph).generate();
 
@@ -80,13 +79,6 @@ public class TriggerComponentInfo extends ComponentInfo {
         }else {
             throw new IllegalStateException(String.format("Unknown component kind: %s", descriptor.kind()));
         }
-    }
-
-    private static ComponentDescriptor getTopDescriptor(ComponentDescriptor descriptor) {
-        while(descriptor.getParentDescriptor() != null) {
-            descriptor = descriptor.getParentDescriptor();
-        }
-        return descriptor;
     }
 
     protected static String resolveSubcomponentBuilderName(ImmutableBiMap<ComponentDescriptor, String> subcomponentNamesMap,

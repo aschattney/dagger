@@ -49,7 +49,7 @@ import javax.lang.model.util.Types;
 final class DaggerElements {
 
   static ImmutableSet<ExecutableElement> getUnimplementedMethods(
-      Elements elements, Types types, TypeElement type) {
+      TypeElement type, Types types, Elements elements) {
     return FluentIterable.from(getLocalAndInheritedMethods(type, types, elements))
         .filter(hasModifiers(ABSTRACT))
         .toSet();
@@ -168,5 +168,17 @@ final class DaggerElements {
       return ImmutableSet.of();
     }
     return ImmutableSet.copyOf(suppressedWarnings.value());
+  }
+
+  /**
+   * Invokes {@link Elements#getTypeElement(CharSequence)}, throwing {@link TypeNotPresentException}
+   * if it is not accessible in the current compilation.
+   */
+  static TypeElement checkTypePresent(String typeName, Elements elements) {
+    TypeElement type = elements.getTypeElement(typeName);
+    if (type == null) {
+      throw new TypeNotPresentException(typeName, null);
+    }
+    return type;
   }
 }

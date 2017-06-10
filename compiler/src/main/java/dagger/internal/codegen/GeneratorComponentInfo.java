@@ -80,6 +80,9 @@ public class GeneratorComponentInfo extends ComponentInfo {
                 final TypeElement typeElement = requirement.typeElement();
                 final boolean hasNotOnlyNoArgConstructor = hasNotOnlyNoArgConstructor(typeElement, requirement.autoCreate());
                 final String methodName = requirementMethod.method().getSimpleName().toString();
+                if (requirement.kind() == ComponentRequirement.Kind.BINDING && requirementMethod.method().getReturnType().toString().equals(void.class.getName())) {
+                    continue;
+                }
                 if ((requirement.kind() == ComponentRequirement.Kind.MODULE &&
                         hasNotOnlyNoArgConstructor) || requirement.kind() != ComponentRequirement.Kind.MODULE) {
                     moduleConstructorStatements.add(CodeBlock.of(".$L($L)",

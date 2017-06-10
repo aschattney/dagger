@@ -40,16 +40,7 @@ import com.google.common.base.Predicate;
 import com.google.common.base.VerifyException;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
-import com.google.common.collect.FluentIterable;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.ImmutableSetMultimap;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
-import com.google.common.collect.TreeTraverser;
+import com.google.common.collect.*;
 import dagger.Reusable;
 import dagger.Subcomponent;
 import dagger.internal.codegen.ComponentDescriptor.BuilderRequirementMethod;
@@ -68,6 +59,7 @@ import javax.inject.Provider;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
+import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.ElementFilter;
 import javax.lang.model.util.Elements;
 
@@ -227,6 +219,7 @@ abstract class BindingGraph {
     private final Key.Factory keyFactory;
     private final ProvisionBinding.Factory provisionBindingFactory;
     private final ProductionBinding.Factory productionBindingFactory;
+    private TypeMirror application;
 
     Factory(
         Elements elements,
@@ -241,19 +234,19 @@ abstract class BindingGraph {
       this.productionBindingFactory = productionBindingFactory;
     }
 
-    BindingGraph create(ComponentDescriptor componentDescriptor) {
+    BindingGraph create(ComponentDescriptor componentDescriptor, TypeMirror application) {
+      this.application = application;
       return create(Optional.empty(), componentDescriptor);
     }
 
-    private BindingGraph create(
-        Optional<Resolver> parentResolver, ComponentDescriptor componentDescriptor) {
+    private BindingGraph create(Optional<Resolver> parentResolver, ComponentDescriptor componentDescriptor) {
+
       ImmutableSet.Builder<ContributionBinding> explicitBindingsBuilder = ImmutableSet.builder();
       ImmutableSet.Builder<DelegateDeclaration> delegatesBuilder = ImmutableSet.builder();
       ImmutableSet.Builder<OptionalBindingDeclaration> optionalsBuilder = ImmutableSet.builder();
 
       // binding for the component itself
-      explicitBindingsBuilder.add(
-          provisionBindingFactory.forComponent(componentDescriptor.componentDefinitionType()));
+      explicitBindingsBuilder.add(provisionBindingFactory.forComponent(componentDescriptor.componentDefinitionType()));
 
       // Collect Component dependencies.
       for (TypeElement componentDependency : componentDescriptor.dependencies()) {
@@ -277,7 +270,8 @@ abstract class BindingGraph {
         for (BuilderRequirementMethod method :
             componentDescriptor.builderSpec().get().requirementMethods()) {
           if (method.requirement().kind().equals(ComponentRequirement.Kind.BINDING)) {
-            explicitBindingsBuilder.add(provisionBindingFactory.forBuilderBinding(method));
+            final ProvisionBinding builderBinding = provisionBindingFactory.forBuilderBinding(method);
+            explicitBindingsBuilder.add(builderBinding);
           }
         }
       }
@@ -291,7 +285,7 @@ abstract class BindingGraph {
           explicitBindingsBuilder.add(
               provisionBindingFactory.forSubcomponentBuilderMethod(
                   componentMethod.methodElement(),
-                  componentDescriptor.componentDefinitionType()));
+                  componentDescriptor.componentDefinitionType(), application));
         }
       }
 
@@ -346,6 +340,8 @@ abstract class BindingGraph {
               indexByKey(subcomponentDeclarations.build()),
               indexByKey(delegatesBuilder.build()),
               indexByKey(optionalsBuilder.build()));
+
+
       for (ComponentMethodDescriptor componentMethod : componentDescriptor.componentMethods()) {
         Optional<DependencyRequest> componentMethodRequest = componentMethod.dependencyRequest();
         if (componentMethodRequest.isPresent()) {
@@ -453,9 +449,10 @@ abstract class BindingGraph {
        * <p>For {@link BindingKey.Kind#MEMBERS_INJECTION} requests, returns the {@link
        * MembersInjectionBinding} for the type.
        */
-      ResolvedBindings lookUpBindings(BindingKey bindingKey) {
+      ResolvedBindings lookUpBindings(BindingKey bindingKey, TypeMirror application) {
         Key requestKey = bindingKey.key();
         switch (bindingKey.kind()) {
+
           case CONTRIBUTION:
             Set<ContributionBinding> contributionBindings = new LinkedHashSet<>();
             ImmutableSet.Builder<ContributionBinding> multibindingContributionsBuilder =
@@ -489,14 +486,14 @@ abstract class BindingGraph {
             maybeContributionBindings.add(
                 syntheticMultibinding(requestKey, multibindingContributions, multibindingDeclarations)
             );
-            syntheticSubcomponentBuilderBinding(subcomponentDeclarations)
+            syntheticSubcomponentBuilderBinding(subcomponentDeclarations, application)
                 .ifPresent(
                     binding -> {
                       contributionBindings.add(binding);
                       addSubcomponentToOwningResolver(binding);
                     });
             maybeContributionBindings.add(
-                syntheticOptionalBinding(requestKey, optionalBindingDeclarations));
+                syntheticOptionalBinding(requestKey, optionalBindingDeclarations, application));
 
             /* If there are no bindings, add the implicit @Inject-constructed binding if there is
              * one. */
@@ -513,6 +510,12 @@ abstract class BindingGraph {
                 .filter(Optional::isPresent)
                 .map(Optional::get)
                 .forEach(contributionBindings::add);
+
+            if (bindingKey.key().type().toString().equals(application.toString())) {
+              explicitBindingsSet.stream()
+                      .filter(contributionBinding -> contributionBinding.key().type().toString().equals(application.toString()))
+                      .findFirst().ifPresent(contributionBindings::add);
+            }
 
             return ResolvedBindings.forContributionBindings(
                 bindingKey,
@@ -662,11 +665,11 @@ abstract class BindingGraph {
       }
 
       private Optional<ProvisionBinding> syntheticSubcomponentBuilderBinding(
-          ImmutableSet<SubcomponentDeclaration> subcomponentDeclarations) {
+              ImmutableSet<SubcomponentDeclaration> subcomponentDeclarations, TypeMirror application) {
         return subcomponentDeclarations.isEmpty()
             ? Optional.empty()
             : Optional.of(
-                provisionBindingFactory.syntheticSubcomponentBuilder(subcomponentDeclarations));
+                provisionBindingFactory.syntheticSubcomponentBuilder(subcomponentDeclarations, application));
       }
 
       /**
@@ -680,12 +683,12 @@ abstract class BindingGraph {
        * binding. Otherwise returns a provision binding.
        */
       private Optional<ContributionBinding> syntheticOptionalBinding(
-          Key key, ImmutableSet<OptionalBindingDeclaration> optionalBindingDeclarations) {
+          Key key, ImmutableSet<OptionalBindingDeclaration> optionalBindingDeclarations, TypeMirror application) {
         if (optionalBindingDeclarations.isEmpty()) {
           return Optional.empty();
         }
         ResolvedBindings underlyingKeyBindings =
-            lookUpBindings(contribution(keyFactory.unwrapOptional(key).get()));
+            lookUpBindings(contribution(keyFactory.unwrapOptional(key).get()), application);
         if (underlyingKeyBindings.isEmpty()) {
           return Optional.of(provisionBindingFactory.syntheticAbsentBinding(key));
         } else if (underlyingKeyBindings.bindingTypes().contains(BindingType.PRODUCTION)) {
@@ -720,7 +723,7 @@ abstract class BindingGraph {
         ResolvedBindings resolvedDelegate;
         try {
           cycleStack.push(delegateBindingKey);
-          resolvedDelegate = lookUpBindings(delegateBindingKey);
+          resolvedDelegate = lookUpBindings(delegateBindingKey, application);
         } finally {
           cycleStack.pop();
         }
@@ -955,6 +958,7 @@ abstract class BindingGraph {
       }
 
       void resolve(BindingKey bindingKey) {
+
         // If we find a cycle, stop resolving. The original request will add it with all of the
         // other resolved deps.
         if (cycleStack.contains(bindingKey)) {
@@ -993,7 +997,7 @@ abstract class BindingGraph {
 
         cycleStack.push(bindingKey);
         try {
-          ResolvedBindings bindings = lookUpBindings(bindingKey);
+          ResolvedBindings bindings = lookUpBindings(bindingKey, application);
           for (Binding binding : bindings.ownedBindings()) {
             for (DependencyRequest dependency : binding.dependencies()) {
               resolve(dependency.bindingKey());

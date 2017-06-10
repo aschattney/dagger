@@ -9,6 +9,7 @@ import javax.annotation.processing.Filer;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
+import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.Elements;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -18,13 +19,15 @@ import java.util.List;
 public class Decorator  extends SourceFileGenerator<BindingGraph>{
 
     private BindingGraph.Factory factory;
-    private ClassName appClass;
+    private TypeMirror appClass;
+    private ClassName testAppClassName;
     private TestRegistry testRegistry;
 
-    private Decorator(Filer filer, Elements elements, BindingGraph.Factory factory, ClassName appClass, TestRegistry testRegistry) {
+    private Decorator(Filer filer, Elements elements, BindingGraph.Factory factory, TypeMirror appClass, ClassName testAppClassName, TestRegistry testRegistry) {
         super(filer, elements);
         this.factory = factory;
         this.appClass = appClass;
+        this.testAppClassName = testAppClassName;
         this.testRegistry = testRegistry;
     }
 
@@ -48,9 +51,11 @@ public class Decorator  extends SourceFileGenerator<BindingGraph>{
         final TypeSpec.Builder builder = TypeSpec.classBuilder(generatedTypeName)
                 .addModifiers(Modifier.PUBLIC);
 
-        final String daggerBuilderClassName = TriggerComponentInfo.resolveBuilderName(factory, input.componentDescriptor());
+        ComponentDescriptor topDescriptor = getTopDescriptor(input.componentDescriptor());
+        final BindingGraph parentGraph = factory.create(topDescriptor, appClass);
+        final String daggerBuilderClassName = TriggerComponentInfo.resolveBuilderName(input, parentGraph);
 
-        builder.addField(appClass, "app", Modifier.PRIVATE);
+        builder.addField(testAppClassName, "app", Modifier.PRIVATE);
         TypeName builderClassName = ClassName.get(input.componentDescriptor().builderSpec().get().builderDefinitionType());
         final ImmutableSet<ContributionBinding> delegateRequirements = input.delegateRequirements();
 
@@ -73,7 +78,7 @@ public class Decorator  extends SourceFileGenerator<BindingGraph>{
         }
         interfaceBuilder.addMethod(MethodSpec.methodBuilder("and")
                 .addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT)
-                .returns(appClass)
+                .returns(testAppClassName)
                 .build());
         return interfaceBuilder;
     }
@@ -83,7 +88,7 @@ public class Decorator  extends SourceFileGenerator<BindingGraph>{
         builder.addModifiers(Modifier.PUBLIC);
         builder.addMethod(MethodSpec.constructorBuilder()
                 .addModifiers(Modifier.PUBLIC)
-                .addParameter(appClass, "app")
+                .addParameter(testAppClassName, "app")
                 .addStatement("this.app = app")
                 .build());
 
@@ -91,7 +96,7 @@ public class Decorator  extends SourceFileGenerator<BindingGraph>{
         final ClassName name = ClassName.bestGuess(className);
         statements.add(CodeBlock.of("$T impl = ($T) builder;", name, name));
 
-        TypeName interfaceName = this.getAccessorTypeName(appClass, componentName);
+        TypeName interfaceName = this.getAccessorTypeName(ClassName.bestGuess(testAppClassName.toString()), componentName);
         builder.addSuperinterface(interfaceName);
 
         for (ContributionBinding contributionBinding : delegateRequirements) {
@@ -106,7 +111,7 @@ public class Decorator  extends SourceFileGenerator<BindingGraph>{
         builder.addMethod(MethodSpec.methodBuilder("and")
                 .addModifiers(Modifier.PUBLIC)
                 .addStatement("return app")
-                .returns(appClass)
+                .returns(testAppClassName)
                 .build());
 
         builder.addMethod(MethodSpec.methodBuilder("decorate")
@@ -135,6 +140,13 @@ public class Decorator  extends SourceFileGenerator<BindingGraph>{
         return app.nestedClass(componentName + "Accessor");
     }
 
+    private static ComponentDescriptor getTopDescriptor(ComponentDescriptor descriptor) {
+        while(descriptor.getParentDescriptor() != null) {
+            descriptor = descriptor.getParentDescriptor();
+        }
+        return descriptor;
+    }
+
     public static class Factory {
 
         private final Filer filer;
@@ -149,8 +161,8 @@ public class Decorator  extends SourceFileGenerator<BindingGraph>{
             this.testRegistry = testRegistry;
         }
 
-        public Decorator create(ClassName appClass) {
-            return new Decorator(filer, elements, bindingGraphFactory, appClass, testRegistry);
+        public Decorator create(ClassName testAppClassName, TypeMirror appClass) {
+            return new Decorator(filer, elements, bindingGraphFactory, appClass, testAppClassName, testRegistry);
         }
 
     }

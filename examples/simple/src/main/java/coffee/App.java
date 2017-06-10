@@ -1,6 +1,6 @@
 package coffee;
 
-public class App extends DaggerApplication {
+public class App extends DaggerHookApplication {
 
     @Override
     public void onCreate() {

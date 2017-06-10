@@ -19,14 +19,13 @@ package com.example.dagger.activitygraphs.ui;
 import com.example.dagger.activitygraphs.AbstractActivityComponent;
 import com.example.dagger.activitygraphs.ActivityModule;
 import com.example.dagger.activitygraphs.ApplicationComponent;
-import com.example.dagger.activitygraphs.PerActivity;
 import dagger.Component;
 
 @PerActivity
 @Component(dependencies = ApplicationComponent.class, modules = ActivityModule.class)
 public interface HomeComponent extends AbstractActivityComponent {
   void inject(HomeActivity homeActivity);
-  void inject(HomeFragment homeFragment);
+  //void inject(HomeFragment homeFragment);
   @Component.Builder
   interface Builder {
     Builder moduleActivity(ActivityModule activityModule);
