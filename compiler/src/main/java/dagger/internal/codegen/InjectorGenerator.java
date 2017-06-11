@@ -2,30 +2,38 @@ package dagger.internal.codegen;
 
 import java.util.Optional;
 
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ImmutableSetMultimap;
 import com.squareup.javapoet.*;
 
 import javax.annotation.processing.Filer;
+import javax.annotation.processing.Messager;
 import javax.lang.model.element.*;
 import javax.lang.model.util.Elements;
+import javax.tools.Diagnostic;
 import java.io.IOException;
 import java.util.*;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static dagger.internal.codegen.SourceFiles.simpleVariableName;
 import static dagger.internal.codegen.Util.distinctByKey;
+import static dagger.internal.codegen.Util.toImmutableList;
 
 class InjectorGenerator extends SourceFileGenerator<DI> {
 
-    private static final String METHOD_NAME_PREFIX = "decorate";
+    static final String METHOD_NAME_PREFIX = "";
 
+    private Messager messager;
     private final ComponentDescriptor.Factory componentDescriptorFactory;
     private final BindingGraph.Factory bindingGraphFactory;
     private TestClassGenerator.Factory testClassGeneratorFactory;
     private final TestRegistry registry;
     private Decorator.Factory decoratorFactory;
 
-    InjectorGenerator(Filer filer, Elements elements, ComponentDescriptor.Factory componentDescriptorFactory, BindingGraph.Factory bindingGraphFactory, TestClassGenerator.Factory testClassGeneratorFactoty, TestRegistry registry, Decorator.Factory decoratorFactory) {
+    InjectorGenerator(Filer filer, Elements elements, Messager messager, ComponentDescriptor.Factory componentDescriptorFactory, BindingGraph.Factory bindingGraphFactory, TestClassGenerator.Factory testClassGeneratorFactoty, TestRegistry registry, Decorator.Factory decoratorFactory) {
         super(filer, elements);
+        this.messager = messager;
         this.componentDescriptorFactory = componentDescriptorFactory;
         this.bindingGraphFactory = bindingGraphFactory;
         this.testClassGeneratorFactory = testClassGeneratorFactoty;
@@ -49,6 +57,7 @@ class InjectorGenerator extends SourceFileGenerator<DI> {
         final Set<TypeElement> components = input.getComponents();
         final TypeElement appClass = input.getAppClass();
         builder.superclass(ClassName.get(appClass));
+        builder.addSuperinterface(input.getDecoratorType());
         createDecoratorClasses(builder, components, appClass);
         for (TypeElement component : components) {
             final List<TriggerComponentInfo> infos =
@@ -64,13 +73,20 @@ class InjectorGenerator extends SourceFileGenerator<DI> {
         ClassName testAppClassName = appClassName.topLevelClassName().peerClass("Test" + appClassName.simpleName());
         final Decorator decorator = decoratorFactory.create(testAppClassName, appClass.asType());
 
-        components.stream()
+        final List<BindingGraph> graphs = components.stream()
                 .map(componentDescriptorFactory::forComponent)
                 .map(descriptor -> bindingGraphFactory.create(descriptor, appClass.asType()))
                 .flatMap(this::flatMapAllSubgraphs)
                 .filter(bindingGraph -> bindingGraph.componentDescriptor() != null && !bindingGraph.delegateRequirements().isEmpty())
-                .filter(distinctByKey(graph -> simpleVariableName(graph.componentDescriptor().componentDefinitionType())))
-                .forEach(graph -> createDecoratorClass(builder, graph, decorator, testAppClassName));
+                .collect(Collectors.toList());
+
+        final ImmutableSetMultimap.Builder<String, BindingGraph> graphBuilder = ImmutableSetMultimap.builder();
+        graphs.forEach(graph -> graphBuilder.put(Util.lowerCaseFirstLetter(graph.componentType().getSimpleName().toString()), graph));
+        ImmutableSetMultimap<String, BindingGraph> groupedGraphs = graphBuilder.build();
+
+        groupedGraphs.keySet().stream()
+                .map(groupedGraphs::get)
+                .forEach(e -> createDecoratorClass(builder, e, decorator, testAppClassName));
 
     }
 
@@ -80,23 +96,34 @@ class InjectorGenerator extends SourceFileGenerator<DI> {
                 graph.subgraphs().stream().flatMap(this::flatMapAllSubgraphs));
     }
 
-    private void createDecoratorClass(TypeSpec.Builder builder, BindingGraph bindingGraph, Decorator decorator, ClassName testAppClassName) {
+    private void createDecoratorClass(TypeSpec.Builder builder, ImmutableSet<BindingGraph> graphs,
+                                      Decorator decorator, ClassName testAppClassName) {
         try {
-            decorator.generate(bindingGraph);
-            final ClassName decoratorName = decorator.nameGeneratedType(bindingGraph);
-            final String componentName = bindingGraph.componentDescriptor().componentDefinitionType().getSimpleName().toString();
-            final TypeName accessorName = decorator.getAccessorTypeName(testAppClassName, componentName);
+            messager.printMessage(Diagnostic.Kind.NOTE, "-----");
+            for (BindingGraph graph : graphs) {
+                messager.printMessage(Diagnostic.Kind.NOTE, String.valueOf(graph.componentType().getSimpleName().toString()));
+            }
+            messager.printMessage(Diagnostic.Kind.NOTE, "-----");
+            decorator.generate(graphs);
+            final Optional<BindingGraph> e = graphs.stream().findFirst();
+            if (!e.isPresent()) {
+                return;
+            }
+            final ClassName decoratorName = decorator.nameGeneratedType(graphs);
+            final String componentName = e.get().componentDescriptor().componentDefinitionType().getSimpleName().toString();
+            final TypeName accessorName = Decorator.getAccessorTypeName(testAppClassName, componentName);
             final String fieldName = Util.lowerCaseFirstLetter(decoratorName.simpleName());
-            final String methodName = METHOD_NAME_PREFIX + Util.capitalize(fieldName.replaceAll("Decorator$", ""));
+            final String methodName = Util.lowerCaseFirstLetter(fieldName.replaceAll("Decorator$", ""));
             final FieldSpec.Builder fieldBuilder = FieldSpec.builder(decoratorName, fieldName, Modifier.PRIVATE);
             final FieldSpec field = fieldBuilder.initializer("new $T(this)", decoratorName).build();
             builder.addField(field);
             builder.addMethod(MethodSpec.methodBuilder(methodName)
+                    .addAnnotation(Override.class)
                     .addModifiers(Modifier.PUBLIC)
                     .returns(accessorName)
                     .addStatement("return this.$L", fieldName)
                     .build());
-            builder.addType(decorator.getAccessorType(testAppClassName, bindingGraph).build());
+            builder.addType(decorator.getAccessorType(testAppClassName, e.get()).build());
         } catch (SourceFileGenerationException e) {
             throw new IllegalStateException("Exception while generating decorator: " + e);
         }
@@ -114,7 +141,6 @@ class InjectorGenerator extends SourceFileGenerator<DI> {
         } catch (IOException e) {
             throw new IllegalStateException(e);
         }
-
     }
 
 }

@@ -20,7 +20,7 @@ import android.location.LocationManager;
 import javax.inject.Inject;
 import javax.inject.Named;
 
-public class DemoApplication1 extends DaggerApplication{
+public class DemoApplication1 extends DaggerHookApplication {
 
   @Inject LocationManager locationManager; // for some reason.
   @Inject @Named("apiKey") String someString;
@@ -29,7 +29,7 @@ public class DemoApplication1 extends DaggerApplication{
 
   @Override public void onCreate() {
     super.onCreate();
-    component = getInjector().applicationComponent(new AndroidModule(this));
+    component = DaggerComponents_ApplicationComponent.builder(this).build();
     component.inject(this);
   }
 

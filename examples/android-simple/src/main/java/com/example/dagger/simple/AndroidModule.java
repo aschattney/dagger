@@ -29,22 +29,17 @@ import javax.inject.Singleton;
  * {@link android.app.Application} to create.
  */
 @Module
-public class AndroidModule {
-  private final DemoApplication1 application;
-
-  public AndroidModule(DemoApplication1 application) {
-    this.application = application;
-  }
+public abstract class AndroidModule {
 
   /**
    * Allow the application context to be injected but require that it be annotated with
    * {@link ForApplication @Annotation} to explicitly differentiate it from an activity context.
    */
-  @Provides @Singleton @ForApplication Context provideApplicationContext() {
-    return application;
+  @Provides @Singleton @ForApplication static Context provideApplicationContext(DemoApplication1 app) {
+    return app;
   }
 
-  @Provides @Singleton LocationManager provideLocationManager() {
-    return (LocationManager) application.getSystemService(LOCATION_SERVICE);
+  @Provides @Singleton static LocationManager provideLocationManager(DemoApplication1 app) {
+    return (LocationManager) app.getSystemService(LOCATION_SERVICE);
   }
 }

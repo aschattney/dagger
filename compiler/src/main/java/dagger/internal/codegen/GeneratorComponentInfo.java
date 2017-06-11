@@ -19,7 +19,7 @@ public class GeneratorComponentInfo extends ComponentInfo {
 
     @Override
     protected String getId() {
-        return simpleVariableName(component);
+        return "decorate" + component.getSimpleName().toString();
     }
 
     @Override

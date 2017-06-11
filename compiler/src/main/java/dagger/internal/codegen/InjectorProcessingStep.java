@@ -6,6 +6,7 @@ import com.google.auto.common.MoreTypes;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.SetMultimap;
+import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.TypeName;
 import dagger.*;
 
@@ -38,16 +39,19 @@ public class InjectorProcessingStep implements BasicProcessor.ProcessingStep {
     private ApplicationGenerator applicationGenerator;
     private StubGenerator stubGenerator;
     private HashSet<TypeElement> components = new HashSet<>();
+    private DecoratorGenerator decoratorGenerator;
 
     public InjectorProcessingStep(Types types, Messager messager,
                                   AppConfig.Factory appConfigFactory,
                                   InjectorGenerator injectorGenerator,
                                   ComponentDescriptor.Kind component, BindingGraph.Factory bindingGraphFactory,
                                   ComponentDescriptor.Factory componentDescriptorFactory,
+                                  DecoratorGenerator decoratorGenerator,
                                   DependencySpecGenerator dependencySpecGenerator,
                                   DependencyInjectorGenerator dependencyInjectorGenerator,
                                   ProvisionBinding.Factory provisionBindingFactory,
-                                  ApplicationGenerator applicationGenerator, StubGenerator stubGenerator) {
+                                  ApplicationGenerator applicationGenerator,
+                                  StubGenerator stubGenerator) {
         this.types = types;
         this.messager = messager;
         this.appConfigFactory = appConfigFactory;
@@ -60,6 +64,7 @@ public class InjectorProcessingStep implements BasicProcessor.ProcessingStep {
         this.provisionBindingFactory = provisionBindingFactory;
         this.applicationGenerator = applicationGenerator;
         this.stubGenerator = stubGenerator;
+        this.decoratorGenerator = decoratorGenerator;
     }
 
     @Override
@@ -114,10 +119,12 @@ public class InjectorProcessingStep implements BasicProcessor.ProcessingStep {
                         });
 
             }
-            final DI di = new DI(appConfig, components, injectorTypeList);
+            final ClassName decoratorClassName = ClassName.get(appConfig.getAppClass()).topLevelClassName().peerClass("Decorator");
+            final DI di = new DI(appConfig, components, injectorTypeList, decoratorClassName);
+            this.decoratorGenerator.generate(di, messager);
             this.applicationGenerator.generate(di, messager);
             this.dependencySpecGenerator.generate(di, messager);
-            this.dependencyInjectorGenerator.generate(di, messager);
+            //this.dependencyInjectorGenerator.generate(di, messager);
             this.injectorGenerator.generate(di, messager);
         } else {
             throw new IllegalStateException(rejectedElements.toString());

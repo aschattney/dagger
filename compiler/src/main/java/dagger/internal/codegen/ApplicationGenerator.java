@@ -49,7 +49,7 @@ class ApplicationGenerator extends SourceFileGenerator<DI>{
         builder.addSuperinterface(TYPENAME_INJECTOR_SPEC);
         final Set<TypeElement> components = di.getComponents();
 
-        builder.addField(TYPENAME_INJECTOR, FIELDNAME_INJECTOR, Modifier.PRIVATE);
+        //builder.addField(TYPENAME_INJECTOR, FIELDNAME_INJECTOR, Modifier.PRIVATE);
 
         for (TypeElement component : components) {
             final List<SpecComponentInfo> infos = ComponentInfo.forSpec(component, componentDescriptorFactory, bindingGraphFactory, di.getAppClass().asType());
@@ -79,16 +79,16 @@ class ApplicationGenerator extends SourceFileGenerator<DI>{
         final Optional<ExecutableElement> onCreateMethod = findOnCreateMethod(di.getAppClass());
         if (onCreateMethod.isPresent()) {
             final MethodSpec.Builder overriding = MethodSpec.overriding(onCreateMethod.get());
-            overriding.addStatement("this.$L = new $T(this)", FIELDNAME_INJECTOR, TYPENAME_INJECTOR);
+            //overriding.addStatement("this.$L = new $T(this)", FIELDNAME_INJECTOR, TYPENAME_INJECTOR);
             overriding.addStatement(SUPER_ON_CREATE_CALL);
             builder.addMethod(overriding.build());
         }
 
-        builder.addMethod(MethodSpec.methodBuilder(METHOD_NAME_GET_INJECTOR)
+        /*builder.addMethod(MethodSpec.methodBuilder(METHOD_NAME_GET_INJECTOR)
                 .addModifiers(Modifier.PUBLIC)
                 .returns(TYPENAME_INJECTOR)
                 .addStatement(String.format("return this.%s", FIELDNAME_INJECTOR))
-                .build());
+                .build());*/
 
         return Optional.ofNullable(builder);
     }

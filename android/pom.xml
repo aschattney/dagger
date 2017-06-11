@@ -17,7 +17,7 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
-  <parent>
+    <parent>
     <groupId>com.google.dagger</groupId>
     <artifactId>dagger-parent</artifactId>
     <version>3.0</version>
@@ -26,7 +26,11 @@
   <artifactId>dagger-android</artifactId>
   <name>Dagger for Android</name>
 
-  <packaging>aar</packaging>
+  <packaging>pom</packaging>
+
+  <properties>
+    <java.version>1.6</java.version>
+  </properties>
 
   <repositories>
     <repository>
@@ -34,10 +38,6 @@
       <url>file://${env.ANDROID_HOME}/extras/android/m2repository</url>
     </repository>
   </repositories>
-
-  <properties>
-    <java.version>1.6</java.version>
-  </properties>
 
   <dependencies>
     <dependency>
@@ -49,12 +49,12 @@
       <groupId>com.android.support</groupId>
       <artifactId>support-annotations</artifactId>
     </dependency>
-      <dependency>
-          <groupId>com.google.android</groupId>
-          <artifactId>android</artifactId>
-          <version>4.2.2_r3</version>
-          <scope>provided</scope>
-      </dependency>
+    <dependency>
+        <groupId>com.google.android</groupId>
+        <artifactId>android</artifactId>
+        <version>4.2.2_r3</version>
+        <scope>provided</scope>
+    </dependency>
     <dependency>
       <groupId>com.google.code.findbugs</groupId>
       <artifactId>jsr305</artifactId>

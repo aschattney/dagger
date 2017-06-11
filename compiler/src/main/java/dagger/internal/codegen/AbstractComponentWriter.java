@@ -1251,7 +1251,7 @@ abstract class AbstractComponentWriter implements HasBindingMembers {
             /* 2 */ bindingKeyTypeName,
             /* 3 */ subcomponentName,
             /* 4 */ expression,
-            /* 5 */ Util.lowerCaseFirstLetter(subcomponentName));
+            /* 5 */ "decorate" + subcomponentName);
 
       case BUILDER_BINDING:
 

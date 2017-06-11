@@ -58,7 +58,7 @@ public class TriggerComponentInfo extends ComponentInfo {
 
     @Override
     protected String getId() {
-        return simpleVariableName(descriptor.componentDefinitionType());
+        return "decorate" + descriptor.componentDefinitionType().getSimpleName().toString();
     }
 
     protected ParameterSpec getBuilderParameterSpec(ClassName builderClassName) {

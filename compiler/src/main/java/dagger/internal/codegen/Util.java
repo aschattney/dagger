@@ -571,6 +571,39 @@ final class Util {
         }
     }
 
+    public static void createDelegateMethodImplementation(TypeName generatedTypeName, TypeSpec.Builder classBuilder, ContributionBinding binding) {
+        try {
+            if (bindingSupportsTestDelegate(binding)) {
+                final String delegateFieldName = Util.getDelegateFieldName(binding.key());
+                final ClassName delegateType = getDelegateTypeName(binding.key());
+                final String methodName = getDelegateMethodName(delegateType);
+                final MethodSpec.Builder delegateMethodBuilder = MethodSpec.methodBuilder(methodName);
+                delegateMethodBuilder.addModifiers(Modifier.PUBLIC);
+                classBuilder.addMethod(delegateMethodBuilder
+                        .returns(generatedTypeName)
+                        .addParameter(delegateType, delegateFieldName)
+                        .addStatement("this.$L = $L", delegateFieldName, CodeBlock.of(delegateFieldName))
+                        .addStatement("return this")
+                        .build());
+            }
+        } catch (Exception e) {
+        }
+    }
+
+    public static void createDelegateField(TypeSpec.Builder classBuilder, ContributionBinding binding) {
+        try {
+            if (bindingSupportsTestDelegate(binding)) {
+                final String delegateFieldName = Util.getDelegateFieldName(binding.key());
+                final ClassName delegateType = getDelegateTypeName(binding.key());
+                final FieldSpec.Builder builder = FieldSpec.builder(delegateType, delegateFieldName);
+                builder.addModifiers(Modifier.PRIVATE);
+                final FieldSpec fieldSpec = builder.build();
+                classBuilder.addField(fieldSpec);
+            }
+        } catch (Exception e) {
+        }
+    }
+
     public static void createDelegateFieldAndMethod(TypeName generatedTypeName, TypeSpec.Builder classBuilder, ContributionBinding binding, Map<Key, String> delegateFieldNames, boolean publicMethod) {
         try {
             if (bindingSupportsTestDelegate(binding)) {

@@ -9,17 +9,17 @@ import javax.inject.Named;
  * Created by Andy on 04.05.2017.
  */
 @Module
-public class SingletonModule {
+public abstract class SingletonModule {
 
     @Provides
     @Named("apiKey")
-    public String someString() {
+    public static String someString() {
        return "";
     }
 
     @Provides
     @Named("apiKey1")
-    public String secondString() {
+    public static String secondString() {
         return "";
     }
 }

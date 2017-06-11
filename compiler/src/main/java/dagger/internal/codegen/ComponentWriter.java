@@ -214,7 +214,7 @@ final class ComponentWriter extends AbstractComponentWriter {
                                     graph.componentDescriptor().builderSpec().get().builderDefinitionType())
                                     : builderName.get())
                     .addStatement("return application.$L(new $T())",
-                            Util.lowerCaseFirstLetter(graph.componentType().getSimpleName().toString()),
+                            "decorate" + graph.componentType().getSimpleName().toString(),
                             builderName.get())
                     .build();
     component.addMethod(builderFactoryMethod);

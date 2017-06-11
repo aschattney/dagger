@@ -14,11 +14,13 @@ public class DI {
     private Set<TypeElement> components;
     private List<InjectorType> injectorTypes;
     private AppConfig config;
+    private ClassName decoratorType;
 
-    public DI(AppConfig config, Set<TypeElement> components, List<InjectorType> injectorTypes) {
+    public DI(AppConfig config, Set<TypeElement> components, List<InjectorType> injectorTypes, ClassName decoratorType) {
         this.config = config;
         this.components = components;
         this.injectorTypes = injectorTypes;
+        this.decoratorType = decoratorType;
     }
 
     public ClassName getClassName() {
@@ -39,4 +41,6 @@ public class DI {
     }
 
     public TypeElement getBaseAppClass() { return config.getBaseAppClass(); }
+
+    public ClassName getDecoratorType() { return this.decoratorType; }
 }

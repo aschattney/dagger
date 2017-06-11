@@ -36,10 +36,12 @@
     <module>compiler</module>
     <module>core</module>
     <module>gwt</module>
+    <module>decoder</module>
     <!-- examples are handled in a default profile (see below) -->
     <module>producers</module>
     <module>android-support</module>
     <module>android-compiler</module>
+    <module>android-testcase</module>
   </modules>
 
   <properties>

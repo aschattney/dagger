@@ -9,10 +9,6 @@
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
-    <artifactId>dagger-android-support</artifactId>
-    <name>Dagger for Android Support</name>
-    <packaging>aar</packaging>
-
     <repositories>
         <repository>
             <id>android-support</id>
@@ -20,17 +16,15 @@
         </repository>
     </repositories>
 
+    <artifactId>dagger-android-testcase</artifactId>
+
+    <packaging>aar</packaging>
+
     <properties>
         <java.version>1.6</java.version>
     </properties>
 
     <dependencies>
-        <dependency>
-            <groupId>com.android.support</groupId>
-            <artifactId>appcompat-v7</artifactId>
-            <version>24.1.1</version>
-            <type>aar</type>
-        </dependency>
         <dependency>
             <groupId>com.google.android</groupId>
             <artifactId>android</artifactId>
@@ -38,9 +32,39 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>com.google.dagger</groupId>
-            <artifactId>dagger-android</artifactId>
-            <version>3.0</version>
+            <groupId>com.android.support.test</groupId>
+            <artifactId>runner</artifactId>
+            <version>0.5</version>
+            <type>aar</type>
+            <scope>compile</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>com.android.support</groupId>
+                    <artifactId>support-annotations</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>com.android.support.test</groupId>
+            <artifactId>rules</artifactId>
+            <version>0.5</version>
+            <type>aar</type>
+            <scope>compile</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>com.android.support</groupId>
+                    <artifactId>support-annotations</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.android.support</groupId>
+            <artifactId>support-annotations</artifactId>
+            <version>24.2.0</version>
             <scope>provided</scope>
         </dependency>
     </dependencies>

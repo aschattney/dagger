@@ -20,7 +20,7 @@ public class SpecComponentInfo extends ComponentInfo {
 
     @Override
     protected String getId() {
-        return simpleVariableName(component);
+        return "decorate" + component.getSimpleName().toString();
     }
 
     @Override
@@ -43,10 +43,9 @@ public class SpecComponentInfo extends ComponentInfo {
 
         ClassName builderClassName = getBuilderClassName(component);
         methodBuilder.returns(builderClassName);
+
         List<ParameterSpec> parameterSpecs = new ArrayList<>();
-
         ParameterSpec builderParameter = ParameterSpec.builder(builderClassName, "builder").build();
-
         parameterSpecs.add(builderParameter);
 
         methodBuilder.addParameters(parameterSpecs);

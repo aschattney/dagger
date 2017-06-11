@@ -45,10 +45,10 @@ public class DependencySpecGenerator extends SourceFileGenerator<DI> {
                 .collect(Collectors.toList())
                 .forEach(info -> info.process(builder));
 
-        builder.addMethod(MethodSpec.methodBuilder(METHOD_NAME_GET_INJECTOR)
+        /*builder.addMethod(MethodSpec.methodBuilder(METHOD_NAME_GET_INJECTOR)
                 .addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT)
                 .returns(TYPENAME_INJECTOR)
-                .build());
+                .build());*/
 
         return Optional.of(builder);
     }
