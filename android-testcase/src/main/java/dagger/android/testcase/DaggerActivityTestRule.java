@@ -17,6 +17,7 @@ public class DaggerActivityTestRule<T extends Activity> extends UiThreadTestRule
 {
 
     private static final String TAG = "ActivityTestRule";
+    private static final String DECORATOR_FIELD_PARTNAME = "decorator";
 
     private final Class<T> mActivityClass;
     private Instrumentation mInstrumentation;
@@ -63,22 +64,8 @@ public class DaggerActivityTestRule<T extends Activity> extends UiThreadTestRule
      */
     protected void beforeActivityLaunched()
     {
-        // empty by default
-        try
-        {
-            apply(new Statement()
-            {
-                @Override
-                public void evaluate() throws Throwable
-                {
-                    Application application = getApplication();
-                    application.onCreate();
-                }
-            }, Description.EMPTY).evaluate();
-        } catch (Throwable throwable)
-        {
-            throwable.printStackTrace();
-        }
+        Application application = getApplication();
+        application.onCreate();
     }
 
     private Application getApplication()
@@ -137,11 +124,11 @@ public class DaggerActivityTestRule<T extends Activity> extends UiThreadTestRule
         for (Field f : declaredFields){
             try {
                 String name = f.getName().toLowerCase();
-                if (!name.contains("decorator") && !f.getType().isPrimitive())
+                if (!name.contains(DECORATOR_FIELD_PARTNAME) && !f.getType().isPrimitive())
                 {
                     f.setAccessible(true);
                     f.set(app, null);
-                }else if (name.contains("decorator")) {
+                }else if (name.contains(DECORATOR_FIELD_PARTNAME)) {
                     Object newDecoratorInstance = f.getType().getConstructors()[0].newInstance(app);
                     f.setAccessible(true);
                     f.set(app, newDecoratorInstance);

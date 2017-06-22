@@ -38,21 +38,18 @@ final class ComponentGenerator extends SourceFileGenerator<BindingGraph> {
   private final Elements elements;
   private final Key.Factory keyFactory;
   private final CompilerOptions compilerOptions;
-  private TypeMirror applicationClassName;
 
   private ComponentGenerator(
           Filer filer,
           Elements elements,
           Types types,
           Key.Factory keyFactory,
-          CompilerOptions compilerOptions,
-          TypeMirror applicationClassName) {
+          CompilerOptions compilerOptions) {
     super(filer, elements);
     this.types = types;
     this.elements = elements;
     this.keyFactory = keyFactory;
     this.compilerOptions = compilerOptions;
-    this.applicationClassName = applicationClassName;
   }
 
   public static class Factory {
@@ -69,8 +66,8 @@ final class ComponentGenerator extends SourceFileGenerator<BindingGraph> {
       this.keyFactory = keyFactory;
       this.compilerOptions = compilerOptions;
     }
-    public ComponentGenerator createComponentGenerator(TypeMirror applicationClassName) {
-      return new ComponentGenerator(filer, elements, types, keyFactory, compilerOptions, applicationClassName);
+    public ComponentGenerator createComponentGenerator() {
+      return new ComponentGenerator(filer, elements, types, keyFactory, compilerOptions);
     }
   }
 
@@ -88,7 +85,7 @@ final class ComponentGenerator extends SourceFileGenerator<BindingGraph> {
   @Override
   Optional<TypeSpec.Builder> write(ClassName componentName, BindingGraph input) {
     return Optional.of(
-        new ComponentWriter(types, elements, keyFactory, compilerOptions, componentName, input, applicationClassName)
-            .write());
+        new ComponentWriter(types, elements, keyFactory, compilerOptions, componentName, input).write()
+    );
   }
 }

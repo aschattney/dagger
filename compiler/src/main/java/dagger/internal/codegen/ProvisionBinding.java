@@ -208,7 +208,7 @@ abstract class ProvisionBinding extends ContributionBinding {
       return ProvisionBinding.builder()
           .contributionType(ContributionType.fromBindingMethod(providesMethod))
           .bindingElement(providesMethod)
-          .ignoreStubGeneration(providesMethod.getAnnotation(AllowStubGeneration.class) == null)
+          .ignoreStubGeneration(genericParameter || providesMethod.getAnnotation(AllowStubGeneration.class) == null)
           .contributingModule(contributedBy)
           .key(key)
           .genericParameter(genericParameter)

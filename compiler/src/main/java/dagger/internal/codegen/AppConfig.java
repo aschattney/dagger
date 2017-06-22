@@ -17,10 +17,12 @@ public class AppConfig {
 
     private final TypeElement appClass;
     private final TypeElement baseAppClass;
+    private boolean debug;
 
-    public AppConfig(TypeElement appClass, TypeElement baseAppClass) {
+    public AppConfig(TypeElement appClass, TypeElement baseAppClass, boolean debug) {
         this.appClass = appClass;
         this.baseAppClass = baseAppClass;
+        this.debug = debug;
     }
 
     public TypeElement getAppClass() {
@@ -29,6 +31,10 @@ public class AppConfig {
 
     public TypeElement getBaseAppClass() {
         return baseAppClass;
+    }
+
+    public boolean debug() {
+        return this.debug;
     }
 
     static class Factory {
@@ -42,7 +48,8 @@ public class AppConfig {
         public AppConfig create(Config config) {
             final TypeElement appClass = extractAppClassElement(config);
             final TypeElement baseAppClass = extractBaseAppClassElement(config);
-            return new AppConfig(appClass, baseAppClass);
+            boolean debug = config.debug();
+            return new AppConfig(appClass, baseAppClass, debug);
         }
 
         private TypeElement extractAppClassElement(Config config) {
@@ -63,6 +70,22 @@ public class AppConfig {
                 );
             }
             return element;
+        }
+    }
+
+    static class Provider {
+        private AppConfig appConfig;
+
+        public void set(AppConfig appConfig) {
+            this.appConfig = appConfig;
+        }
+
+        public AppConfig get() {
+            return appConfig;
+        }
+
+        public boolean isSet() {
+            return appConfig != null;
         }
     }
 

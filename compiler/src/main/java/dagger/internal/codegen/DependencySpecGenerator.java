@@ -40,7 +40,7 @@ public class DependencySpecGenerator extends SourceFileGenerator<DI> {
                 .addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT);
 
         input.getComponents().stream()
-                .flatMap(typeElement -> ComponentInfo.forSpec(typeElement, componentDescriptorFactory, bindingGraphFactory, input.getAppClass().asType())
+                .flatMap(typeElement -> ComponentInfo.forSpec(typeElement, componentDescriptorFactory, bindingGraphFactory)
                 .stream())
                 .collect(Collectors.toList())
                 .forEach(info -> info.process(builder));

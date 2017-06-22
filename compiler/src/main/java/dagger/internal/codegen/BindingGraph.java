@@ -33,14 +33,18 @@ import static dagger.internal.codegen.Util.toImmutableSet;
 import static java.util.function.Predicate.isEqual;
 import static javax.lang.model.element.Modifier.ABSTRACT;
 
+import com.google.auto.common.AnnotationMirrors;
+import com.google.auto.common.MoreElements;
 import com.google.auto.common.MoreTypes;
 import com.google.auto.value.AutoValue;
 import com.google.auto.value.extension.memoized.Memoized;
+import com.google.common.base.Equivalence;
 import com.google.common.base.Predicate;
 import com.google.common.base.VerifyException;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.*;
+import com.sun.tools.internal.ws.processor.modeler.annotation.WrapperInfo;
 import dagger.Reusable;
 import dagger.Subcomponent;
 import dagger.internal.codegen.ComponentDescriptor.BuilderRequirementMethod;
@@ -59,6 +63,7 @@ import javax.inject.Provider;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
+import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.ElementFilter;
 import javax.lang.model.util.Elements;
@@ -73,6 +78,7 @@ abstract class BindingGraph {
   abstract ComponentDescriptor componentDescriptor();
   abstract ImmutableMap<BindingKey, ResolvedBindings> resolvedBindings();
   abstract ImmutableSet<BindingGraph> subgraphs();
+  abstract Equivalence.Wrapper<TypeMirror> application();
 
   /** Returns the resolved bindings for the dependencies of {@code binding}. */
   ImmutableSet<ResolvedBindings> resolvedDependencies(ContributionBinding binding) {
@@ -219,23 +225,26 @@ abstract class BindingGraph {
     private final Key.Factory keyFactory;
     private final ProvisionBinding.Factory provisionBindingFactory;
     private final ProductionBinding.Factory productionBindingFactory;
+    private AppConfig.Provider appConfigProvider;
     private TypeMirror application;
 
     Factory(
-        Elements elements,
-        InjectBindingRegistry injectBindingRegistry,
-        Key.Factory keyFactory,
-        ProvisionBinding.Factory provisionBindingFactory,
-        ProductionBinding.Factory productionBindingFactory) {
+            Elements elements,
+            InjectBindingRegistry injectBindingRegistry,
+            Key.Factory keyFactory,
+            ProvisionBinding.Factory provisionBindingFactory,
+            ProductionBinding.Factory productionBindingFactory,
+            AppConfig.Provider appConfigProvider) {
       this.elements = elements;
       this.injectBindingRegistry = injectBindingRegistry;
       this.keyFactory = keyFactory;
       this.provisionBindingFactory = provisionBindingFactory;
       this.productionBindingFactory = productionBindingFactory;
+      this.appConfigProvider = appConfigProvider;
     }
 
-    BindingGraph create(ComponentDescriptor componentDescriptor, TypeMirror application) {
-      this.application = application;
+    BindingGraph create(ComponentDescriptor componentDescriptor) {
+      this.application = appConfigProvider.get().getAppClass().asType();
       return create(Optional.empty(), componentDescriptor);
     }
 
@@ -376,6 +385,7 @@ abstract class BindingGraph {
           componentDescriptor,
           requestResolver.getResolvedBindings(),
           subgraphs.build(),
+          MoreTypes.equivalence().wrap(application),
           requestResolver.getOwnedModules());
     }
 

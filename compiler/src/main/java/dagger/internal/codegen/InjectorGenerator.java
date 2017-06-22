@@ -61,7 +61,7 @@ class InjectorGenerator extends SourceFileGenerator<DI> {
         createDecoratorClasses(builder, components, appClass);
         for (TypeElement component : components) {
             final List<TriggerComponentInfo> infos =
-                    ComponentInfo.forTrigger(component, componentDescriptorFactory, bindingGraphFactory, input.getAppClass().asType());
+                    ComponentInfo.forTrigger(component, componentDescriptorFactory, bindingGraphFactory);
             infos.forEach(info -> info.process(builder));
         }
 
@@ -71,11 +71,11 @@ class InjectorGenerator extends SourceFileGenerator<DI> {
     private void createDecoratorClasses(TypeSpec.Builder builder, Set<TypeElement> components, TypeElement appClass) {
         final ClassName appClassName = ClassName.get(appClass);
         ClassName testAppClassName = appClassName.topLevelClassName().peerClass("Test" + appClassName.simpleName());
-        final Decorator decorator = decoratorFactory.create(testAppClassName, appClass.asType());
+        final Decorator decorator = decoratorFactory.create(testAppClassName);
 
         final List<BindingGraph> graphs = components.stream()
                 .map(componentDescriptorFactory::forComponent)
-                .map(descriptor -> bindingGraphFactory.create(descriptor, appClass.asType()))
+                .map(bindingGraphFactory::create)
                 .flatMap(this::flatMapAllSubgraphs)
                 .filter(bindingGraph -> bindingGraph.componentDescriptor() != null && !bindingGraph.delegateRequirements().isEmpty())
                 .collect(Collectors.toList());
@@ -99,11 +99,11 @@ class InjectorGenerator extends SourceFileGenerator<DI> {
     private void createDecoratorClass(TypeSpec.Builder builder, ImmutableSet<BindingGraph> graphs,
                                       Decorator decorator, ClassName testAppClassName) {
         try {
-            messager.printMessage(Diagnostic.Kind.NOTE, "-----");
+            /*messager.printMessage(Diagnostic.Kind.NOTE, "-----");
             for (BindingGraph graph : graphs) {
                 messager.printMessage(Diagnostic.Kind.NOTE, String.valueOf(graph.componentType().getSimpleName().toString()));
             }
-            messager.printMessage(Diagnostic.Kind.NOTE, "-----");
+            messager.printMessage(Diagnostic.Kind.NOTE, "-----");*/
             decorator.generate(graphs);
             final Optional<BindingGraph> e = graphs.stream().findFirst();
             if (!e.isPresent()) {

@@ -52,7 +52,7 @@ class ApplicationGenerator extends SourceFileGenerator<DI>{
         //builder.addField(TYPENAME_INJECTOR, FIELDNAME_INJECTOR, Modifier.PRIVATE);
 
         for (TypeElement component : components) {
-            final List<SpecComponentInfo> infos = ComponentInfo.forSpec(component, componentDescriptorFactory, bindingGraphFactory, di.getAppClass().asType());
+            final List<SpecComponentInfo> infos = ComponentInfo.forSpec(component, componentDescriptorFactory, bindingGraphFactory);
             final List<MethodSpec.Builder> methodBuilders = infos.stream()
                     .flatMap(info -> info.getMethods().stream())
                     .collect(Collectors.toList());

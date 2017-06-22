@@ -20,6 +20,8 @@ import static com.google.auto.common.MoreElements.getLocalAndInheritedMethods;
 import static com.google.auto.common.MoreElements.hasModifiers;
 import static com.google.auto.common.MoreTypes.asDeclared;
 import static com.google.common.collect.Lists.asList;
+import static dagger.internal.codegen.SourceFiles.generateBindingFieldsForDependencies;
+import static dagger.internal.codegen.SourceFiles.simpleVariableName;
 import static java.util.stream.Collectors.collectingAndThen;
 import static java.util.stream.Collectors.toList;
 import static javax.lang.model.element.ElementKind.CONSTRUCTOR;
@@ -31,9 +33,8 @@ import com.google.auto.common.MoreTypes;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import java.util.Optional;
-import com.google.common.collect.FluentIterable;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
+
+import com.google.common.collect.*;
 import com.squareup.javapoet.*;
 import dagger.*;
 import dagger.multibindings.ClassKey;
@@ -46,6 +47,7 @@ import java.util.function.Predicate;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import java.util.stream.Collector;
+import javax.inject.Provider;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
@@ -569,6 +571,67 @@ final class Util {
             }
         } catch (Exception e) {
         }
+    }
+
+    public static void createMockInstanceMethod(TypeName generatedTypeName, TypeSpec.Builder classBuilder, ContributionBinding binding) {
+        try {
+            if (bindingSupportsTestDelegate(binding)) {
+                final ClassName delegateType = getDelegateTypeName(binding.key());
+                final String methodName = getDelegateMethodName(delegateType);
+                final MethodSpec.Builder delegateMethodBuilder = MethodSpec.methodBuilder(methodName);
+                delegateMethodBuilder.addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT);
+                classBuilder.addMethod(delegateMethodBuilder
+                        .addParameter(
+                                ParameterizedTypeName.get(ClassName.get(Provider.class),
+                                ClassName.get(binding.contributedType())), "provider"
+                        ).returns(generatedTypeName)
+                        .build());
+            }
+        } catch (Exception e) {
+        }
+    }
+
+    public static void createMockMethodImplementation(TypeName generatedTypeName, TypeSpec.Builder classBuilder, ContributionBinding binding) {
+        try {
+            if (bindingSupportsTestDelegate(binding)) {
+                final String delegateFieldName = Util.getDelegateFieldName(binding.key());
+                final ClassName delegateType = getDelegateTypeName(binding.key());
+                final TypeName contributedTypeName = ClassName.get(binding.contributedType());
+                final ParameterizedTypeName providerType = ParameterizedTypeName.get(ClassName.get(Provider.class), contributedTypeName);
+                final String methodName = getDelegateMethodName(delegateType);
+                final MethodSpec.Builder delegateMethodBuilder = MethodSpec.methodBuilder(methodName);
+                delegateMethodBuilder.addModifiers(Modifier.PUBLIC);
+                final CodeBlock params = createParametersCodeBlock(binding);
+                classBuilder.addMethod(delegateMethodBuilder
+                        .returns(generatedTypeName)
+                        .addParameter(providerType, "provider", Modifier.FINAL)
+                        .addStatement("this.$L = new $T() {\n" +
+                                "   public $T get($L) { \n" +
+                                "       return provider.get();\n" +
+                                "   }\n" +
+                                "};", delegateFieldName, delegateType,
+                                contributedTypeName,
+                                     params)
+                        .addStatement("return this")
+                        .build());
+            }
+        } catch (Exception e) {
+        }
+    }
+
+    protected static CodeBlock createParametersCodeBlock(ContributionBinding binding) {
+        final ImmutableMap<BindingKey, FrameworkField> map = generateBindingFieldsForDependencies(binding);
+        return binding.explicitDependencies()
+                .stream()
+                .map(request -> createCodeBlock(request, map))
+                .collect(CodeBlocks.joiningCodeBlocks(","));
+    }
+
+    private static CodeBlock createCodeBlock(DependencyRequest request, ImmutableMap<BindingKey, FrameworkField> map) {
+        FrameworkField field = map.get(request.bindingKey());
+        TypeName type = request.kind() == DependencyRequest.Kind.INSTANCE ? field.type().typeArguments.get(0) : field.type();
+        return CodeBlock.of("$T $L", type, field.name());
+
     }
 
     public static void createDelegateMethodImplementation(TypeName generatedTypeName, TypeSpec.Builder classBuilder, ContributionBinding binding) {

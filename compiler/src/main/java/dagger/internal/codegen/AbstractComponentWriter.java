@@ -155,7 +155,6 @@ abstract class AbstractComponentWriter implements HasBindingMembers {
   private final Map<BindingKey, MemberSelect> memberSelects = new HashMap<>();
   private final Map<BindingKey, MemberSelect> producerFromProviderMemberSelects = new HashMap<>();
   private final RequestFulfillmentRegistry requestFulfillmentRegistry;
-  protected TypeMirror application;
   protected final MethodSpec.Builder constructor = constructorBuilder().addModifiers(PRIVATE);
   protected Optional<ClassName> builderName = Optional.empty();
   private Map<Key, String> delegateFieldNames = new HashMap<>();
@@ -192,8 +191,7 @@ abstract class AbstractComponentWriter implements HasBindingMembers {
       ClassName name,
       BindingGraph graph,
       ImmutableMap<ComponentDescriptor, String> subcomponentNames,
-      OptionalFactories optionalFactories,
-      TypeMirror application) {
+      OptionalFactories optionalFactories) {
     this.types = types;
     this.elements = elements;
     this.keyFactory = keyFactory;
@@ -205,7 +203,6 @@ abstract class AbstractComponentWriter implements HasBindingMembers {
     this.optionalFactories = optionalFactories;
     this.requestFulfillmentRegistry =
         new RequestFulfillmentRegistry(graph.resolvedBindings(), this);
-    this.application = application;
   }
 
   protected AbstractComponentWriter(
@@ -218,8 +215,7 @@ abstract class AbstractComponentWriter implements HasBindingMembers {
         name,
         graph,
         parent.subcomponentNames,
-        parent.optionalFactories,
-        parent.application
+        parent.optionalFactories
     );
   }
 
@@ -1230,7 +1226,7 @@ abstract class AbstractComponentWriter implements HasBindingMembers {
 
       case SUBCOMPONENT_BUILDER:
 
-        final CodeBlock expression = getMemberSelectExpression(BindingKey.contribution(Key.builder(application).build()));
+        final CodeBlock expression = getMemberSelectExpression(BindingKey.contribution(Key.builder(graph.application().get()).build()));
 
         String subcomponentName =
             subcomponentNames.get(

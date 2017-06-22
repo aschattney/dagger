@@ -35,6 +35,11 @@ public class TestClassGenerator extends SourceFileGenerator<TestRegistry> {
 
     @Override
     Optional<TypeSpec.Builder> write(ClassName generatedTypeName, TestRegistry input) {
+
+        if (!input.isDebug()) {
+            return Optional.empty();
+        }
+
         uniqueNameSet = new UniqueNameSet();
         final TypeSpec.Builder builder = TypeSpec.classBuilder(generatedTypeName);
         final Iterator<TestRegistry.EncodedClass> it = input.iterator();

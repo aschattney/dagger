@@ -59,8 +59,7 @@ final class ComponentWriter extends AbstractComponentWriter {
           Key.Factory keyFactory,
           CompilerOptions compilerOptions,
           ClassName name,
-          BindingGraph graph,
-          TypeMirror applicationClassName) {
+          BindingGraph graph) {
     super(
         types,
         elements,
@@ -69,8 +68,7 @@ final class ComponentWriter extends AbstractComponentWriter {
         name,
         graph,
         new UniqueSubcomponentNamesGenerator(graph).generate(),
-        new OptionalFactories(),
-        applicationClassName);
+        new OptionalFactories());
   }
 
   /**
@@ -207,7 +205,7 @@ final class ComponentWriter extends AbstractComponentWriter {
     MethodSpec builderFactoryMethod =
             methodBuilder("builder")
                     .addModifiers(PUBLIC, STATIC)
-                    .addParameter(ClassName.get(application), "application")
+                    .addParameter(ClassName.get(graph.application().get()), "application")
                     .returns(
                             graph.componentDescriptor().builderSpec().isPresent()
                                     ? ClassName.get(

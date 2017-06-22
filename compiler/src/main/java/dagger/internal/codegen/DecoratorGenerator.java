@@ -59,7 +59,7 @@ class DecoratorGenerator extends SourceFileGenerator<DI>{
 
        components.stream()
                 .map(componentDescriptorFactory::forComponent)
-                .map(descriptor -> bindingGraphFactory.create(descriptor, input.getAppClass().asType()))
+                .map(bindingGraphFactory::create)
                 .flatMap(this::flatMapAllSubgraphs)
                 .filter(bindingGraph -> bindingGraph.componentDescriptor() != null && !bindingGraph.delegateRequirements().isEmpty())
                 .filter(distinctByKey(graph -> simpleVariableName(graph.componentDescriptor().componentDefinitionType())))

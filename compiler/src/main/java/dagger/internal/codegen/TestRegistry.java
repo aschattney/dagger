@@ -18,6 +18,7 @@ import static com.google.common.io.ByteStreams.toByteArray;
 public class TestRegistry {
 
     private List<EncodedClass> encodedClasses = new ArrayList<>();
+    private boolean debug = false;
 
     public void addEncodedClass(ClassName className, JavaFile javaFile) throws IOException {
         final JavaFileObject javaFileObject = javaFile.toJavaFileObject();
@@ -37,6 +38,14 @@ public class TestRegistry {
 
     public byte[] decodeClass(String value) {
         return Base64.getDecoder().decode(value);
+    }
+
+    public void setDebug(boolean debug) {
+        this.debug = debug;
+    }
+
+    public boolean isDebug() {
+        return this.debug;
     }
 
     public static class EncodedClass {

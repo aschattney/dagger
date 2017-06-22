@@ -14,20 +14,17 @@ import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.Elements;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 
 public class Decorator  extends SourceFileGenerator<ImmutableSet<BindingGraph>>{
 
     private BindingGraph.Factory factory;
-    private TypeMirror appClass;
     private ClassName testAppClassName;
     private TestRegistry testRegistry;
 
-    private Decorator(Filer filer, Elements elements, BindingGraph.Factory factory, TypeMirror appClass, ClassName testAppClassName, TestRegistry testRegistry) {
+    private Decorator(Filer filer, Elements elements, BindingGraph.Factory factory, ClassName testAppClassName, TestRegistry testRegistry) {
         super(filer, elements);
         this.factory = factory;
-        this.appClass = appClass;
         this.testAppClassName = testAppClassName;
         this.testRegistry = testRegistry;
     }
@@ -68,7 +65,7 @@ public class Decorator  extends SourceFileGenerator<ImmutableSet<BindingGraph>>{
         final BindingGraph bindingGraph = input.stream().findFirst().get();
 
         ComponentDescriptor topDescriptor = getTopDescriptor(bindingGraph.componentDescriptor());
-        final BindingGraph parentGraph = factory.create(topDescriptor, appClass);
+        final BindingGraph parentGraph = factory.create(topDescriptor);
         final String daggerBuilderClassName = TriggerComponentInfo.resolveBuilderName(bindingGraph, parentGraph);
 
         builder.addField(testAppClassName, "app", Modifier.PRIVATE);
@@ -92,6 +89,9 @@ public class Decorator  extends SourceFileGenerator<ImmutableSet<BindingGraph>>{
         final TypeSpec.Builder interfaceBuilder = TypeSpec.interfaceBuilder(name).addModifiers(Modifier.PUBLIC);
         for (ContributionBinding contributionBinding : bindingGraph.delegateRequirements()) {
             Util.createDelegateMethod(name, interfaceBuilder, contributionBinding);
+            if (!contributionBinding.dependencies().isEmpty()) {
+                Util.createMockInstanceMethod(name, interfaceBuilder, contributionBinding);
+            }
         }
         interfaceBuilder.addMethod(MethodSpec.methodBuilder("and")
                 .addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT)
@@ -109,7 +109,7 @@ public class Decorator  extends SourceFileGenerator<ImmutableSet<BindingGraph>>{
             final BindingGraph bindingGraph = it.next();
             final CodeBlock.Builder codeBuilder = CodeBlock.builder();
             ComponentDescriptor topDescriptor = getTopDescriptor(bindingGraph.componentDescriptor());
-            final BindingGraph parentGraph = factory.create(topDescriptor, appClass);
+            final BindingGraph parentGraph = factory.create(topDescriptor);
             final ClassName name = ClassName.bestGuess(TriggerComponentInfo.resolveBuilderName(bindingGraph, parentGraph));
             codeBuilder.beginControlFlow("if (builder instanceof $T)", name);
             codeBuilder.add(CodeBlock.of("$T impl = ($T) builder;\n", name, name));
@@ -119,6 +119,9 @@ public class Decorator  extends SourceFileGenerator<ImmutableSet<BindingGraph>>{
                 if (counter == 0) {
                     Util.createDelegateField(builder, contributionBinding);
                     Util.createDelegateMethodImplementation(interfaceName, builder, contributionBinding);
+                    if (!contributionBinding.dependencies().isEmpty()) {
+                        Util.createMockMethodImplementation(interfaceName, builder, contributionBinding);
+                    }
                 }
                 final String delegateFieldName = Util.getDelegateFieldName(contributionBinding.key());
                 final ClassName delegateTypeName = Util.getDelegateTypeName(contributionBinding.key());
@@ -185,8 +188,8 @@ public class Decorator  extends SourceFileGenerator<ImmutableSet<BindingGraph>>{
             this.testRegistry = testRegistry;
         }
 
-        public Decorator create(ClassName testAppClassName, TypeMirror appClass) {
-            return new Decorator(filer, elements, bindingGraphFactory, appClass, testAppClassName, testRegistry);
+        public Decorator create(ClassName testAppClassName) {
+            return new Decorator(filer, elements, bindingGraphFactory, testAppClassName, testRegistry);
         }
 
     }

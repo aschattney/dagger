@@ -58,13 +58,6 @@ final class ComponentProcessingStep implements BasicProcessor.ProcessingStep {
   private final BindingGraph.Factory bindingGraphFactory;
   private final ComponentGenerator.Factory componentGeneratorFactory;
 
-  public static Set<TypeElement> allComponents = new HashSet<>();
-  public static TypeElement appClass;
-
-  public static boolean generatedAllComponents = true;
-  private final AppConfig.Factory appConfigFactory;
-  private static AppConfig appConfig;
-
   ComponentProcessingStep(
       ComponentDescriptor.Kind componentKind,
       Messager messager,
@@ -75,8 +68,7 @@ final class ComponentProcessingStep implements BasicProcessor.ProcessingStep {
       BindingGraphValidator bindingGraphValidator,
       Factory componentDescriptorFactory,
       BindingGraph.Factory bindingGraphFactory,
-      ComponentGenerator.Factory componentGeneratorFactory,
-      AppConfig.Factory appConfigFactory) {
+      ComponentGenerator.Factory componentGeneratorFactory) {
     this.componentKind = componentKind;
     this.messager = messager;
     this.componentValidator = componentValidator;
@@ -87,13 +79,11 @@ final class ComponentProcessingStep implements BasicProcessor.ProcessingStep {
     this.componentDescriptorFactory = componentDescriptorFactory;
     this.bindingGraphFactory = bindingGraphFactory;
     this.componentGeneratorFactory = componentGeneratorFactory;
-    this.appConfigFactory = appConfigFactory;
   }
 
   @Override
   public Set<Class<? extends Annotation>> annotations() {
     return ImmutableSet.of(
-        Config.class,
         Component.class,
         Component.Builder.class,
         ProductionComponent.class,
@@ -107,18 +97,6 @@ final class ComponentProcessingStep implements BasicProcessor.ProcessingStep {
   @Override
   public final ImmutableSet<Element> process(
       SetMultimap<Class<? extends Annotation>, Element> elementsByAnnotation, boolean anyElementsRejected) {
-
-    if (appClass == null) {
-      final Set<Element> elements = elementsByAnnotation.get(Config.class);
-      if (!elements.isEmpty()) {
-        final Iterator<Element> it = elements.iterator();
-        if (it.hasNext()) {
-          final Element e = it.next();
-          appConfig = appConfigFactory.create(e.getAnnotation(Config.class));
-          appClass = MoreElements.asType(e);
-        }
-      }
-    }
 
     ImmutableSet.Builder<Element> rejectedElements = ImmutableSet.builder();
 
@@ -161,7 +139,7 @@ final class ComponentProcessingStep implements BasicProcessor.ProcessingStep {
               componentHierarchyValidator.validate(componentDescriptor);
           hierarchyReport.printMessagesTo(messager);
           if (hierarchyReport.isClean()) {
-            BindingGraph bindingGraph = bindingGraphFactory.create(componentDescriptor, appConfig.getAppClass().asType());
+            BindingGraph bindingGraph = bindingGraphFactory.create(componentDescriptor);
             ValidationReport<TypeElement> graphReport =
                 bindingGraphValidator.validate(bindingGraph);
             graphReport.printMessagesTo(messager);
@@ -170,7 +148,6 @@ final class ComponentProcessingStep implements BasicProcessor.ProcessingStep {
             }
           }
         }
-        allComponents.add(componentTypeElement);
       } catch (TypeNotPresentException e) {
         rejectedElements.add(componentTypeElement);
       }
@@ -178,17 +155,11 @@ final class ComponentProcessingStep implements BasicProcessor.ProcessingStep {
 
     final ImmutableSet<Element> failedElements = rejectedElements.build();
 
-    if (elements.isEmpty() && failedElements.isEmpty()) {
-      generatedAllComponents = true;
-    }
-
     return failedElements;
   }
 
   private void generateComponent(BindingGraph bindingGraph) {
-    final AppConfig appConfig = appConfigFactory.create(appClass.getAnnotation(Config.class));
-    final TypeMirror appClass = appConfig.getAppClass().asType();
-    componentGeneratorFactory.createComponentGenerator(appClass).generate(bindingGraph, messager);
+    componentGeneratorFactory.createComponentGenerator().generate(bindingGraph, messager);
   }
 
   private ImmutableSet<Element> getElementsFromAnnotations(

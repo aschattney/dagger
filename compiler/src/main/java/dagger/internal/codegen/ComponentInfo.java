@@ -26,9 +26,8 @@ public abstract class ComponentInfo {
 
     public static List<SpecComponentInfo> forSpec(TypeElement component,
                                                   ComponentDescriptor.Factory componentDescriptorFactory,
-                                                  BindingGraph.Factory bindingGraphFactory,
-                                                  TypeMirror application) {
-        return createSpecComponentInfo(component, componentDescriptorFactory, bindingGraphFactory, application)
+                                                  BindingGraph.Factory bindingGraphFactory) {
+        return createSpecComponentInfo(component, componentDescriptorFactory, bindingGraphFactory)
                 .stream()
                 .distinct()
                 .collect(Collectors.toList());
@@ -36,9 +35,8 @@ public abstract class ComponentInfo {
 
     public static List<GeneratorComponentInfo> forGenerator(TypeElement component,
                                                             ComponentDescriptor.Factory componentDescriptorFactory,
-                                                            BindingGraph.Factory bindingGraphFactory,
-                                                            TypeMirror application) {
-        return createGeneratorComponentInfo(component, componentDescriptorFactory, bindingGraphFactory, application)
+                                                            BindingGraph.Factory bindingGraphFactory) {
+        return createGeneratorComponentInfo(component, componentDescriptorFactory, bindingGraphFactory)
                 .stream()
                 .distinct()
                 .collect(Collectors.toList());
@@ -46,9 +44,8 @@ public abstract class ComponentInfo {
 
     public static List<TriggerComponentInfo> forTrigger(TypeElement component,
                                                         ComponentDescriptor.Factory componentDescriptorFactory,
-                                                        BindingGraph.Factory bindingGraphFactory,
-                                                        TypeMirror application) {
-        return createTriggerComponentInfo(component, componentDescriptorFactory, bindingGraphFactory, application)
+                                                        BindingGraph.Factory bindingGraphFactory) {
+        return createTriggerComponentInfo(component, componentDescriptorFactory, bindingGraphFactory)
                 .stream()
                 .distinct()
                 .collect(Collectors.toList());
@@ -56,11 +53,10 @@ public abstract class ComponentInfo {
 
     private static List<TriggerComponentInfo> createTriggerComponentInfo(TypeElement component,
                                                             ComponentDescriptor.Factory componentDescriptorFactory,
-                                                            BindingGraph.Factory bindingGraphFactory,
-                                                            TypeMirror application) {
+                                                            BindingGraph.Factory bindingGraphFactory) {
         List<TriggerComponentInfo> infos = new ArrayList<>();
         final ComponentDescriptor descriptor = componentDescriptorFactory.forComponent(component);
-        final BindingGraph bindingGraph = bindingGraphFactory.create(descriptor, application);
+        final BindingGraph bindingGraph = bindingGraphFactory.create(descriptor);
         final TriggerComponentInfo componentInfo = new TriggerComponentInfo(component, descriptor, bindingGraph);
         infos.add(componentInfo);
         for (BindingGraph subGraph : bindingGraph.subgraphs()) {
@@ -84,11 +80,10 @@ public abstract class ComponentInfo {
 
     private static List<SpecComponentInfo> createSpecComponentInfo(TypeElement component,
                                                          ComponentDescriptor.Factory componentDescriptorFactory,
-                                                         BindingGraph.Factory bindingGraphFactory,
-                                                         TypeMirror application) {
+                                                         BindingGraph.Factory bindingGraphFactory) {
         List<SpecComponentInfo> infos = new ArrayList<>();
         final ComponentDescriptor descriptor = componentDescriptorFactory.forComponent(component);
-        final BindingGraph bindingGraph = bindingGraphFactory.create(descriptor, application);
+        final BindingGraph bindingGraph = bindingGraphFactory.create(descriptor);
         infos.add(new SpecComponentInfo(component, descriptor, bindingGraph));
         for (BindingGraph graph : bindingGraph.subgraphs()) {
             infos.addAll(createSpecSubcomponentInfo(graph.componentDescriptor(), graph));
@@ -108,11 +103,10 @@ public abstract class ComponentInfo {
 
     private static List<GeneratorComponentInfo> createGeneratorComponentInfo(TypeElement component,
                                                                              ComponentDescriptor.Factory componentDescriptorFactory,
-                                                                             BindingGraph.Factory bindingGraphFactory,
-                                                                             TypeMirror application) {
+                                                                             BindingGraph.Factory bindingGraphFactory) {
         List<GeneratorComponentInfo> infos = new ArrayList<>();
         final ComponentDescriptor descriptor = componentDescriptorFactory.forComponent(component);
-        final BindingGraph bindingGraph = bindingGraphFactory.create(descriptor, application);
+        final BindingGraph bindingGraph = bindingGraphFactory.create(descriptor);
         infos.add(new GeneratorComponentInfo(component, descriptor, bindingGraph));
         for (BindingGraph subGraph : bindingGraph.subgraphs()) {
             infos.addAll(createGeneratorSubcomponentInfo(subGraph.componentDescriptor(), subGraph));

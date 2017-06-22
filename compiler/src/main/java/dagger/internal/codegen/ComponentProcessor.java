@@ -52,6 +52,7 @@ public final class ComponentProcessor extends BasicProcessor {
   private MultipleSourceFileGenerator<ProvisionBinding> multipleGenerator;
   private InjectBindingRegistry injectBindingRegistry;
   private MembersInjectorGenerator membersInjectorGenerator;
+  private AppConfig.Provider appConfigProvider;
 
   @Override
   public SourceVersion getSupportedSourceVersion() {
@@ -166,12 +167,15 @@ public final class ComponentProcessor extends BasicProcessor {
     ComponentDescriptor.Factory componentDescriptorFactory = new ComponentDescriptor.Factory(
             elements, types, dependencyRequestFactory, moduleDescriptorFactory);
 
+    appConfigProvider = new AppConfig.Provider();
+
     BindingGraph.Factory bindingGraphFactory = new BindingGraph.Factory(
             elements,
             injectBindingRegistry,
             keyFactory,
             provisionBindingFactory,
-            productionBindingFactory);
+            productionBindingFactory,
+            appConfigProvider);
 
     AnnotationCreatorGenerator annotationCreatorGenerator =
             new AnnotationCreatorGenerator(filer, elements);
@@ -195,6 +199,7 @@ public final class ComponentProcessor extends BasicProcessor {
                     keyFactory);
 
     return ImmutableList.of(
+        new AppConfigProcessingStep(messager, new AppConfig.Validator(elements, types), new AppConfig.Factory(elements), appConfigProvider),
         new MapKeyProcessingStep(
             messager, types, mapKeyValidator, annotationCreatorGenerator, unwrappedMapKeyGenerator),
         new ForReleasableReferencesValidator(messager),
@@ -216,8 +221,7 @@ public final class ComponentProcessor extends BasicProcessor {
             bindingGraphValidator,
             componentDescriptorFactory,
             bindingGraphFactory,
-            componentGeneratorFactory,
-            new AppConfig.Factory(elements)
+            componentGeneratorFactory
         ),
         producerModuleProcessingStep(
             messager,
@@ -236,13 +240,13 @@ public final class ComponentProcessor extends BasicProcessor {
             bindingGraphValidator,
             componentDescriptorFactory,
             bindingGraphFactory,
-            componentGeneratorFactory,
-            new AppConfig.Factory(elements)),
+            componentGeneratorFactory),
         new BindingMethodProcessingStep(messager, anyBindingMethodValidator),
         new InjectorProcessingStep(
                 types,
                 messager,
-                new AppConfig.Factory(elements),
+                appConfigProvider,
+                testRegistry,
                 new InjectorGenerator(filer, elements, messager, componentDescriptorFactory,
                         bindingGraphFactory, new TestClassGenerator.Factory(filer, elements),
                         testRegistry, new Decorator.Factory(filer, elements, bindingGraphFactory, testRegistry)),
