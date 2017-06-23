@@ -9,13 +9,24 @@
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
+    <packaging>jar</packaging>
+
     <artifactId>dagger-android-compiler</artifactId>
 
     <dependencies>
         <dependency>
-            <groupId>com.google.dagger</groupId>
+            <groupId>${project.groupId}</groupId>
             <artifactId>dagger</artifactId>
             <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>dagger-android</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.google.auto</groupId>
+            <artifactId>auto-common</artifactId>
         </dependency>
         <dependency>
             <groupId>com.google.auto.service</groupId>
@@ -67,20 +78,6 @@
                             <verbose>true</verbose>
                         </configuration>
                     </execution>
-                    <!--<execution>
-                      <id>default-test-compile</id>
-                      <goals><goal>testCompile</goal></goals>
-                      <configuration>
-                        <annotationProcessors>
-                          <annotationProcessor>dagger.internal.codegen.ComponentProcessor</annotationProcessor>
-                        </annotationProcessors>
-                        <compilerArguments>
-                          <Xlint/>
-                          <Averbose>true</Averbose>
-                        </compilerArguments>
-                        <verbose>true</verbose>
-                      </configuration>
-                    </execution>-->
                 </executions>
             </plugin>
             <plugin>
@@ -104,8 +101,8 @@
                                     <exclude>com.google.auto.value</exclude>
                                     <!-- projects should depend on api projects directly -->
                                     <exclude>com.google.dagger:dagger</exclude>
-                                    <exclude>com.google.dagger:dagger-producers</exclude>
                                     <exclude>javax.inject</exclude>
+                                    <exclude>com.google.dagger:dagger-android</exclude>
                                 </excludes>
                             </artifactSet>
                             <relocations>

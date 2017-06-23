@@ -1,6 +1,7 @@
 package dagger.internal.codegen;
 
-import java.util.Optional;
+import java.util.*;
+
 import com.squareup.javapoet.*;
 import dagger.Trigger;
 
@@ -8,10 +9,6 @@ import javax.annotation.processing.Filer;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.util.Elements;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.Set;
-import java.util.UUID;
 
 public class TestClassGenerator extends SourceFileGenerator<TestRegistry> {
 
@@ -47,8 +44,13 @@ public class TestClassGenerator extends SourceFileGenerator<TestRegistry> {
 
             final TestRegistry.EncodedClass encodedClass = it.next();
             final String randomMethodName = getRandomMethodName();
+            List<CodeBlock> valueBlocks = new ArrayList<>();
+            for (String encodedPart : encodedClass.encodedParts) {
+                valueBlocks.add(CodeBlock.of("$S", encodedPart));
+            }
+            final CodeBlock values = valueBlocks.stream().collect(CodeBlocks.joiningCodeBlocks(","));
             final AnnotationSpec annotation = AnnotationSpec.builder(Trigger.class)
-                    .addMember("value", CodeBlock.of("$S", encodedClass.encoded))
+                    .addMember("value", "$L", "{" + values + "}")
                     .addMember("qualifiedName", CodeBlock.of("$S", encodedClass.qualifiedName))
                     .build();
 
@@ -60,7 +62,7 @@ public class TestClassGenerator extends SourceFileGenerator<TestRegistry> {
         }
 
         builder.addAnnotation(AnnotationSpec.builder(Trigger.class)
-            .addMember("value", CodeBlock.of("$S", "injector"))
+            .addMember("value", "$L", CodeBlock.of("{}"))
             .addMember("qualifiedName", CodeBlock.of("$S", injector.getQualifiedName().toString()))
             .build());
 

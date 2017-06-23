@@ -11,7 +11,7 @@
 
     <artifactId>dagger-android-support</artifactId>
     <name>Dagger for Android Support</name>
-    <packaging>aar</packaging>
+    <packaging>jar</packaging>
 
     <repositories>
         <repository>

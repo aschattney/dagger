@@ -481,6 +481,11 @@ final class Util {
             }
 
             @Override
+            public Void visitWildcard(WildcardType t, Void aVoid) {
+                return null;
+            }
+
+            @Override
             public Void visitError(ErrorType errorType, Void v) {
                 // Error type found, a type may not yet have been generated, but we need the type
                 // so we can generate the correct code in anticipation of the type being available
@@ -543,14 +548,18 @@ final class Util {
         return original.substring(0, 1).toLowerCase() + original.substring(1);
     }
 
-    public static boolean bindingSupportsTestDelegate(ContributionBinding binding) {
+    public static boolean bindingCanBeProvidedInTest(ContributionBinding binding) {
         final ImmutableList<ContributionBinding.Kind> kinds = ImmutableList.of(
                 ContributionBinding.Kind.PROVISION,
                 ContributionBinding.Kind.INJECTION,
                 ContributionBinding.Kind.BUILDER_BINDING
         );
         final ContributionBinding.Kind kind = binding.bindingKind();
-        return kinds.contains(kind) && !binding.genericParameter() && !binding.ignoreStubGeneration();
+        return kinds.contains(kind);
+    }
+
+    public static boolean bindingSupportsTestDelegate(ContributionBinding binding) {
+        return bindingCanBeProvidedInTest(binding) && !binding.genericParameter() && !binding.ignoreStubGeneration();
     }
 
     private Util() {
@@ -693,6 +702,9 @@ final class Util {
         }
     }
 
+    public static String getProvisionMethodName(ContributionBinding binding) {
+        return "get" + getDelegateTypeName(binding.key()).simpleName().replaceAll("Delegate$", "");
+    }
 
     public static String getDelegateMethodName(ClassName delegateType) {
         return "with" + delegateType.simpleName().replaceAll("Delegate$", "");
@@ -721,4 +733,5 @@ final class Util {
     public static final ClassName TYPENAME_INJECTOR_SPEC = ClassName.bestGuess("injector.InjectorSpec");
     public static final ClassName TYPENAME_ANDROID_APPLICATION = ClassName.bestGuess("android.app.Application");
     public static final ClassName TYPENAME_DAGGER_ANDROID_APPLICATION = TYPENAME_ANDROID_APPLICATION.topLevelClassName().peerClass("DaggerApplication");
+
 }

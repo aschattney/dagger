@@ -107,29 +107,12 @@ public class Decorator  extends SourceFileGenerator<ImmutableSet<BindingGraph>>{
         int counter = 0;
         while(it.hasNext()) {
             final BindingGraph bindingGraph = it.next();
-            final CodeBlock.Builder codeBuilder = CodeBlock.builder();
             ComponentDescriptor topDescriptor = getTopDescriptor(bindingGraph.componentDescriptor());
             final BindingGraph parentGraph = factory.create(topDescriptor);
             final ClassName name = ClassName.bestGuess(TriggerComponentInfo.resolveBuilderName(bindingGraph, parentGraph));
-            codeBuilder.beginControlFlow("if (builder instanceof $T)", name);
-            codeBuilder.add(CodeBlock.of("$T impl = ($T) builder;\n", name, name));
-            TypeName interfaceName = getAccessorTypeName(ClassName.bestGuess(testAppClassName.toString()),
-                    bindingGraph.componentDescriptor().componentDefinitionType().getSimpleName().toString());
-            for (ContributionBinding contributionBinding : delegateRequirements) {
-                if (counter == 0) {
-                    Util.createDelegateField(builder, contributionBinding);
-                    Util.createDelegateMethodImplementation(interfaceName, builder, contributionBinding);
-                    if (!contributionBinding.dependencies().isEmpty()) {
-                        Util.createMockMethodImplementation(interfaceName, builder, contributionBinding);
-                    }
-                }
-                final String delegateFieldName = Util.getDelegateFieldName(contributionBinding.key());
-                final ClassName delegateTypeName = Util.getDelegateTypeName(contributionBinding.key());
-                codeBuilder.add(CodeBlock.of("impl.$L(this.$L);\n", Util.getDelegateMethodName(delegateTypeName), delegateFieldName));
-            }
-            codeBuilder.add(CodeBlock.of("return impl;\n"));
-            codeBuilder.endControlFlow();
-            statements.add(codeBuilder.build());
+            final ClassName testName = ClassName.bestGuess(TriggerComponentInfo.resolveTestBuilderName(bindingGraph, parentGraph));
+            apply(builder, delegateRequirements, statements, counter, bindingGraph, CodeBlock.builder(), name);
+            applyTest(delegateRequirements, statements, CodeBlock.builder(), testName);
             counter++;
         }
 
@@ -148,6 +131,41 @@ public class Decorator  extends SourceFileGenerator<ImmutableSet<BindingGraph>>{
                 .returns(builderClassName)
                 .build());
 
+    }
+
+    private void apply(TypeSpec.Builder builder, ImmutableSet<ContributionBinding> delegateRequirements, List<CodeBlock> statements, int counter, BindingGraph bindingGraph, CodeBlock.Builder codeBuilder, ClassName name) {
+        codeBuilder.beginControlFlow("if (builder instanceof $T)", name);
+        codeBuilder.add(CodeBlock.of("$T impl = ($T) builder;\n", name, name));
+        TypeName interfaceName = getAccessorTypeName(ClassName.bestGuess(testAppClassName.toString()),
+                bindingGraph.componentDescriptor().componentDefinitionType().getSimpleName().toString());
+        for (ContributionBinding contributionBinding : delegateRequirements) {
+            if (counter == 0) {
+                Util.createDelegateField(builder, contributionBinding);
+                Util.createDelegateMethodImplementation(interfaceName, builder, contributionBinding);
+                if (!contributionBinding.dependencies().isEmpty()) {
+                    Util.createMockMethodImplementation(interfaceName, builder, contributionBinding);
+                }
+            }
+            final String delegateFieldName = Util.getDelegateFieldName(contributionBinding.key());
+            final ClassName delegateTypeName = Util.getDelegateTypeName(contributionBinding.key());
+            codeBuilder.add(CodeBlock.of("impl.$L(this.$L);\n", Util.getDelegateMethodName(delegateTypeName), delegateFieldName));
+        }
+        codeBuilder.add(CodeBlock.of("return impl;\n"));
+        codeBuilder.endControlFlow();
+        statements.add(codeBuilder.build());
+    }
+
+    private void applyTest(ImmutableSet<ContributionBinding> delegateRequirements, List<CodeBlock> statements, CodeBlock.Builder codeBuilder, ClassName name) {
+        codeBuilder.beginControlFlow("if (builder instanceof $T)", name);
+        codeBuilder.add(CodeBlock.of("$T impl = ($T) builder;\n", name, name));
+        for (ContributionBinding contributionBinding : delegateRequirements) {
+            final String delegateFieldName = Util.getDelegateFieldName(contributionBinding.key());
+            final ClassName delegateTypeName = Util.getDelegateTypeName(contributionBinding.key());
+            codeBuilder.add(CodeBlock.of("impl.$L(this.$L);\n", Util.getDelegateMethodName(delegateTypeName), delegateFieldName));
+        }
+        codeBuilder.add(CodeBlock.of("return impl;\n"));
+        codeBuilder.endControlFlow();
+        statements.add(codeBuilder.build());
     }
 
     @Override

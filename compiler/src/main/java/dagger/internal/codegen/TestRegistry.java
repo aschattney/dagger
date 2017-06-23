@@ -1,5 +1,7 @@
 package dagger.internal.codegen;
 
+import com.google.common.base.Splitter;
+import com.google.common.collect.Iterables;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.JavaFile;
 import javax.tools.JavaFileObject;
@@ -24,8 +26,10 @@ public class TestRegistry {
         final JavaFileObject javaFileObject = javaFile.toJavaFileObject();
         final InputStream inputStream = javaFileObject.openInputStream();
         final String encodedClass = java.util.Base64.getEncoder().encodeToString(toByteArray(inputStream));
+        Iterable<String> result = Splitter.fixedLength(65000).split(encodedClass);
+        String[] parts = Iterables.toArray(result, String.class);
         final String name = className.packageName() + "." + className.simpleName();
-        encodedClasses.add(new EncodedClass(name, encodedClass));
+        encodedClasses.add(new EncodedClass(name, parts));
     }
 
     public ClassName getClassName() {
@@ -50,12 +54,12 @@ public class TestRegistry {
 
     public static class EncodedClass {
 
-        public EncodedClass(String qualifiedName, String encoded) {
+        public EncodedClass(String qualifiedName, String[] encodedParts) {
             this.qualifiedName = qualifiedName;
-            this.encoded = encoded;
+            this.encodedParts = encodedParts;
         }
 
         public String qualifiedName;
-        public String encoded;
+        public String[] encodedParts;
     }
 }

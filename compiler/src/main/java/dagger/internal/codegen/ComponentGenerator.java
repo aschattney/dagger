@@ -20,6 +20,8 @@ import com.google.common.base.Joiner;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.TypeSpec;
 import dagger.Component;
+
+import java.io.IOException;
 import java.util.Optional;
 import javax.annotation.processing.Filer;
 import javax.lang.model.element.Element;
@@ -38,18 +40,24 @@ final class ComponentGenerator extends SourceFileGenerator<BindingGraph> {
   private final Elements elements;
   private final Key.Factory keyFactory;
   private final CompilerOptions compilerOptions;
+  private final TestRegistry testRegistry;
+  private final AppConfig.Provider appConfigProvider;
 
   private ComponentGenerator(
           Filer filer,
           Elements elements,
           Types types,
           Key.Factory keyFactory,
-          CompilerOptions compilerOptions) {
+          CompilerOptions compilerOptions,
+          TestRegistry testRegistry,
+          AppConfig.Provider appConfigProvider) {
     super(filer, elements);
     this.types = types;
     this.elements = elements;
     this.keyFactory = keyFactory;
     this.compilerOptions = compilerOptions;
+    this.testRegistry = testRegistry;
+    this.appConfigProvider = appConfigProvider;
   }
 
   public static class Factory {
@@ -58,16 +66,22 @@ final class ComponentGenerator extends SourceFileGenerator<BindingGraph> {
     private final Types types;
     private final Key.Factory keyFactory;
     private final CompilerOptions compilerOptions;
+    private final AppConfig.Provider appConfigProvider;
+    private final TestRegistry testRegistry;
 
-    public Factory(Filer filer, Elements elements, Types types, Key.Factory keyFactory, CompilerOptions compilerOptions) {
+    public Factory(Filer filer, Elements elements, Types types, Key.Factory keyFactory, CompilerOptions compilerOptions,
+                   AppConfig.Provider appConfigProvider,
+                   TestRegistry testRegistry) {
       this.filer = filer;
       this.elements = elements;
       this.types = types;
       this.keyFactory = keyFactory;
       this.compilerOptions = compilerOptions;
+      this.appConfigProvider = appConfigProvider;
+      this.testRegistry = testRegistry;
     }
     public ComponentGenerator createComponentGenerator() {
-      return new ComponentGenerator(filer, elements, types, keyFactory, compilerOptions);
+      return new ComponentGenerator(filer, elements, types, keyFactory, compilerOptions, testRegistry, appConfigProvider);
     }
   }
 
@@ -84,8 +98,22 @@ final class ComponentGenerator extends SourceFileGenerator<BindingGraph> {
 
   @Override
   Optional<TypeSpec.Builder> write(ClassName componentName, BindingGraph input) {
+    if (appConfigProvider.get().debug()) {
+      final ClassName name = componentName.topLevelClassName().peerClass("Test" + Joiner.on('_').join(componentName.simpleNames()));
+      System.out.println("generating test dagger component");
+      final TypeSpec.Builder testComponentBuilder =
+              new ComponentWriter(types, elements, keyFactory, compilerOptions, name, input, true).write();
+      System.out.println("DONE generating test dagger component");
+      try {
+        System.out.println("adding to registry");
+        testRegistry.addEncodedClass(name, buildJavaFile(name, testComponentBuilder));
+        System.out.println("DONE - adding to registry");
+      } catch (IOException e) {
+        throw new IllegalStateException(e);
+      }
+    }
     return Optional.of(
-        new ComponentWriter(types, elements, keyFactory, compilerOptions, componentName, input).write()
+        new ComponentWriter(types, elements, keyFactory, compilerOptions, componentName, input, false).write()
     );
   }
 }

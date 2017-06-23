@@ -16,8 +16,6 @@
 
 package dagger.android.processor;
 
-import static com.google.auto.common.MoreElements.isAnnotationPresent;
-import static com.google.common.collect.Iterables.getOnlyElement;
 import static java.util.stream.Collectors.toMap;
 import static javax.lang.model.util.ElementFilter.methodsIn;
 import static javax.lang.model.util.ElementFilter.typesIn;

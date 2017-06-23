@@ -76,7 +76,7 @@ public interface AndroidInjector<T> {
      * <p>This should be the same instance that will be passed to {@link #inject(Object)}.
      */
     @BindsInstance
-    public abstract void seedInstance(T instance);
+    public abstract Builder<T> seedInstance(T instance);
 
     /** Returns a newly-constructed {@link AndroidInjector}. */
     public abstract AndroidInjector<T> build();

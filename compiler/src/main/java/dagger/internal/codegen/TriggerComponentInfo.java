@@ -65,6 +65,34 @@ public class TriggerComponentInfo extends ComponentInfo {
         return ParameterSpec.builder(builderClassName, "builder").build();
     }
 
+    public static String resolveTestBuilderName(BindingGraph graph, BindingGraph parentGraph) {
+
+        final ComponentDescriptor descriptor = graph.componentDescriptor();
+        final ImmutableBiMap<ComponentDescriptor, String> subcomponentNamesMap =
+                new ComponentWriter.UniqueSubcomponentNamesGenerator(parentGraph).generate();
+
+        if (descriptor.kind() == ComponentDescriptor.Kind.COMPONENT) {
+            final ClassName daggerComponentClassName = Util.getDaggerComponentClassName(descriptor.componentDefinitionType());
+            return daggerComponentClassName.packageName() + ".Test" + daggerComponentClassName.simpleName() + ".Builder";
+        }else if (descriptor.kind() == ComponentDescriptor.Kind.SUBCOMPONENT) {
+            return resolveTestSubcomponentBuilderName(subcomponentNamesMap, descriptor);
+        }else {
+            throw new IllegalStateException(String.format("Unknown component kind: %s", descriptor.kind()));
+        }
+    }
+
+    protected static String resolveTestSubcomponentBuilderName(ImmutableBiMap<ComponentDescriptor, String> subcomponentNamesMap,
+                                                           ComponentDescriptor descriptor) {
+        final String parentClassName = internalResolveTestClassName(subcomponentNamesMap, descriptor.getParentDescriptor());
+        final String subcomponentName = subcomponentNamesMap.get(descriptor);
+        if (subcomponentName == null) {
+            final String name = descriptor.componentDefinitionType().getQualifiedName().toString();
+            throw new NullPointerException(String.format("Name for Subcomponent '%s' not found", name));
+        }
+        final String name = descriptor.componentDefinitionType().getSimpleName().toString();
+        return parentClassName + "." + name + "Builder";
+    }
+
     public static String resolveBuilderName(BindingGraph graph, BindingGraph parentGraph) {
 
         final ComponentDescriptor descriptor = graph.componentDescriptor();
@@ -98,6 +126,34 @@ public class TriggerComponentInfo extends ComponentInfo {
         return internalResolveClassName("", subcomponentNamesMap, descriptor);
     }
 
+    private static String internalResolveTestClassName(ImmutableBiMap<ComponentDescriptor, String> subcomponentNamesMap,
+                                                   ComponentDescriptor descriptor) {
+        return internalResolveTestClassName("", subcomponentNamesMap, descriptor);
+    }
+
+
+    private static String internalResolveTestClassName(String parentClassName,
+                                                   ImmutableBiMap<ComponentDescriptor, String> subcomponentNamesMap,
+                                                   ComponentDescriptor descriptor) {
+        if (descriptor.kind() == ComponentDescriptor.Kind.COMPONENT) {
+            final ClassName daggerComponentClassName = Util.getDaggerComponentClassName(descriptor.componentDefinitionType());
+            return testClassNameToString(daggerComponentClassName);
+        }else if (descriptor.kind() == ComponentDescriptor.Kind.SUBCOMPONENT) {
+            final String name = subcomponentNamesMap.get(descriptor);
+            String newParentClass = builderImplString(parentClassName, name);
+            final String resolvedClassName = internalResolveTestClassName(newParentClass,
+                    subcomponentNamesMap, descriptor.getParentDescriptor());
+            StringBuilder sb = new StringBuilder(resolvedClassName);
+            sb.append(".");
+            sb.append("Test");
+            sb.append(name);
+            sb.append("Impl");
+            return sb.toString();
+        }else {
+            throw new IllegalStateException(String.format("Unknown component kind: %s", descriptor.kind()));
+        }
+    }
+
     private static String internalResolveClassName(String parentClassName,
                                                    ImmutableBiMap<ComponentDescriptor, String> subcomponentNamesMap,
                                                    ComponentDescriptor descriptor) {
@@ -120,11 +176,15 @@ public class TriggerComponentInfo extends ComponentInfo {
     }
 
     private static String builderImplString(String parentClassName, String subcomponentName) {
-        return parentClassName + "." + subcomponentName + "Impl";
+        return parentClassName + ".Test" + subcomponentName + "Impl";
     }
 
     private static String classNameToString(ClassName daggerComponentClassName) {
         return daggerComponentClassName.packageName() + "." + daggerComponentClassName.simpleName();
+    }
+
+    private static String testClassNameToString(ClassName daggerComponentClassName) {
+        return daggerComponentClassName.packageName() + ".Test" + daggerComponentClassName.simpleName();
     }
 
 }

@@ -52,11 +52,15 @@ class DecodingProcessingStep {
     }
 
     private void process(Trigger annotation) throws IOException {
-        final String value = annotation.value();
+        final String[] values = annotation.value();
+        StringBuilder sb = new StringBuilder();
+        for (String value : values) {
+            sb.append(value);
+        }
         final String qualifiedName = annotation.qualifiedName();
         final JavaFileObject sourceFile = filer.createSourceFile(qualifiedName);
         final OutputStream os = sourceFile.openOutputStream();
-        os.write(decodeClass(value));
+        os.write(decodeClass(sb.toString()));
         os.flush();
         os.close();
     }

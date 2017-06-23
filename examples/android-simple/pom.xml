@@ -45,6 +45,14 @@
     </dependency>
 
     <dependency>
+      <groupId>com.google.dagger</groupId>
+      <artifactId>dagger-android-compiler</artifactId>
+      <version>3.0</version>
+      <scope>provided</scope>
+      <optional>true</optional>
+    </dependency>
+
+    <dependency>
       <groupId>com.google.android</groupId>
       <artifactId>android</artifactId>
       <scope>provided</scope>

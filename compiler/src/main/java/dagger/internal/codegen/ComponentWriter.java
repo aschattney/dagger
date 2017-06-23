@@ -59,7 +59,8 @@ final class ComponentWriter extends AbstractComponentWriter {
           Key.Factory keyFactory,
           CompilerOptions compilerOptions,
           ClassName name,
-          BindingGraph graph) {
+          BindingGraph graph,
+          boolean forTests) {
     super(
         types,
         elements,
@@ -68,7 +69,8 @@ final class ComponentWriter extends AbstractComponentWriter {
         name,
         graph,
         new UniqueSubcomponentNamesGenerator(graph).generate(),
-        new OptionalFactories());
+        new OptionalFactories(),
+        forTests);
   }
 
   /**
@@ -184,7 +186,7 @@ final class ComponentWriter extends AbstractComponentWriter {
 
   @Override
   protected void decorateComponent() {
-    component.addModifiers(PUBLIC, FINAL);
+    component.addModifiers(PUBLIC);
     addSupertype(component, graph.componentType());
   }
 

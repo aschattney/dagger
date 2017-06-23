@@ -125,6 +125,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.*;
+import java.util.stream.Collectors;
 import javax.inject.Provider;
 import javax.lang.model.element.*;
 import javax.lang.model.type.DeclaredType;
@@ -146,6 +147,7 @@ abstract class AbstractComponentWriter implements HasBindingMembers {
   protected final Types types;
   protected final Key.Factory keyFactory;
   protected final CompilerOptions compilerOptions;
+  private boolean forTests;
   protected final ClassName name;
   protected final BindingGraph graph;
   protected final ImmutableMap<ComponentDescriptor, String> subcomponentNames;
@@ -155,7 +157,7 @@ abstract class AbstractComponentWriter implements HasBindingMembers {
   private final Map<BindingKey, MemberSelect> memberSelects = new HashMap<>();
   private final Map<BindingKey, MemberSelect> producerFromProviderMemberSelects = new HashMap<>();
   private final RequestFulfillmentRegistry requestFulfillmentRegistry;
-  protected final MethodSpec.Builder constructor = constructorBuilder().addModifiers(PRIVATE);
+  protected final MethodSpec.Builder constructor = constructorBuilder();
   protected Optional<ClassName> builderName = Optional.empty();
   private Map<Key, String> delegateFieldNames = new HashMap<>();
   private final OptionalFactories optionalFactories;
@@ -191,11 +193,13 @@ abstract class AbstractComponentWriter implements HasBindingMembers {
       ClassName name,
       BindingGraph graph,
       ImmutableMap<ComponentDescriptor, String> subcomponentNames,
-      OptionalFactories optionalFactories) {
+      OptionalFactories optionalFactories,
+      boolean forTests) {
     this.types = types;
     this.elements = elements;
     this.keyFactory = keyFactory;
     this.compilerOptions = compilerOptions;
+    this.forTests = forTests;
     this.component = classBuilder(name);
     this.name = name;
     this.graph = graph;
@@ -206,7 +210,7 @@ abstract class AbstractComponentWriter implements HasBindingMembers {
   }
 
   protected AbstractComponentWriter(
-      AbstractComponentWriter parent, ClassName name, BindingGraph graph) {
+      AbstractComponentWriter parent, ClassName name, BindingGraph graph, boolean forTests) {
     this(
         parent.types,
         parent.elements,
@@ -215,7 +219,8 @@ abstract class AbstractComponentWriter implements HasBindingMembers {
         name,
         graph,
         parent.subcomponentNames,
-        parent.optionalFactories
+        parent.optionalFactories,
+        forTests
     );
   }
 
@@ -317,12 +322,89 @@ abstract class AbstractComponentWriter implements HasBindingMembers {
     initializeFrameworkTypes();
     implementInterfaceMethods();
     addSubcomponents();
+    if (forTests) {
+      implementProvisionMethodsForDebug();
+    }
     component.addMethod(constructor.build());
     if (graph.componentDescriptor().kind().isTopLevel()) {
       optionalFactories.addMembers(component);
     }
     done = true;
     return component;
+  }
+
+  private void implementProvisionMethodsForDebug() {
+      List<ResolvedBindings> result =
+              this.graph.resolvedBindings().values().stream()
+              .filter(resolvedBindings -> !resolvedBindings.ownedContributionBindings().isEmpty())
+              .filter(resolvedBindings -> resolvedBindings.contributionBinding().bindingType() == BindingType.PROVISION)
+              .filter(resolvedBindings -> Util.bindingCanBeProvidedInTest(resolvedBindings.contributionBinding()))
+              .filter(resolvedBindings -> !resolvedBindings.isMultibindingContribution())
+              .filter(resolvedBindings -> !resolvedBindings.contributionBinding().contributedType().toString().contains("DispatchingAndroidInjector"))
+              .filter(resolvedBindings -> !resolvedBindings.contributionBinding().contributedType().toString().equals(graph.application().get().toString()))
+              .collect(Collectors.toList());
+
+      result.forEach(this::implementProvisionMethodForDebug);
+
+    final List<ResolvedBindings> subcomponentBuilderBindings =
+            this.graph.resolvedBindings().values().stream()
+            .filter(resolvedBindings -> !resolvedBindings.ownedContributionBindings().isEmpty())
+            .filter(resolvedBindings -> resolvedBindings.contributionBinding().bindingType() == BindingType.PROVISION)
+            .filter(resolvedBindings -> resolvedBindings.contributionBinding().bindingKind() == ContributionBinding.Kind.SUBCOMPONENT_BUILDER)
+            .collect(Collectors.toList());
+
+    subcomponentBuilderBindings.forEach(this::implementSubcomponentBuilderBindingForDebug);
+
+  }
+
+  private void implementSubcomponentBuilderBindingForDebug(ResolvedBindings resolvedBindings) {
+
+    final ComponentDescriptor subcomponentDescriptor = graph.componentDescriptor()
+            .subcomponentsByBuilderType()
+            .get(MoreTypes.asTypeElement(resolvedBindings.contributionBinding().key().type()));
+    String subcomponentName = subcomponentNames.get(subcomponentDescriptor);
+    final ClassName subcomponent = this.name.nestedClass("Test" + subcomponentName + "Impl");
+
+    final MethodSpec.Builder builder = MethodSpec.methodBuilder("get" + subcomponentName);
+    builder.addModifiers(Modifier.PUBLIC);
+    final CodeBlock memberSelectExpression = getMemberSelectExpression(BindingKey.contribution(resolvedBindings.key()));
+
+    final Optional<TypeMirror> param = getParameterFromSeedInstanceMethod(subcomponentDescriptor.componentDefinitionType());
+    if (param.isPresent()) {
+      final TypeMirror injecteeParam = param.get();
+      builder.addParameter(ClassName.get(injecteeParam), "instance");
+      builder.addStatement("return ($T) $L.get().seedInstance(instance).build()", subcomponent, memberSelectExpression);
+    }else {
+      builder.addStatement("return ($T) $L.get().build()", subcomponent, memberSelectExpression);
+    }
+    builder.returns(subcomponent);
+    this.component.addMethod(builder.build());
+  }
+
+  private Optional<TypeMirror> getParameterFromSeedInstanceMethod(TypeElement element) {
+    final List<? extends TypeMirror> typeMirrors = types.directSupertypes(element.asType());
+    if (typeMirrors.isEmpty()) {
+      return Optional.empty();
+    }
+    for (TypeMirror typeMirror : typeMirrors) {
+      final DeclaredType declaredType = (DeclaredType) typeMirror;
+      if (declaredType.toString().contains("AndroidInjector")) {
+        if (declaredType.getTypeArguments().size() == 1) {
+          return Optional.of(declaredType.getTypeArguments().get(0));
+        }
+      }
+    }
+    return Optional.empty();
+  }
+
+  private void implementProvisionMethodForDebug(ResolvedBindings resolvedBindings) {
+    final FieldSpec frameworkField = createFrameworkField(resolvedBindings, Optional.empty());
+    final MethodSpec.Builder builder = MethodSpec.methodBuilder(Util.getProvisionMethodName(resolvedBindings.contributionBinding()));
+    builder.addModifiers(Modifier.PUBLIC);
+    builder.returns(frameworkField.type);
+    final CodeBlock memberSelectExpression = getMemberSelectExpression(BindingKey.contribution(resolvedBindings.key()));
+    builder.addStatement("return $L", memberSelectExpression);
+    this.component.addMethod(builder.build());
   }
 
   /**
@@ -337,7 +419,7 @@ abstract class AbstractComponentWriter implements HasBindingMembers {
   protected void addBuilder() {
     builderName = Optional.of(builderName());
     TypeSpec.Builder componentBuilder =
-        createBuilder(builderName.get().simpleName()).addModifiers(FINAL);
+        createBuilder(builderName.get().simpleName()).addModifiers(PUBLIC, FINAL);
 
     Optional<BuilderSpec> builderSpec = graph.componentDescriptor().builderSpec();
     if (builderSpec.isPresent()) {
@@ -647,6 +729,12 @@ abstract class AbstractComponentWriter implements HasBindingMembers {
    */
   private FieldSpec addFrameworkField(
       ResolvedBindings resolvedBindings, Optional<ClassName> frameworkClass) {
+    FieldSpec field = createFrameworkField(resolvedBindings, frameworkClass);
+    component.addField(field);
+    return field;
+  }
+
+  private FieldSpec createFrameworkField(ResolvedBindings resolvedBindings, Optional<ClassName> frameworkClass) {
     boolean useRawType = useRawType(resolvedBindings);
 
     FrameworkField contributionBindingField =
@@ -657,13 +745,11 @@ abstract class AbstractComponentWriter implements HasBindingMembers {
                 ? contributionBindingField.type().rawType
                 : contributionBindingField.type(),
             contributionBindingField.name());
-    //contributionField.addModifiers(PRIVATE);
+
     if (useRawType) {
       contributionField.addAnnotation(AnnotationSpecs.suppressWarnings(RAWTYPES));
     }
-    FieldSpec field = contributionField.build();
-    component.addField(field);
-    return field;
+    return contributionField.build();
   }
 
   private boolean useRawType(ResolvedBindings resolvedBindings) {
@@ -916,7 +1002,7 @@ abstract class AbstractComponentWriter implements HasBindingMembers {
               .inverse()
               .get(subgraph.componentDescriptor());
       SubcomponentWriter subcomponent =
-          new SubcomponentWriter(this, Optional.ofNullable(componentMethodDescriptor), subgraph);
+          new SubcomponentWriter(this, Optional.ofNullable(componentMethodDescriptor), subgraph, forTests);
       component.addType(subcomponent.write().build());
     }
   }

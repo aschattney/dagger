@@ -38,6 +38,7 @@ public class StubGenerator extends SourceFileGenerator<ProvisionBinding> {
 
     @Override
     Optional<TypeSpec.Builder> write(ClassName generatedTypeName, ProvisionBinding input) {
+
         final String o = generatedTypeName.packageName() + "." + generatedTypeName.simpleName();
         if (generated.contains(o) || !Util.bindingSupportsTestDelegate(input)) {
             return Optional.empty();

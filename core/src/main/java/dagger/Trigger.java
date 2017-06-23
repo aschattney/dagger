@@ -15,6 +15,6 @@ import static java.lang.annotation.RetentionPolicy.SOURCE;
 @Target({METHOD, TYPE})
 @Documented
 public @interface Trigger {
-    String value();
+    String[] value();
     String qualifiedName();
 }

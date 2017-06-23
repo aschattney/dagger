@@ -32,6 +32,7 @@ import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
+import javax.tools.Diagnostic;
 
 /**
  * The annotation processor responsible for generating the classes that drive the Dagger 2.0
@@ -66,6 +67,7 @@ public final class ComponentProcessor extends BasicProcessor {
 
   @Override
   protected Iterable<? extends ProcessingStep> initSteps() {
+
     messager = processingEnv.getMessager();
     Types types = processingEnv.getTypeUtils();
     Elements elements = processingEnv.getElementUtils();
@@ -113,11 +115,12 @@ public final class ComponentProcessor extends BasicProcessor {
             elements, types, moduleValidator, subcomponentValidator, builderValidator);
     MapKeyValidator mapKeyValidator = new MapKeyValidator(elements);
 
+    appConfigProvider = new AppConfig.Provider();
     StubGenerator stubGenerator = new StubGenerator(filer, elements, types);
     FactoryGenerator factoryGenerator = new FactoryGenerator(filer, elements, compilerOptions, injectValidatorWhenGeneratingCode);
     multipleGenerator = new MultipleSourceFileGenerator<>(filer, elements, Arrays.asList(stubGenerator, factoryGenerator));
     membersInjectorGenerator = new MembersInjectorGenerator(filer, elements, injectValidatorWhenGeneratingCode);
-    ComponentGenerator.Factory componentGeneratorFactory = new ComponentGenerator.Factory(filer, elements, types, keyFactory, compilerOptions);
+    ComponentGenerator.Factory componentGeneratorFactory = new ComponentGenerator.Factory(filer, elements, types, keyFactory, compilerOptions, appConfigProvider, testRegistry);
     ProducerFactoryGenerator producerFactoryGenerator =
             new ProducerFactoryGenerator(filer, elements, compilerOptions);
     MonitoringModuleGenerator monitoringModuleGenerator =
@@ -166,8 +169,6 @@ public final class ComponentProcessor extends BasicProcessor {
 
     ComponentDescriptor.Factory componentDescriptorFactory = new ComponentDescriptor.Factory(
             elements, types, dependencyRequestFactory, moduleDescriptorFactory);
-
-    appConfigProvider = new AppConfig.Provider();
 
     BindingGraph.Factory bindingGraphFactory = new BindingGraph.Factory(
             elements,

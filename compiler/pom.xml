@@ -76,13 +76,6 @@
       <artifactId>junit</artifactId>
       <scope>test</scope>
     </dependency>
-    <!--<dependency>
-      <groupId>${project.groupId}</groupId>
-      <artifactId>dagger</artifactId>
-      <classifier>tests</classifier>
-      <version>${project.version}</version>
-      <scope>test</scope>
-    </dependency>-->
     <dependency>
       <groupId>com.google.testing.compile</groupId>
       <artifactId>compile-testing</artifactId>
@@ -138,47 +131,8 @@
               <verbose>true</verbose>
             </configuration>
           </execution>
-          <!--<execution>
-            <id>default-test-compile</id>
-            <goals><goal>testCompile</goal></goals>
-            <configuration>
-              <annotationProcessors>
-                <annotationProcessor>dagger.internal.codegen.ComponentProcessor</annotationProcessor>
-              </annotationProcessors>
-              <compilerArguments>
-                <Xlint/>
-                <Averbose>true</Averbose>
-              </compilerArguments>
-              <verbose>true</verbose>
-            </configuration>
-          </execution>-->
         </executions>
       </plugin>
-      <!--<plugin>
-        <artifactId>maven-invoker-plugin</artifactId>
-        <configuration>
-          <addTestClassPath>true</addTestClassPath>
-          <cloneProjectsTo>${project.build.directory}/it</cloneProjectsTo>
-          <cloneClean>true</cloneClean>
-          <profiles>
-            <profile>!sonatype-oss-release</profile>
-          </profiles>
-          <pomIncludes>
-            <pomInclude>*/pom.xml</pomInclude>
-          </pomIncludes>
-          <localRepositoryPath>${project.build.directory}/it-repo</localRepositoryPath>
-          <streamLogs>true</streamLogs>
-        </configuration>
-        <executions>
-          <execution>
-            <id>integration-test</id>
-            <goals>
-              <goal>install</goal>
-              <goal>run</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>-->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-shade-plugin</artifactId>

@@ -65,14 +65,16 @@ final class SubcomponentWriter extends AbstractComponentWriter {
   SubcomponentWriter(
       AbstractComponentWriter parent,
       Optional<ComponentMethodDescriptor> subcomponentFactoryMethod,
-      BindingGraph subgraph) {
-    super(parent, subcomponentName(parent, subgraph), subgraph);
+      BindingGraph subgraph,
+      boolean forTests) {
+    super(parent, subcomponentName(parent, subgraph, forTests), subgraph, forTests);
     this.parent = parent;
     this.subcomponentFactoryMethod = subcomponentFactoryMethod;
   }
 
-  private static ClassName subcomponentName(AbstractComponentWriter parent, BindingGraph subgraph) {
+  private static ClassName subcomponentName(AbstractComponentWriter parent, BindingGraph subgraph, boolean forTests) {
     return parent.name.nestedClass(
+            (forTests ? "Test" : "") +
         parent.subcomponentNames.get(subgraph.componentDescriptor()) + "Impl");
   }
 
@@ -119,7 +121,7 @@ final class SubcomponentWriter extends AbstractComponentWriter {
 
   @Override
   protected void decorateComponent() {
-    component.addModifiers(PUBLIC, FINAL);
+    component.addModifiers(PUBLIC);
     addSupertype(
         component,
         MoreTypes.asTypeElement(
@@ -189,7 +191,7 @@ final class SubcomponentWriter extends AbstractComponentWriter {
             CaseFormat.UPPER_CAMEL.to(LOWER_CAMEL, moduleTypeElement.getSimpleName().toString());
         FieldSpec contributionField =
             componentField(ClassName.get(moduleTypeElement), preferredModuleName)
-                .addModifiers(PRIVATE, FINAL)
+                .addModifiers(FINAL)
                 .build();
         component.addField(contributionField);
 
@@ -218,7 +220,7 @@ final class SubcomponentWriter extends AbstractComponentWriter {
           CaseFormat.UPPER_CAMEL.to(LOWER_CAMEL, moduleType.getSimpleName().toString());
       FieldSpec contributionField =
           componentField(ClassName.get(moduleType), preferredModuleName)
-              .addModifiers(PRIVATE, FINAL)
+              .addModifiers(FINAL)
               .build();
       component.addField(contributionField);
       String actualModuleName = contributionField.name;
