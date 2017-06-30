@@ -692,24 +692,16 @@ final class Util {
     public static void createMockMethodImplementation(TypeName generatedTypeName, TypeSpec.Builder classBuilder, ContributionBinding binding) {
         try {
             if (bindingSupportsTestDelegate(binding)) {
-                final String delegateFieldName = Util.getDelegateFieldName(binding.key());
-                final ClassName delegateType = getDelegateTypeName(binding.key());
-                final TypeName contributedTypeName = ClassName.get(binding.contributedType());
-                final ParameterizedTypeName providerType = ParameterizedTypeName.get(ClassName.get(Provider.class), contributedTypeName);
-                final String methodName = getDelegateMethodName(delegateType);
-                final MethodSpec.Builder delegateMethodBuilder = MethodSpec.methodBuilder(methodName);
-                delegateMethodBuilder.addModifiers(Modifier.PUBLIC);
-                final CodeBlock params = createParametersCodeBlock(binding);
-                classBuilder.addMethod(delegateMethodBuilder
+                final String mockFieldName = Util.getMockFieldName(binding.key());
+                final ClassName delegateType = getMockTypeName(binding.key());
+                final String methodName = getMockMethodName(delegateType);
+                final TypeName providerType = providerOf(binding);
+                final MethodSpec.Builder mockMethodBuilder = MethodSpec.methodBuilder(methodName);
+                mockMethodBuilder.addModifiers(Modifier.PUBLIC);
+                classBuilder.addMethod(mockMethodBuilder
                         .returns(generatedTypeName)
                         .addParameter(providerType, "provider", Modifier.FINAL)
-                        .addStatement("this.$L = new $T() {\n" +
-                                "   public $T get($L) { \n" +
-                                "       return provider.get();\n" +
-                                "   }\n" +
-                                "};", delegateFieldName, delegateType,
-                                contributedTypeName,
-                                     params)
+                        .addStatement("this.$L = provider", mockFieldName)
                         .addStatement("return this")
                         .build());
             }
@@ -803,7 +795,7 @@ final class Util {
                 mockFieldNames.put(binding.key(), mockFieldName);
                 final FieldSpec fieldSpec = builder.build();
                 classBuilder.addField(fieldSpec);
-                final String methodName = getDelegateMethodName(delegateType);
+                final String methodName = getMockMethodName(delegateType);
                 final MethodSpec.Builder delegateMethodBuilder = MethodSpec.methodBuilder(methodName);
                 if (publicMethod) {
                     delegateMethodBuilder.addModifiers(Modifier.PUBLIC);
@@ -820,7 +812,7 @@ final class Util {
     }
 
     static TypeName providerOf(ContributionBinding binding) {
-        return ParameterizedTypeName.get(ClassName.get(Provider.class), ClassName.get(binding.key().type()));
+        return ParameterizedTypeName.get(ClassName.get(Provider.class), ClassName.get(binding.contributedType()));
     }
 
     public static String getProvisionMethodName(ContributionBinding binding) {
@@ -856,15 +848,14 @@ final class Util {
     public static final ClassName TYPENAME_DAGGER_ANDROID_APPLICATION = TYPENAME_ANDROID_APPLICATION.topLevelClassName().peerClass("DaggerApplication");
 
     public static boolean generateTestDelegate(ContributionBinding binding) {
-        return bindingCanBeProvidedInTest(binding) && !binding.genericParameter() && !binding.ignoreStubGeneration();
+        return bindingCanBeProvidedInTest(binding) && binding.generateTestDelegate();
     }
 
     public static void createMockField(TypeSpec.Builder classBuilder, ContributionBinding binding) {
         try {
             if (bindingSupportsTestDelegate(binding)) {
-                final String delegateFieldName = Util.getMockFieldName(binding.key());
-                final ClassName delegateType = getMockTypeName(binding.key());
-                final FieldSpec.Builder builder = FieldSpec.builder(delegateType, delegateFieldName);
+                final String mockFieldName = Util.getMockFieldName(binding.key());
+                final FieldSpec.Builder builder = FieldSpec.builder(providerOf(binding), mockFieldName);
                 builder.addModifiers(Modifier.PRIVATE);
                 final FieldSpec fieldSpec = builder.build();
                 classBuilder.addField(fieldSpec);
@@ -873,6 +864,6 @@ final class Util {
     }
 
     static String getMockMethodName(ClassName mockTypeName) {
-        return "with" + mockTypeName.simpleName().replaceAll("Delegate$", "Mock");
+        return "with" + mockTypeName.simpleName().replaceAll("Delegate$", "").replaceAll("Mock$", "");
     }
 }

@@ -22,7 +22,7 @@ public class TestFactoryGenerator extends FactoryGenerator {
 
     @Override
     protected boolean shouldCheckForDelegate(ContributionBinding binding) {
-        return Util.generateTestDelegate(binding);
+        return Util.bindingSupportsTestDelegate(binding);
     }
 
     @Override

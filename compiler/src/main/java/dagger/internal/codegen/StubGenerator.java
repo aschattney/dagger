@@ -13,6 +13,7 @@ import javax.lang.model.util.Types;
 import java.util.*;
 import static dagger.internal.codegen.SourceFiles.generateBindingFieldsForDependencies;
 import static dagger.internal.codegen.TypeNames.*;
+import static dagger.internal.codegen.Util.bindingSupportsTestDelegate;
 
 
 public class StubGenerator extends SourceFileGenerator<ProvisionBinding> {
@@ -39,9 +40,8 @@ public class StubGenerator extends SourceFileGenerator<ProvisionBinding> {
 
     @Override
     Optional<TypeSpec.Builder> write(ClassName generatedTypeName, ProvisionBinding input) {
-
         final String o = generatedTypeName.packageName() + "." + generatedTypeName.simpleName();
-        if (generated.contains(o) || !Util.generateTestDelegate(input)) {
+        if (generated.contains(o) || !bindingSupportsTestDelegate(input)) {
             return Optional.empty();
         }
         generated.add(o);

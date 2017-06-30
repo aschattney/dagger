@@ -83,7 +83,7 @@ class DecoratorGenerator extends SourceFileGenerator<DI>{
     private MethodSpec createMethod(BindingGraph graph, ClassName testAppClassName) {
         final String componentName = graph.componentDescriptor().componentDefinitionType().getSimpleName().toString();
         final ClassName className = Decorator.className(graph);
-        final String methodName = Util.lowerCaseFirstLetter(className.simpleName().replaceAll("Decorator$", ""));
+        final String methodName = Util.lowerCaseFirstLetter(className.simpleName().replaceAll("DecoratorImpl$", ""));
         final TypeName accessorName = Decorator.getAccessorTypeName(testAppClassName, componentName);
         return MethodSpec.methodBuilder(methodName)
                 .addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT)

@@ -462,8 +462,10 @@ abstract class AbstractComponentWriter implements HasBindingMembers {
     }
 
     for (ContributionBinding contributionBinding : graph.delegateRequirements()) {
-      createDelegateFieldAndMethod(builderName(), componentBuilder, contributionBinding, delegateFieldNames, false);
-      createMockFieldAndMethod(builderName(), componentBuilder, contributionBinding, mockFieldNames, false);
+      if (forTests || Util.generateTestDelegate(contributionBinding)) {
+        createDelegateFieldAndMethod(builderName(), componentBuilder, contributionBinding, delegateFieldNames, false);
+        createMockFieldAndMethod(builderName(), componentBuilder, contributionBinding, mockFieldNames, false);
+      }
     }
 
     return builderFields.build();
@@ -770,7 +772,7 @@ abstract class AbstractComponentWriter implements HasBindingMembers {
    * this method returns the static member select that returns the factory or no-op members
    * injector.
    */
-  private static Optional<MemberSelect> staticMemberSelect(ResolvedBindings resolvedBindings) {
+  private Optional<MemberSelect> staticMemberSelect(ResolvedBindings resolvedBindings) {
     BindingKey bindingKey = resolvedBindings.bindingKey();
     switch (bindingKey.kind()) {
       case CONTRIBUTION:
@@ -801,7 +803,7 @@ abstract class AbstractComponentWriter implements HasBindingMembers {
                   List<? extends TypeMirror> typeArguments =
                       ((DeclaredType) bindingKey.key().type()).getTypeArguments();
                   return Optional.of(MemberSelect.parameterizedFactoryCreateMethod(
-                      generatedClassNameForBinding(contributionBinding), typeArguments));
+                      this.generatedClassNameForBinding(contributionBinding), typeArguments));
                 }
               }
               // fall through
@@ -809,7 +811,7 @@ abstract class AbstractComponentWriter implements HasBindingMembers {
             default:
               return Optional.of(
                   staticMethod(
-                      generatedClassNameForBinding(contributionBinding), CodeBlock.of("create()")));
+                      this.generatedClassNameForBinding(contributionBinding), CodeBlock.of("create()")));
           }
         }
         break;
@@ -827,6 +829,14 @@ abstract class AbstractComponentWriter implements HasBindingMembers {
         throw new AssertionError();
     }
     return Optional.empty();
+  }
+
+  protected ClassName generatedClassNameForBinding(ContributionBinding contributionBinding) {
+    if (forTests && !contributionBinding.contributedType().toString().contains("DispatchingAndroidInjector")) {
+      return SourceFiles.generatedTestClassNameForBinding(contributionBinding);
+    }else {
+      return SourceFiles.generatedClassNameForBinding(contributionBinding);
+    }
   }
 
   /**
@@ -1340,7 +1350,7 @@ abstract class AbstractComponentWriter implements HasBindingMembers {
 
         final CodeBlock parameter = getComponentContributionExpression(ComponentRequirement.forBinding(binding));
         CodeBlock parameterDecision;
-        if (delegateFieldName != null && bindingSupportsTestDelegate(binding)) {
+        if (delegateFieldName != null) {
           parameterDecision = CodeBlock.of("builder.$L == null ? $L : builder.$L.get()", delegateFieldName, parameter, delegateFieldName);
         }else {
           parameterDecision = CodeBlock.of("$L", parameter);
@@ -1373,7 +1383,7 @@ abstract class AbstractComponentWriter implements HasBindingMembers {
           CodeBlock factoryCreate =
               CodeBlock.of(
                   "$T.create($L)",
-                  generatedClassNameForBinding(binding),
+                  this.generatedClassNameForBinding(binding),
                   makeParametersCodeBlock(arguments));
 
           // If scoping a parameterized factory for an @Inject class, Java 7 cannot always infer the
@@ -1422,7 +1432,7 @@ abstract class AbstractComponentWriter implements HasBindingMembers {
 
           return CodeBlock.of(
               "new $T($L)",
-              generatedClassNameForBinding(binding),
+              this.generatedClassNameForBinding(binding),
               makeParametersCodeBlock(arguments));
         }
 

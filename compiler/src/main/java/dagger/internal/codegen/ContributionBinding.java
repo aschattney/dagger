@@ -63,6 +63,8 @@ abstract class ContributionBinding extends Binding implements HasContributionTyp
 
   abstract boolean genericParameter();
 
+  abstract boolean generateTestDelegate();
+
   abstract boolean ignoreStubGeneration();
 
   abstract Optional<Equivalence.Wrapper<AnnotationMirror>> wrappedMapKey();
@@ -302,5 +304,7 @@ abstract class ContributionBinding extends Binding implements HasContributionTyp
     abstract B wrappedMapKey(Optional<Equivalence.Wrapper<AnnotationMirror>> wrappedMapKey);
 
     abstract B bindingKind(ContributionBinding.Kind kind);
+
+    abstract B generateTestDelegate(boolean generate);
   }
 }

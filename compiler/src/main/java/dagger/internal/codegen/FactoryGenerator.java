@@ -97,7 +97,7 @@ class FactoryGenerator extends SourceFileGenerator<ProvisionBinding> {
   }
 
   protected boolean shouldCheckForDelegate(ContributionBinding binding) {
-    return Util.bindingSupportsTestDelegate(binding);
+    return Util.generateTestDelegate(binding);
   }
 
   @Override
@@ -159,13 +159,15 @@ class FactoryGenerator extends SourceFileGenerator<ProvisionBinding> {
                   constructorBuilder.get(),
                   false
           );
-          addConstructorParameterAndTypeField(
-                  Util.providerOf(binding),
-                  getMockFieldName(binding.key()),
-                  factoryBuilder,
-                  constructorBuilder.get(),
-                  false
-          );
+          if (!binding.dependencies().isEmpty()) {
+            addConstructorParameterAndTypeField(
+                    Util.providerOf(binding),
+                    getMockFieldName(binding.key()),
+                    factoryBuilder,
+                    constructorBuilder.get(),
+                    false
+            );
+          }
         }
         if (binding.requiresModuleInstance()) {
 

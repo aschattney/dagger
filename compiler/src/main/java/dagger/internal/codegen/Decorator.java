@@ -117,7 +117,9 @@ public class Decorator  extends SourceFileGenerator<ImmutableSet<BindingGraph>>{
             if (counter == 0) {
                 createFieldAndMethodImplementations(builder, bindingGraph, delegateRequirements);
             }
-            apply(delegateRequirements, statements, CodeBlock.builder(), name);
+            if (appConfigProvider.get().debug()) {
+                apply(delegateRequirements, statements, CodeBlock.builder(), name);
+            }
             if (appConfigProvider.get().generateExtendedComponents()) {
                 applyTest(delegateRequirements, statements, CodeBlock.builder(), testName);
             }

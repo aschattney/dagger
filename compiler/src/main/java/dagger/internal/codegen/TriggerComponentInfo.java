@@ -49,7 +49,7 @@ public class TriggerComponentInfo extends ComponentInfo {
     }
 
     protected String getDecoratorFieldName(TypeElement component) {
-        return lowerCaseFirstLetter(component.getSimpleName().toString()) + DECORATOR;
+        return lowerCaseFirstLetter(component.getSimpleName().toString()) + DECORATOR + "Impl";
     }
 
     protected boolean noActionRequired(List<String> ids) {

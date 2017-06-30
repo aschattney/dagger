@@ -88,6 +88,7 @@ abstract class ProvisionBinding extends ContributionBinding {
     return new AutoValue_ProvisionBinding.Builder()
         .genericParameter(false)
         .ignoreStubGeneration(true)
+        .generateTestDelegate(false)
         .explicitDependencies(ImmutableSet.<DependencyRequest>of());
   }
   
@@ -157,11 +158,13 @@ abstract class ProvisionBinding extends ContributionBinding {
       Optional<DependencyRequest> membersInjectionRequest =
           membersInjectionRequest(enclosingCxtorType);
 
+      final boolean ignoreStubGeneration = constructorElement.getAnnotation(AllowStubGeneration.class) == null;
       ProvisionBinding.Builder builder =
           ProvisionBinding.builder()
               .contributionType(ContributionType.UNIQUE)
               .bindingElement(constructorElement)
-              .ignoreStubGeneration(constructorElement.getAnnotation(AllowStubGeneration.class) == null)
+              .ignoreStubGeneration(ignoreStubGeneration)
+              .generateTestDelegate(!ignoreStubGeneration && appConfigProvider.get().debug())
               .key(key)
               .explicitDependencies(dependencies)
               .membersInjectionRequest(membersInjectionRequest)
@@ -207,10 +210,12 @@ abstract class ProvisionBinding extends ContributionBinding {
           dependencyRequestFactory.forRequiredResolvedVariables(
               providesMethod.getParameters(),
               resolvedMethod.getParameterTypes());
+      final boolean ignoreStubGeneration = genericParameter || providesMethod.getAnnotation(AllowStubGeneration.class) == null;
       return ProvisionBinding.builder()
           .contributionType(ContributionType.fromBindingMethod(providesMethod))
           .bindingElement(providesMethod)
-          .ignoreStubGeneration(genericParameter || providesMethod.getAnnotation(AllowStubGeneration.class) == null)
+          .ignoreStubGeneration(ignoreStubGeneration)
+          .generateTestDelegate(!ignoreStubGeneration && (appConfigProvider.get().debug()))
           .contributingModule(contributedBy)
           .key(key)
           .genericParameter(genericParameter)
@@ -285,10 +290,12 @@ abstract class ProvisionBinding extends ContributionBinding {
       checkArgument(builderMethod.getKind().equals(METHOD));
       checkArgument(builderMethod.getParameters().size() == 1);
       VariableElement parameterElement = Iterables.getOnlyElement(builderMethod.getParameters());
+      final boolean ignoreStubGeneration = builderMethod.getAnnotation(AllowStubGeneration.class) == null;
       return ProvisionBinding.builder()
           .contributionType(ContributionType.UNIQUE)
           .bindingElement(builderMethod)
-          .ignoreStubGeneration(builderMethod.getAnnotation(AllowStubGeneration.class) == null)
+          .ignoreStubGeneration(ignoreStubGeneration)
+          .generateTestDelegate(!ignoreStubGeneration && (appConfigProvider.get().debug()))
           .key(method.requirement().key().get())
           .nullableType(ConfigurationAnnotations.getNullableType(parameterElement))
           .bindingKind(Kind.BUILDER_BINDING)
@@ -302,9 +309,11 @@ abstract class ProvisionBinding extends ContributionBinding {
       checkArgument(subcomponentBuilderMethod.getParameters().isEmpty());
       DeclaredType declaredContainer = asDeclared(contributedBy.asType());
       final DependencyRequest request = dependencyRequestFactory.plantDependency(application);
+      final boolean ignoreStubGeneration = subcomponentBuilderMethod.getAnnotation(AllowStubGeneration.class) == null;
       return ProvisionBinding.builder()
           .contributionType(ContributionType.UNIQUE)
-          .ignoreStubGeneration(subcomponentBuilderMethod.getAnnotation(AllowStubGeneration.class) == null)
+          .ignoreStubGeneration(ignoreStubGeneration)
+          .generateTestDelegate(!ignoreStubGeneration && (appConfigProvider.get().debug()))
           .bindingElement(subcomponentBuilderMethod)
           .key(keyFactory.forSubcomponentBuilderMethod(subcomponentBuilderMethod, declaredContainer))
           .bindingKind(Kind.SUBCOMPONENT_BUILDER)
