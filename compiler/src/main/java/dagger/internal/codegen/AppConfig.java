@@ -1,8 +1,6 @@
 package dagger.internal.codegen;
 
-import com.google.auto.common.MoreElements;
 import com.google.auto.common.MoreTypes;
-import com.sun.jdi.Mirror;
 import dagger.Config;
 
 import javax.lang.model.element.Element;
@@ -18,11 +16,13 @@ public class AppConfig {
     private final TypeElement appClass;
     private final TypeElement baseAppClass;
     private boolean debug;
+    private final boolean generateExtendedComponents;
 
-    public AppConfig(TypeElement appClass, TypeElement baseAppClass, boolean debug) {
+    public AppConfig(TypeElement appClass, TypeElement baseAppClass, boolean debug, boolean generateExtendedComponents) {
         this.appClass = appClass;
         this.baseAppClass = baseAppClass;
         this.debug = debug;
+        this.generateExtendedComponents = generateExtendedComponents;
     }
 
     public TypeElement getAppClass() {
@@ -31,6 +31,10 @@ public class AppConfig {
 
     public TypeElement getBaseAppClass() {
         return baseAppClass;
+    }
+
+    public boolean generateExtendedComponents() {
+        return generateExtendedComponents;
     }
 
     public boolean debug() {
@@ -49,7 +53,8 @@ public class AppConfig {
             final TypeElement appClass = extractAppClassElement(config);
             final TypeElement baseAppClass = extractBaseAppClassElement(config);
             boolean debug = config.debug();
-            return new AppConfig(appClass, baseAppClass, debug);
+            boolean generateExtendedComponents = config.generateExtendedComponents();
+            return new AppConfig(appClass, baseAppClass, debug, generateExtendedComponents);
         }
 
         private TypeElement extractAppClassElement(Config config) {

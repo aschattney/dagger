@@ -98,16 +98,12 @@ final class ComponentGenerator extends SourceFileGenerator<BindingGraph> {
 
   @Override
   Optional<TypeSpec.Builder> write(ClassName componentName, BindingGraph input) {
-    if (appConfigProvider.get().debug()) {
+    if (appConfigProvider.get().generateExtendedComponents()) {
       final ClassName name = componentName.topLevelClassName().peerClass("Test" + Joiner.on('_').join(componentName.simpleNames()));
-      System.out.println("generating test dagger component");
       final TypeSpec.Builder testComponentBuilder =
               new ComponentWriter(types, elements, keyFactory, compilerOptions, name, input, true).write();
-      System.out.println("DONE generating test dagger component");
       try {
-        System.out.println("adding to registry");
         testRegistry.addEncodedClass(name, buildJavaFile(name, testComponentBuilder));
-        System.out.println("DONE - adding to registry");
       } catch (IOException e) {
         throw new IllegalStateException(e);
       }

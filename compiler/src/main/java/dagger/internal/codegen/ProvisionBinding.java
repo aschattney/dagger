@@ -112,13 +112,15 @@ abstract class ProvisionBinding extends ContributionBinding {
     private final Types types;
     private final Key.Factory keyFactory;
     private final DependencyRequest.Factory dependencyRequestFactory;
-
+    private final AppConfig.Provider appConfigProvider;
     Factory(Elements elements, Types types, Key.Factory keyFactory,
-        DependencyRequest.Factory dependencyRequestFactory) {
+        DependencyRequest.Factory dependencyRequestFactory,
+            AppConfig.Provider appConfigProvider) {
       this.elements = elements;
       this.types = types;
       this.keyFactory = keyFactory;
       this.dependencyRequestFactory = dependencyRequestFactory;
+      this.appConfigProvider = appConfigProvider;
     }
 
     /**

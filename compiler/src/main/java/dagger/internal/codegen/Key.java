@@ -119,7 +119,7 @@ abstract class Key implements Serializable{
    * <p>Absent except for multibinding contributions.
    */
   abstract Optional<MultibindingContributionIdentifier> multibindingContributionIdentifier();
-  
+
   abstract Builder toBuilder();
 
   @Memoized
@@ -163,7 +163,7 @@ abstract class Key implements Serializable{
 
     abstract Key build();
   }
-  
+
   /**
    * An object that identifies a multibinding contribution method and the module class that
    * contributes it to the graph.
@@ -196,6 +196,11 @@ abstract class Key implements Serializable{
     }
 
     public ClassName getDelegateTypeName() {
+      StringBuilder sb = internalGetTypeName();
+      return ClassName.bestGuess(String.format("delegates.%sDelegate", sb.toString()));
+    }
+
+    private StringBuilder internalGetTypeName() {
       final TypeMirror returnType = bindingMethod.getReturnType();
 
       // find qualifier annotations
@@ -252,12 +257,20 @@ abstract class Key implements Serializable{
       }else {
         sb.append(capitalize(extractClassName(typeToString(returnType))));
       }
-
-      return ClassName.bestGuess(String.format("delegates.%sDelegate", sb.toString()));
-
+      return sb;
     }
 
     public String getDelegateFieldName() {
+      StringBuilder sb = internalGetFieldName();
+      return sb.toString() + "Delegate";
+    }
+
+    public String getMockFieldName() {
+      StringBuilder sb = internalGetFieldName();
+      return sb.toString() + "Mock";
+    }
+
+    private StringBuilder internalGetFieldName() {
       final TypeMirror returnType = bindingMethod.getReturnType();
 
       // find qualifier annotations
@@ -314,8 +327,7 @@ abstract class Key implements Serializable{
       }else {
         sb.append(transformValue(extractClassName(typeToString(returnType)), sb));
       }
-
-      return sb.toString();
+      return sb;
     }
 
     protected String transformValue(String simpleMapValueName, StringBuilder sb) {
@@ -378,6 +390,11 @@ abstract class Key implements Serializable{
     @Override
     public int hashCode() {
       return identifierString.hashCode();
+    }
+
+    public ClassName getMockTypeName() {
+      StringBuilder sb = internalGetTypeName();
+      return ClassName.bestGuess(String.format("delegates.%sMock", sb.toString()));
     }
   }
 
@@ -482,7 +499,7 @@ abstract class Key implements Serializable{
   static final class Factory {
     private final Types types;
     private final Elements elements;
-    
+
     Factory(Types types, Elements elements) {
       this.types = checkNotNull(types);
       this.elements = checkNotNull(elements);

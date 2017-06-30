@@ -144,6 +144,39 @@ class SourceFiles {
     }
   }
 
+  static ClassName generatedTestClassNameForBinding(Binding binding) {
+    switch (binding.bindingType()) {
+      case PROVISION:
+      case PRODUCTION:
+        ContributionBinding contribution = (ContributionBinding) binding;
+        checkArgument(contribution.bindingTypeElement().isPresent());
+        ClassName enclosingClassName = ClassName.get(contribution.bindingTypeElement().get());
+        switch (contribution.bindingKind()) {
+          case INJECTION:
+          case PROVISION:
+          case PRODUCTION:
+            return enclosingClassName
+                    .topLevelClassName()
+                    .peerClass(
+                            "Test" +
+                            classFileName(enclosingClassName)
+                                    + "_"
+                                    + factoryPrefix(contribution)
+                                    + "Factory");
+
+          default:
+            throw new AssertionError();
+        }
+
+      case MEMBERS_INJECTION:
+        return membersInjectorNameForType(
+                ((MembersInjectionBinding) binding).membersInjectedType());
+
+      default:
+        throw new AssertionError();
+    }
+  }
+
   /**
    * Returns the generated factory or members injector name for a binding.
    */
@@ -187,6 +220,12 @@ class SourceFiles {
         : ParameterizedTypeName.get(className, Iterables.toArray(typeParameters, TypeName.class));
   }
 
+  static TypeName parameterizedGeneratedTestTypeNameForBinding(Binding binding) {
+    ClassName className = generatedTestClassNameForBinding(binding);
+    return className;
+  }
+
+
   static ClassName membersInjectorNameForType(TypeElement typeElement) {
     return siblingClassName(typeElement,  "_MembersInjector");
   }
@@ -211,7 +250,7 @@ class SourceFiles {
     return className.topLevelClassName().peerClass(classFileName(className) + suffix);
   }
 
-  private static String factoryPrefix(ContributionBinding binding) {
+  static String factoryPrefix(ContributionBinding binding) {
     switch (binding.bindingKind()) {
       case INJECTION:
         return "";

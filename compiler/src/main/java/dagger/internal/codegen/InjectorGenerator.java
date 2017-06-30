@@ -27,16 +27,14 @@ class InjectorGenerator extends SourceFileGenerator<DI> {
     private Messager messager;
     private final ComponentDescriptor.Factory componentDescriptorFactory;
     private final BindingGraph.Factory bindingGraphFactory;
-    private TestClassGenerator.Factory testClassGeneratorFactory;
     private final TestRegistry registry;
     private Decorator.Factory decoratorFactory;
 
-    InjectorGenerator(Filer filer, Elements elements, Messager messager, ComponentDescriptor.Factory componentDescriptorFactory, BindingGraph.Factory bindingGraphFactory, TestClassGenerator.Factory testClassGeneratorFactoty, TestRegistry registry, Decorator.Factory decoratorFactory) {
+    InjectorGenerator(Filer filer, Elements elements, Messager messager, ComponentDescriptor.Factory componentDescriptorFactory, BindingGraph.Factory bindingGraphFactory, TestRegistry registry, Decorator.Factory decoratorFactory) {
         super(filer, elements);
         this.messager = messager;
         this.componentDescriptorFactory = componentDescriptorFactory;
         this.bindingGraphFactory = bindingGraphFactory;
-        this.testClassGeneratorFactory = testClassGeneratorFactoty;
         this.registry = registry;
         this.decoratorFactory = decoratorFactory;
     }
@@ -99,11 +97,6 @@ class InjectorGenerator extends SourceFileGenerator<DI> {
     private void createDecoratorClass(TypeSpec.Builder builder, ImmutableSet<BindingGraph> graphs,
                                       Decorator decorator, ClassName testAppClassName) {
         try {
-            /*messager.printMessage(Diagnostic.Kind.NOTE, "-----");
-            for (BindingGraph graph : graphs) {
-                messager.printMessage(Diagnostic.Kind.NOTE, String.valueOf(graph.componentType().getSimpleName().toString()));
-            }
-            messager.printMessage(Diagnostic.Kind.NOTE, "-----");*/
             decorator.generate(graphs);
             final Optional<BindingGraph> e = graphs.stream().findFirst();
             if (!e.isPresent()) {
@@ -113,7 +106,7 @@ class InjectorGenerator extends SourceFileGenerator<DI> {
             final String componentName = e.get().componentDescriptor().componentDefinitionType().getSimpleName().toString();
             final TypeName accessorName = Decorator.getAccessorTypeName(testAppClassName, componentName);
             final String fieldName = Util.lowerCaseFirstLetter(decoratorName.simpleName());
-            final String methodName = Util.lowerCaseFirstLetter(fieldName.replaceAll("Decorator$", ""));
+            final String methodName = Util.lowerCaseFirstLetter(fieldName.replaceAll("DecoratorImpl$", ""));
             final FieldSpec.Builder fieldBuilder = FieldSpec.builder(decoratorName, fieldName, Modifier.PRIVATE);
             final FieldSpec field = fieldBuilder.initializer("new $T(this)", decoratorName).build();
             builder.addField(field);
@@ -136,8 +129,6 @@ class InjectorGenerator extends SourceFileGenerator<DI> {
             if (builder.isPresent()) {
                 registry.addEncodedClass(input.getClassName(), buildJavaFile(input.getClassName(), builder.get()));
             }
-            final TestClassGenerator testClassGenerator = testClassGeneratorFactory.create(input.getAppClass());
-            testClassGenerator.generate(registry);
         } catch (IOException e) {
             throw new IllegalStateException(e);
         }

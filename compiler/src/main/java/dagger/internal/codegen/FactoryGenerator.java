@@ -39,6 +39,7 @@ import static dagger.internal.codegen.TypeNames.factoryOf;
 import static dagger.internal.codegen.TypeNames.providerOf;
 import static dagger.internal.codegen.Util.getDelegateFieldName;
 import static dagger.internal.codegen.Util.getDelegateTypeName;
+import static dagger.internal.codegen.Util.getMockFieldName;
 import static javax.lang.model.element.Modifier.FINAL;
 import static javax.lang.model.element.Modifier.PRIVATE;
 import static javax.lang.model.element.Modifier.PUBLIC;
@@ -80,7 +81,7 @@ import javax.tools.Diagnostic;
  * @author Gregory Kick
  * @since 2.0
  */
-final class FactoryGenerator extends SourceFileGenerator<ProvisionBinding> {
+class FactoryGenerator extends SourceFileGenerator<ProvisionBinding> {
 
   private final CompilerOptions compilerOptions;
   private final InjectValidator injectValidator;
@@ -93,6 +94,10 @@ final class FactoryGenerator extends SourceFileGenerator<ProvisionBinding> {
     super(filer, elements);
     this.compilerOptions = compilerOptions;
     this.injectValidator = injectValidator;
+  }
+
+  protected boolean shouldCheckForDelegate(ContributionBinding binding) {
+    return Util.bindingSupportsTestDelegate(binding);
   }
 
   @Override
@@ -146,10 +151,17 @@ final class FactoryGenerator extends SourceFileGenerator<ProvisionBinding> {
         break;
       case CLASS_CONSTRUCTOR:
         constructorBuilder = Optional.of(constructorBuilder().addModifiers(PUBLIC));
-        if (Util.bindingSupportsTestDelegate(binding)) {
+        if (shouldCheckForDelegate(binding)) {
           addConstructorParameterAndTypeField(
                   getDelegateTypeName(binding.key()),
                   getDelegateFieldName(binding.key()),
+                  factoryBuilder,
+                  constructorBuilder.get(),
+                  false
+          );
+          addConstructorParameterAndTypeField(
+                  Util.providerOf(binding),
+                  getMockFieldName(binding.key()),
                   factoryBuilder,
                   constructorBuilder.get(),
                   false
@@ -220,7 +232,7 @@ final class FactoryGenerator extends SourceFileGenerator<ProvisionBinding> {
           case CLASS_CONSTRUCTOR:
             createMethodBuilder.addStatement(
                 "return new $T($L)",
-                parameterizedGeneratedTypeNameForBinding(binding),
+                this.parameterizedGeneratedTypeNameForBinding(binding),
                 makeParametersCodeBlock(
                     Lists.transform(params, input -> CodeBlock.of("$N", input))));
             break;
@@ -251,12 +263,17 @@ final class FactoryGenerator extends SourceFileGenerator<ProvisionBinding> {
             .addAnnotation(Override.class)
             .addModifiers(PUBLIC);
 
-    final CodeBlock codeBlock = CodeBlock.of(getDelegateFieldName(binding.key()));
+    final String delegateFieldName = Util.getDelegateFieldName(binding.key());
+    final String mockFieldName = !binding.dependencies().isEmpty() ? Util.getMockFieldName(binding.key()) : null;
+
     if (binding.bindingKind().equals(PROVISION)) {
-      if (Util.bindingSupportsTestDelegate(binding)) {
-        final String delegateFieldName = Util.getDelegateFieldName(binding.key());
-        getMethodBuilder.beginControlFlow("if ($L != null)", CodeBlock.of(delegateFieldName));
-        getMethodBuilder.addStatement("return $L.get($L)", CodeBlock.of(delegateFieldName), parametersCodeBlock);
+      if (shouldCheckForDelegate(binding)) {
+        getMethodBuilder.beginControlFlow("if ($L != null)", delegateFieldName);
+        getMethodBuilder.addStatement("return $L.get($L)", delegateFieldName, parametersCodeBlock);
+        if (mockFieldName != null) {
+          getMethodBuilder.nextControlFlow("else if ($L != null)", mockFieldName);
+          getMethodBuilder.addStatement("return $L.get()", mockFieldName);
+        }
         getMethodBuilder.nextControlFlow("else");
       }
       CodeBlock.Builder providesMethodInvocationBuilder = CodeBlock.builder();
@@ -272,7 +289,7 @@ final class FactoryGenerator extends SourceFileGenerator<ProvisionBinding> {
       CodeBlock providesMethodInvocation = providesMethodInvocationBuilder.build();
       getMethodBuilder.addStatement("return $L", providesMethodInvocation);
 
-      if (Util.bindingSupportsTestDelegate(binding)) {
+      if (shouldCheckForDelegate(binding)) {
         getMethodBuilder.endControlFlow();
       }
 
@@ -290,14 +307,22 @@ final class FactoryGenerator extends SourceFileGenerator<ProvisionBinding> {
       }*/
     } else if (binding.membersInjectionRequest().isPresent()) {
 
-      if (Util.bindingSupportsTestDelegate(binding)) {
-        getMethodBuilder.beginControlFlow("if ($L != null)", codeBlock);
+      if (shouldCheckForDelegate(binding)) {
+        getMethodBuilder.beginControlFlow("if ($L != null)", delegateFieldName);
         getMethodBuilder.addStatement(
                 "return $T.injectMembers($N, $L.get($L))",
                 MembersInjectors.class,
                 fields.get(binding.membersInjectionRequest().get().bindingKey()),
-                codeBlock,
+                delegateFieldName,
                 parametersCodeBlock);
+        if (mockFieldName != null) {
+          getMethodBuilder.nextControlFlow("else if ($L != null)", mockFieldName);
+          getMethodBuilder.addStatement(
+                  "return $T.injectMembers($N, $L.get())",
+                  MembersInjectors.class,
+                  fields.get(binding.membersInjectionRequest().get().bindingKey()),
+                  mockFieldName);
+        }
         getMethodBuilder.nextControlFlow("else");
       }
       getMethodBuilder.addStatement(
@@ -306,17 +331,21 @@ final class FactoryGenerator extends SourceFileGenerator<ProvisionBinding> {
           fields.get(binding.membersInjectionRequest().get().bindingKey()),
           providedTypeName,
           parametersCodeBlock);
-      if (Util.bindingSupportsTestDelegate(binding)) {
+      if (shouldCheckForDelegate(binding)) {
         getMethodBuilder.endControlFlow();
       }
     } else {
-      if (Util.bindingSupportsTestDelegate(binding)) {
-        getMethodBuilder.beginControlFlow("if ($L != null)", codeBlock);
-        getMethodBuilder.addStatement("return $L.get($L)", codeBlock, parametersCodeBlock);
+      if (shouldCheckForDelegate(binding)) {
+        getMethodBuilder.beginControlFlow("if ($L != null)", delegateFieldName);
+        getMethodBuilder.addStatement("return $L.get($L)", delegateFieldName, parametersCodeBlock);
+        if (mockFieldName != null) {
+          getMethodBuilder.nextControlFlow("else if ($L != null)", mockFieldName);
+          getMethodBuilder.addStatement("return $L.get()", mockFieldName);
+        }
         getMethodBuilder.nextControlFlow("else");
       }
       getMethodBuilder.addStatement("return new $T($L)", providedTypeName, parametersCodeBlock);
-      if (Util.bindingSupportsTestDelegate(binding)) {
+      if (shouldCheckForDelegate(binding)) {
         getMethodBuilder.endControlFlow();
       }
     }
@@ -331,6 +360,10 @@ final class FactoryGenerator extends SourceFileGenerator<ProvisionBinding> {
     gwtIncompatibleAnnotation(binding).ifPresent(factoryBuilder::addAnnotation);
 
     return Optional.of(factoryBuilder);
+  }
+
+  protected TypeName parameterizedGeneratedTypeNameForBinding(ProvisionBinding binding) {
+      return SourceFiles.parameterizedGeneratedTypeNameForBinding(binding);
   }
 
   /**

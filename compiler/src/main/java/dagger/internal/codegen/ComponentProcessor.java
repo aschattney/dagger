@@ -116,9 +116,11 @@ public final class ComponentProcessor extends BasicProcessor {
     MapKeyValidator mapKeyValidator = new MapKeyValidator(elements);
 
     appConfigProvider = new AppConfig.Provider();
-    StubGenerator stubGenerator = new StubGenerator(filer, elements, types);
+    StubGenerator stubGenerator = new StubGenerator(filer, elements, types, appConfigProvider, testRegistry);
+    //MockGenerator mockGenerator = new MockGenerator(filer, elements, types, appConfigProvider, testRegistry);
     FactoryGenerator factoryGenerator = new FactoryGenerator(filer, elements, compilerOptions, injectValidatorWhenGeneratingCode);
-    multipleGenerator = new MultipleSourceFileGenerator<>(filer, elements, Arrays.asList(stubGenerator, factoryGenerator));
+    TestFactoryGenerator testFactoryGenerator = new TestFactoryGenerator(filer, elements, compilerOptions, injectValidatorWhenGeneratingCode, appConfigProvider, testRegistry);
+    multipleGenerator = new MultipleSourceFileGenerator<>(filer, elements, Arrays.asList(stubGenerator, factoryGenerator, testFactoryGenerator));
     membersInjectorGenerator = new MembersInjectorGenerator(filer, elements, injectValidatorWhenGeneratingCode);
     ComponentGenerator.Factory componentGeneratorFactory = new ComponentGenerator.Factory(filer, elements, types, keyFactory, compilerOptions, appConfigProvider, testRegistry);
     ProducerFactoryGenerator producerFactoryGenerator =
@@ -131,7 +133,7 @@ public final class ComponentProcessor extends BasicProcessor {
     DependencyRequest.Factory dependencyRequestFactory =
             new DependencyRequest.Factory(keyFactory);
     ProvisionBinding.Factory provisionBindingFactory =
-            new ProvisionBinding.Factory(elements, types, keyFactory, dependencyRequestFactory);
+            new ProvisionBinding.Factory(elements, types, keyFactory, dependencyRequestFactory, appConfigProvider);
     ProductionBinding.Factory productionBindingFactory =
             new ProductionBinding.Factory(types, keyFactory, dependencyRequestFactory);
     MultibindingDeclaration.Factory multibindingDeclarationFactory =
@@ -248,15 +250,15 @@ public final class ComponentProcessor extends BasicProcessor {
                 messager,
                 appConfigProvider,
                 testRegistry,
+                new TestClassGenerator.Factory(filer, elements),
                 new InjectorGenerator(filer, elements, messager, componentDescriptorFactory,
-                        bindingGraphFactory, new TestClassGenerator.Factory(filer, elements),
-                        testRegistry, new Decorator.Factory(filer, elements, bindingGraphFactory, testRegistry)),
+                        bindingGraphFactory,
+                        testRegistry, new Decorator.Factory(filer, elements, bindingGraphFactory, testRegistry, appConfigProvider)),
                 ComponentDescriptor.Kind.COMPONENT,
                 bindingGraphFactory,
                 componentDescriptorFactory,
                 new DecoratorGenerator(filer, elements, componentDescriptorFactory, bindingGraphFactory, testRegistry),
                 new DependencySpecGenerator(filer, elements, componentDescriptorFactory, bindingGraphFactory),
-                new DependencyInjectorGenerator(filer, elements, bindingGraphFactory, componentDescriptorFactory),
                 provisionBindingFactory,
                 new ApplicationGenerator(filer, types, elements, bindingGraphFactory, componentDescriptorFactory),
                 stubGenerator

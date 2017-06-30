@@ -330,6 +330,49 @@ final class Util {
         return name;
     }
 
+    static ClassName getMockTypeName(Key key) {
+
+        if (key.multibindingContributionIdentifier().isPresent()) {
+            final Key.MultibindingContributionIdentifier identifier = key.multibindingContributionIdentifier().get();
+            return identifier.getMockTypeName();
+        }
+
+        final TypeMirror returnType = key.type();
+
+        // find qualifier annotations
+        final Optional<? extends AnnotationMirror> qualifier = key.qualifier();
+
+        String simpleQualifierName = "";
+        String simpleQualifierValue = "";
+
+        if (qualifier.isPresent()) {
+            Optional<String> qualifierValue = qualifier.get().getElementValues().entrySet().stream()
+                    .filter(e -> e.getKey().getSimpleName().contentEquals("value"))
+                    .filter(e -> e.getKey().getReturnType().toString().equals(String.class.getName()))
+                    .map(e -> e.getValue().getValue().toString())
+                    .findFirst();
+            simpleQualifierName = MoreAnnotationMirrors.simpleName(qualifier.get()).toString();
+            if (qualifierValue.isPresent()) {
+                simpleQualifierValue = qualifierValue.get();
+            }
+        }
+
+        StringBuilder sb = new StringBuilder();
+        if (qualifier.isPresent()) {
+            sb.append(capitalize(simpleQualifierName).trim());
+            if (!simpleQualifierValue.trim().isEmpty()) {
+                sb.append(capitalize(simpleQualifierValue).trim());
+            }else {
+                sb.append(capitalize(extractClassName(typeToString(returnType))).trim());
+            }
+        }else {
+            sb.append(capitalize(extractClassName(typeToString(returnType))).trim());
+        }
+
+        final ClassName name = ClassName.bestGuess(String.format("delegates.%sMock", sb.toString()));
+        return name;
+    }
+
     static String getDelegateFieldName(Key key) {
 
         if (key.multibindingContributionIdentifier().isPresent()) {
@@ -372,6 +415,52 @@ final class Util {
         }
 
         sb.append("Delegate");
+
+        return sb.toString();
+    }
+
+    static String getMockFieldName(Key key) {
+
+        if (key.multibindingContributionIdentifier().isPresent()) {
+            final Key.MultibindingContributionIdentifier identifier = key.multibindingContributionIdentifier().get();
+            return identifier.getMockFieldName();
+        }
+
+        final TypeMirror returnType = key.type();
+
+        // find qualifier annotations
+        final Optional<? extends AnnotationMirror> qualifier = key.qualifier();
+
+        Optional<String> qualifierValue = Optional.empty();
+
+        String simpleQualifierName = "";
+        String simpleQualifierValue = "";
+
+        if (qualifier.isPresent()) {
+            qualifierValue = qualifier.get().getElementValues().entrySet().stream()
+                    .filter(e -> e.getKey().getSimpleName().toString().equals("value"))
+                    .filter(e -> e.getKey().getReturnType().toString().equals(String.class.getName()))
+                    .map(e -> e.getValue().getValue().toString())
+                    .findFirst();
+            simpleQualifierName = MoreAnnotationMirrors.simpleName(qualifier.get()).toString();
+            if (qualifierValue.isPresent()) {
+                simpleQualifierValue = qualifierValue.get();
+            }
+        }
+
+        StringBuilder sb = new StringBuilder();
+        if (qualifier.isPresent()) {
+            sb.append(lowerCaseFirstLetter(simpleQualifierName));
+            if (!simpleQualifierValue.isEmpty()) {
+                sb.append(transformValue(simpleQualifierValue, sb));
+            }else {
+                sb.append(transformValue(extractClassName(typeToString(returnType)), sb));
+            }
+        }else {
+            sb.append(lowerCaseFirstLetter(extractClassName(typeToString(returnType))));
+        }
+
+        sb.append("Mock");
 
         return sb.toString();
     }
@@ -672,8 +761,7 @@ final class Util {
                 final FieldSpec fieldSpec = builder.build();
                 classBuilder.addField(fieldSpec);
             }
-        } catch (Exception e) {
-        }
+        } catch (Exception e) {}
     }
 
     public static void createDelegateFieldAndMethod(TypeName generatedTypeName, TypeSpec.Builder classBuilder, ContributionBinding binding, Map<Key, String> delegateFieldNames, boolean publicMethod) {
@@ -700,6 +788,39 @@ final class Util {
             }
         } catch (Exception e) {
         }
+    }
+
+    public static void createMockFieldAndMethod(TypeName generatedTypeName, TypeSpec.Builder classBuilder, ContributionBinding binding, Map<Key, String> mockFieldNames, boolean publicMethod) {
+        try {
+            if (binding.dependencies().isEmpty()) {
+                return;
+            }
+            if (bindingSupportsTestDelegate(binding)) {
+                final String mockFieldName = Util.getMockFieldName(binding.key());
+                final ClassName delegateType = Util.getMockTypeName(binding.key());
+                final FieldSpec.Builder builder = FieldSpec.builder(providerOf(binding), mockFieldName);
+                builder.addModifiers(Modifier.PRIVATE);
+                mockFieldNames.put(binding.key(), mockFieldName);
+                final FieldSpec fieldSpec = builder.build();
+                classBuilder.addField(fieldSpec);
+                final String methodName = getDelegateMethodName(delegateType);
+                final MethodSpec.Builder delegateMethodBuilder = MethodSpec.methodBuilder(methodName);
+                if (publicMethod) {
+                    delegateMethodBuilder.addModifiers(Modifier.PUBLIC);
+                }
+                classBuilder.addMethod(delegateMethodBuilder
+                        .returns(generatedTypeName)
+                        .addParameter(providerOf(binding), mockFieldName)
+                        .addStatement("this.$N = $L", fieldSpec, CodeBlock.of(mockFieldName))
+                        .addStatement("return this")
+                        .build());
+            }
+        } catch (Exception e) {
+        }
+    }
+
+    static TypeName providerOf(ContributionBinding binding) {
+        return ParameterizedTypeName.get(ClassName.get(Provider.class), ClassName.get(binding.key().type()));
     }
 
     public static String getProvisionMethodName(ContributionBinding binding) {
@@ -734,4 +855,24 @@ final class Util {
     public static final ClassName TYPENAME_ANDROID_APPLICATION = ClassName.bestGuess("android.app.Application");
     public static final ClassName TYPENAME_DAGGER_ANDROID_APPLICATION = TYPENAME_ANDROID_APPLICATION.topLevelClassName().peerClass("DaggerApplication");
 
+    public static boolean generateTestDelegate(ContributionBinding binding) {
+        return bindingCanBeProvidedInTest(binding) && !binding.genericParameter() && !binding.ignoreStubGeneration();
+    }
+
+    public static void createMockField(TypeSpec.Builder classBuilder, ContributionBinding binding) {
+        try {
+            if (bindingSupportsTestDelegate(binding)) {
+                final String delegateFieldName = Util.getMockFieldName(binding.key());
+                final ClassName delegateType = getMockTypeName(binding.key());
+                final FieldSpec.Builder builder = FieldSpec.builder(delegateType, delegateFieldName);
+                builder.addModifiers(Modifier.PRIVATE);
+                final FieldSpec fieldSpec = builder.build();
+                classBuilder.addField(fieldSpec);
+            }
+        } catch (Exception e) {}
+    }
+
+    static String getMockMethodName(ClassName mockTypeName) {
+        return "with" + mockTypeName.simpleName().replaceAll("Delegate$", "Mock");
+    }
 }

@@ -1,27 +1,16 @@
 package dagger.internal.codegen;
 
-import com.google.auto.common.BasicAnnotationProcessor;
-import com.google.auto.common.MoreElements;
-import com.google.auto.common.MoreTypes;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.SetMultimap;
 import com.squareup.javapoet.ClassName;
-import com.squareup.javapoet.TypeName;
 import dagger.*;
 
 import javax.annotation.processing.Messager;
 import javax.lang.model.element.Element;
-import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
-import javax.lang.model.element.VariableElement;
-import javax.lang.model.type.MirroredTypeException;
 import javax.lang.model.util.Types;
-import javax.tools.Diagnostic;
 import java.lang.annotation.Annotation;
 import java.util.*;
-import java.util.function.Consumer;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public class InjectorProcessingStep implements BasicProcessor.ProcessingStep {
@@ -30,12 +19,12 @@ public class InjectorProcessingStep implements BasicProcessor.ProcessingStep {
     private final Messager messager;
     private TestRegistry testRegistry;
     private final AppConfig.Provider appConfigProvider;
+    private final TestClassGenerator.Factory testClassGeneratorFactory;
     private final InjectorGenerator injectorGenerator;
     private final ComponentDescriptor.Kind component;
     private final BindingGraph.Factory bindingGraphFactory;
     private final ComponentDescriptor.Factory componentDescriptorFactory;
     private DependencySpecGenerator dependencySpecGenerator;
-    private DependencyInjectorGenerator dependencyInjectorGenerator;
     private ProvisionBinding.Factory provisionBindingFactory;
     private ApplicationGenerator applicationGenerator;
     private StubGenerator stubGenerator;
@@ -45,12 +34,12 @@ public class InjectorProcessingStep implements BasicProcessor.ProcessingStep {
     public InjectorProcessingStep(Types types, Messager messager,
                                   AppConfig.Provider appConfigProvider,
                                   TestRegistry testRegistry,
+                                  TestClassGenerator.Factory testClassGeneratorFactory,
                                   InjectorGenerator injectorGenerator,
                                   ComponentDescriptor.Kind component, BindingGraph.Factory bindingGraphFactory,
                                   ComponentDescriptor.Factory componentDescriptorFactory,
                                   DecoratorGenerator decoratorGenerator,
                                   DependencySpecGenerator dependencySpecGenerator,
-                                  DependencyInjectorGenerator dependencyInjectorGenerator,
                                   ProvisionBinding.Factory provisionBindingFactory,
                                   ApplicationGenerator applicationGenerator,
                                   StubGenerator stubGenerator) {
@@ -58,12 +47,12 @@ public class InjectorProcessingStep implements BasicProcessor.ProcessingStep {
         this.messager = messager;
         this.appConfigProvider = appConfigProvider;
         this.testRegistry = testRegistry;
+        this.testClassGeneratorFactory = testClassGeneratorFactory;
         this.injectorGenerator = injectorGenerator;
         this.component = component;
         this.bindingGraphFactory = bindingGraphFactory;
         this.componentDescriptorFactory = componentDescriptorFactory;
         this.dependencySpecGenerator = dependencySpecGenerator;
-        this.dependencyInjectorGenerator = dependencyInjectorGenerator;
         this.provisionBindingFactory = provisionBindingFactory;
         this.applicationGenerator = applicationGenerator;
         this.stubGenerator = stubGenerator;
@@ -83,8 +72,6 @@ public class InjectorProcessingStep implements BasicProcessor.ProcessingStep {
         }
 
         final AppConfig appConfig = appConfigProvider.get();
-
-        testRegistry.setDebug(appConfig.debug());
 
         Set<Element> rejectedElements = new LinkedHashSet<>();
 
@@ -116,13 +103,16 @@ public class InjectorProcessingStep implements BasicProcessor.ProcessingStep {
                         });
 
             }
-            final ClassName decoratorClassName = ClassName.get(appConfig.getAppClass()).topLevelClassName().peerClass("Decorator");
+            final ClassName decoratorClassName = ClassName.get(appConfig.getAppClass()).topLevelClassName().peerClass("GraphDecorator");
             final DI di = new DI(appConfig, components, injectorTypeList, decoratorClassName);
             this.decoratorGenerator.generate(di, messager);
             this.applicationGenerator.generate(di, messager);
             this.dependencySpecGenerator.generate(di, messager);
-            //this.dependencyInjectorGenerator.generate(di, messager);
             this.injectorGenerator.generate(di, messager);
+            if (appConfig.debug() || appConfig.generateExtendedComponents()) {
+                final TestClassGenerator testClassGenerator = testClassGeneratorFactory.create(di.getAppClass());
+                testClassGenerator.generate(testRegistry, messager);
+            }
         } else {
             throw new IllegalStateException(rejectedElements.toString());
         }

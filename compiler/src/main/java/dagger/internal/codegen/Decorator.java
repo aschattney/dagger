@@ -15,18 +15,21 @@ import javax.lang.model.util.Elements;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class Decorator  extends SourceFileGenerator<ImmutableSet<BindingGraph>>{
 
     private BindingGraph.Factory factory;
     private ClassName testAppClassName;
     private TestRegistry testRegistry;
+    private final AppConfig.Provider appConfigProvider;
 
-    private Decorator(Filer filer, Elements elements, BindingGraph.Factory factory, ClassName testAppClassName, TestRegistry testRegistry) {
+    private Decorator(Filer filer, Elements elements, BindingGraph.Factory factory, ClassName testAppClassName, TestRegistry testRegistry, AppConfig.Provider appConfigProvider) {
         super(filer, elements);
         this.factory = factory;
         this.testAppClassName = testAppClassName;
         this.testRegistry = testRegistry;
+        this.appConfigProvider = appConfigProvider;
     }
 
     @Override
@@ -42,7 +45,7 @@ public class Decorator  extends SourceFileGenerator<ImmutableSet<BindingGraph>>{
         final ComponentDescriptor topDescriptor = getTopDescriptor(input.componentDescriptor());
         final TypeElement topComponent = topDescriptor.componentDefinitionType();
         final String componentName = input.componentDescriptor().componentDefinitionType().getSimpleName().toString();
-        return ClassName.get(topComponent).topLevelClassName().peerClass(componentName + "Decorator");
+        return ClassName.get(topComponent).topLevelClassName().peerClass(componentName + "DecoratorImpl");
     }
 
     @Override
@@ -95,7 +98,7 @@ public class Decorator  extends SourceFileGenerator<ImmutableSet<BindingGraph>>{
         }
         interfaceBuilder.addMethod(MethodSpec.methodBuilder("and")
                 .addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT)
-                .returns(testAppClassName.topLevelClassName().peerClass("Decorator"))
+                .returns(testAppClassName.topLevelClassName().peerClass("GraphDecorator"))
                 .build());
         return interfaceBuilder;
     }
@@ -111,8 +114,13 @@ public class Decorator  extends SourceFileGenerator<ImmutableSet<BindingGraph>>{
             final BindingGraph parentGraph = factory.create(topDescriptor);
             final ClassName name = ClassName.bestGuess(TriggerComponentInfo.resolveBuilderName(bindingGraph, parentGraph));
             final ClassName testName = ClassName.bestGuess(TriggerComponentInfo.resolveTestBuilderName(bindingGraph, parentGraph));
-            apply(builder, delegateRequirements, statements, counter, bindingGraph, CodeBlock.builder(), name);
-            applyTest(delegateRequirements, statements, CodeBlock.builder(), testName);
+            if (counter == 0) {
+                createFieldAndMethodImplementations(builder, bindingGraph, delegateRequirements);
+            }
+            apply(delegateRequirements, statements, CodeBlock.builder(), name);
+            if (appConfigProvider.get().generateExtendedComponents()) {
+                applyTest(delegateRequirements, statements, CodeBlock.builder(), testName);
+            }
             counter++;
         }
 
@@ -133,22 +141,40 @@ public class Decorator  extends SourceFileGenerator<ImmutableSet<BindingGraph>>{
 
     }
 
-    private void apply(TypeSpec.Builder builder, ImmutableSet<ContributionBinding> delegateRequirements, List<CodeBlock> statements, int counter, BindingGraph bindingGraph, CodeBlock.Builder codeBuilder, ClassName name) {
-        codeBuilder.beginControlFlow("if (builder instanceof $T)", name);
-        codeBuilder.add(CodeBlock.of("$T impl = ($T) builder;\n", name, name));
+    private void createFieldAndMethodImplementations(TypeSpec.Builder builder, BindingGraph bindingGraph, ImmutableSet<ContributionBinding> delegateRequirements) {
         TypeName interfaceName = getAccessorTypeName(ClassName.bestGuess(testAppClassName.toString()),
                 bindingGraph.componentDescriptor().componentDefinitionType().getSimpleName().toString());
         for (ContributionBinding contributionBinding : delegateRequirements) {
-            if (counter == 0) {
-                Util.createDelegateField(builder, contributionBinding);
-                Util.createDelegateMethodImplementation(interfaceName, builder, contributionBinding);
-                if (!contributionBinding.dependencies().isEmpty()) {
-                    Util.createMockMethodImplementation(interfaceName, builder, contributionBinding);
-                }
+            Util.createDelegateField(builder, contributionBinding);
+            Util.createDelegateMethodImplementation(interfaceName, builder, contributionBinding);
+            if (!contributionBinding.dependencies().isEmpty()) {
+                Util.createMockField(builder, contributionBinding);
+                Util.createMockMethodImplementation(interfaceName, builder, contributionBinding);
             }
+        }
+    }
+
+    private void apply(ImmutableSet<ContributionBinding> delegateRequirements, List<CodeBlock> statements, CodeBlock.Builder codeBuilder, ClassName name) {
+
+        delegateRequirements = ImmutableSet.copyOf(delegateRequirements.stream()
+                .filter(Util::bindingSupportsTestDelegate)
+                .collect(Collectors.toList()));
+
+        if (delegateRequirements.isEmpty()) {
+            return;
+        }
+
+        codeBuilder.beginControlFlow("if (builder instanceof $T)", name);
+        codeBuilder.add(CodeBlock.of("$T impl = ($T) builder;\n", name, name));
+        for (ContributionBinding contributionBinding : delegateRequirements) {
             final String delegateFieldName = Util.getDelegateFieldName(contributionBinding.key());
             final ClassName delegateTypeName = Util.getDelegateTypeName(contributionBinding.key());
             codeBuilder.add(CodeBlock.of("impl.$L(this.$L);\n", Util.getDelegateMethodName(delegateTypeName), delegateFieldName));
+            if (!contributionBinding.dependencies().isEmpty()) {
+                final String mockFieldName = Util.getMockFieldName(contributionBinding.key());
+                final ClassName mockTypeName = Util.getMockTypeName(contributionBinding.key());
+                codeBuilder.add(CodeBlock.of("impl.$L(this.$L);\n", Util.getMockMethodName(mockTypeName), mockFieldName));
+            }
         }
         codeBuilder.add(CodeBlock.of("return impl;\n"));
         codeBuilder.endControlFlow();
@@ -162,6 +188,11 @@ public class Decorator  extends SourceFileGenerator<ImmutableSet<BindingGraph>>{
             final String delegateFieldName = Util.getDelegateFieldName(contributionBinding.key());
             final ClassName delegateTypeName = Util.getDelegateTypeName(contributionBinding.key());
             codeBuilder.add(CodeBlock.of("impl.$L(this.$L);\n", Util.getDelegateMethodName(delegateTypeName), delegateFieldName));
+            if (!contributionBinding.dependencies().isEmpty()) {
+                final String mockFieldName = Util.getMockFieldName(contributionBinding.key());
+                final ClassName mockTypeName = Util.getMockTypeName(contributionBinding.key());
+                codeBuilder.add(CodeBlock.of("impl.$L(this.$L);\n", Util.getMockMethodName(mockTypeName), mockFieldName));
+            }
         }
         codeBuilder.add(CodeBlock.of("return impl;\n"));
         codeBuilder.endControlFlow();
@@ -182,7 +213,7 @@ public class Decorator  extends SourceFileGenerator<ImmutableSet<BindingGraph>>{
     }
 
     public static ClassName getAccessorTypeName(ClassName app, String componentName) {
-        return app.nestedClass(componentName + "Accessor");
+        return app.nestedClass(componentName + "Decorator");
     }
 
     private static ComponentDescriptor getTopDescriptor(ComponentDescriptor descriptor) {
@@ -198,16 +229,18 @@ public class Decorator  extends SourceFileGenerator<ImmutableSet<BindingGraph>>{
         private final Elements elements;
         private final BindingGraph.Factory bindingGraphFactory;
         private TestRegistry testRegistry;
+        private final AppConfig.Provider appConfigProvider;
 
-        Factory(Filer filer, Elements elements, BindingGraph.Factory bindingGraphFactory, TestRegistry testRegistry) {
+        Factory(Filer filer, Elements elements, BindingGraph.Factory bindingGraphFactory, TestRegistry testRegistry, AppConfig.Provider appConfigProvider) {
             this.filer = filer;
             this.elements = elements;
             this.bindingGraphFactory = bindingGraphFactory;
             this.testRegistry = testRegistry;
+            this.appConfigProvider = appConfigProvider;
         }
 
         public Decorator create(ClassName testAppClassName) {
-            return new Decorator(filer, elements, bindingGraphFactory, testAppClassName, testRegistry);
+            return new Decorator(filer, elements, bindingGraphFactory, testAppClassName, testRegistry, appConfigProvider);
         }
 
     }

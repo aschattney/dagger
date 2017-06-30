@@ -42,12 +42,10 @@ import static dagger.internal.codegen.MemberSelect.emptySetProvider;
 import static dagger.internal.codegen.MemberSelect.localField;
 import static dagger.internal.codegen.MemberSelect.noOpMembersInjector;
 import static dagger.internal.codegen.MemberSelect.staticMethod;
+import static dagger.internal.codegen.SourceFiles.*;
 import static dagger.internal.codegen.Util.*;
 import static dagger.internal.codegen.MoreAnnotationMirrors.getTypeValue;
 import static dagger.internal.codegen.Scope.reusableScope;
-import static dagger.internal.codegen.SourceFiles.bindingTypeElementTypeVariableNames;
-import static dagger.internal.codegen.SourceFiles.generatedClassNameForBinding;
-import static dagger.internal.codegen.SourceFiles.membersInjectorNameForType;
 import static dagger.internal.codegen.TypeNames.DELEGATE_FACTORY;
 import static dagger.internal.codegen.TypeNames.DOUBLE_CHECK;
 import static dagger.internal.codegen.TypeNames.INSTANCE_FACTORY;
@@ -160,6 +158,7 @@ abstract class AbstractComponentWriter implements HasBindingMembers {
   protected final MethodSpec.Builder constructor = constructorBuilder();
   protected Optional<ClassName> builderName = Optional.empty();
   private Map<Key, String> delegateFieldNames = new HashMap<>();
+  private Map<Key, String> mockFieldNames = new HashMap<>();
   private final OptionalFactories optionalFactories;
   private boolean done;
 
@@ -464,6 +463,7 @@ abstract class AbstractComponentWriter implements HasBindingMembers {
 
     for (ContributionBinding contributionBinding : graph.delegateRequirements()) {
       createDelegateFieldAndMethod(builderName(), componentBuilder, contributionBinding, delegateFieldNames, false);
+      createMockFieldAndMethod(builderName(), componentBuilder, contributionBinding, mockFieldNames, false);
     }
 
     return builderFields.build();
@@ -1221,6 +1221,7 @@ abstract class AbstractComponentWriter implements HasBindingMembers {
   private CodeBlock initializeFactoryForContributionBinding(ContributionBinding binding) {
     TypeName bindingKeyTypeName = TypeName.get(binding.key().type());
     final String delegateFieldName = delegateFieldNames.get(binding.key());
+    final String mockFieldName = mockFieldNames.get(binding.key());
     switch (binding.bindingKind()) {
       case COMPONENT:
         return CodeBlock.of(
@@ -1354,7 +1355,7 @@ abstract class AbstractComponentWriter implements HasBindingMembers {
       case PROVISION:
         {
           List<CodeBlock> arguments =
-              Lists.newArrayListWithCapacity(binding.explicitDependencies().size() + 2);
+              Lists.newArrayListWithCapacity(binding.explicitDependencies().size() + 3);
           if (binding.requiresModuleInstance()) {
             arguments.add(
                 getComponentContributionExpression(
@@ -1363,6 +1364,9 @@ abstract class AbstractComponentWriter implements HasBindingMembers {
           arguments.addAll(getDependencyArguments(binding));
 
           if (delegateFieldName != null && bindingSupportsTestDelegate(binding)) {
+            if (mockFieldName != null) {
+              arguments.add(0, CodeBlock.of("builder.$L", mockFieldName));
+            }
             arguments.add(0, CodeBlock.of("builder.$L", delegateFieldName));
           }
 

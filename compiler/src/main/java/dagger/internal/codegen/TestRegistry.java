@@ -40,18 +40,6 @@ public class TestRegistry {
         return encodedClasses.iterator();
     }
 
-    public byte[] decodeClass(String value) {
-        return Base64.getDecoder().decode(value);
-    }
-
-    public void setDebug(boolean debug) {
-        this.debug = debug;
-    }
-
-    public boolean isDebug() {
-        return this.debug;
-    }
-
     public static class EncodedClass {
 
         public EncodedClass(String qualifiedName, String[] encodedParts) {
