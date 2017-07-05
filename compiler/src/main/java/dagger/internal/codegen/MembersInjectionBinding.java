@@ -32,6 +32,8 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.LinkedHashMultimap;
 import com.google.common.collect.SetMultimap;
+
+import java.lang.reflect.Member;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
@@ -200,6 +202,7 @@ abstract class MembersInjectionBinding extends Binding {
       return new AutoValue_MembersInjectionBinding(
           key,
           dependencies,
+          false,
           typeElement,
           hasNonDefaultTypeParameters(typeElement, key.type(), types)
               ? Optional.of(

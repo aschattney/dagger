@@ -37,7 +37,7 @@ import com.google.common.collect.Sets;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import dagger.internal.codegen.ComponentDescriptor.BuilderRequirementMethod;
 import java.util.Optional;
-import dagger.AllowStubGeneration;
+import dagger.Replaceable;
 
 import javax.annotation.CheckReturnValue;
 import javax.inject.Inject;
@@ -76,6 +76,11 @@ abstract class ProvisionBinding extends ContributionBinding {
   @Override
   public BindingType bindingType() {
     return BindingType.PROVISION;
+  }
+
+  @Override
+  public boolean shouldGenerateDelegate() {
+    return Util.bindingSupportsTestDelegate(this) && bindingKind() != Kind.SYNTHETIC_DELEGATE_BINDING;
   }
 
   @Override
@@ -158,7 +163,7 @@ abstract class ProvisionBinding extends ContributionBinding {
       Optional<DependencyRequest> membersInjectionRequest =
           membersInjectionRequest(enclosingCxtorType);
 
-      final boolean ignoreStubGeneration = constructorElement.getAnnotation(AllowStubGeneration.class) == null;
+      final boolean ignoreStubGeneration = constructorElement.getAnnotation(Replaceable.class) == null;
       ProvisionBinding.Builder builder =
           ProvisionBinding.builder()
               .contributionType(ContributionType.UNIQUE)
@@ -210,7 +215,7 @@ abstract class ProvisionBinding extends ContributionBinding {
           dependencyRequestFactory.forRequiredResolvedVariables(
               providesMethod.getParameters(),
               resolvedMethod.getParameterTypes());
-      final boolean ignoreStubGeneration = genericParameter || providesMethod.getAnnotation(AllowStubGeneration.class) == null;
+      final boolean ignoreStubGeneration = genericParameter || providesMethod.getAnnotation(Replaceable.class) == null;
       return ProvisionBinding.builder()
           .contributionType(ContributionType.fromBindingMethod(providesMethod))
           .bindingElement(providesMethod)
@@ -290,7 +295,7 @@ abstract class ProvisionBinding extends ContributionBinding {
       checkArgument(builderMethod.getKind().equals(METHOD));
       checkArgument(builderMethod.getParameters().size() == 1);
       VariableElement parameterElement = Iterables.getOnlyElement(builderMethod.getParameters());
-      final boolean ignoreStubGeneration = builderMethod.getAnnotation(AllowStubGeneration.class) == null;
+      final boolean ignoreStubGeneration = builderMethod.getAnnotation(Replaceable.class) == null;
       return ProvisionBinding.builder()
           .contributionType(ContributionType.UNIQUE)
           .bindingElement(builderMethod)
@@ -309,7 +314,7 @@ abstract class ProvisionBinding extends ContributionBinding {
       checkArgument(subcomponentBuilderMethod.getParameters().isEmpty());
       DeclaredType declaredContainer = asDeclared(contributedBy.asType());
       final DependencyRequest request = dependencyRequestFactory.plantDependency(application);
-      final boolean ignoreStubGeneration = subcomponentBuilderMethod.getAnnotation(AllowStubGeneration.class) == null;
+      final boolean ignoreStubGeneration = subcomponentBuilderMethod.getAnnotation(Replaceable.class) == null;
       return ProvisionBinding.builder()
           .contributionType(ContributionType.UNIQUE)
           .ignoreStubGeneration(ignoreStubGeneration)
@@ -347,12 +352,19 @@ abstract class ProvisionBinding extends ContributionBinding {
     }
 
     private ProvisionBinding.Builder delegateBuilder(DelegateDeclaration delegateDeclaration) {
+      boolean ignoreStubGeneration = true;
+      final Optional<ExecutableElement> element = delegateDeclaration.bindingElement();
+      if (element.isPresent()) {
+        ignoreStubGeneration = element.get().getAnnotation(Replaceable.class) == null;
+      }
       return ProvisionBinding.builder()
           .contributionType(delegateDeclaration.contributionType())
           .bindingElement(delegateDeclaration.bindingElement().get())
           .contributingModule(delegateDeclaration.contributingModule().get())
           .key(keyFactory.forDelegateBinding(delegateDeclaration, Provider.class))
           .explicitDependencies(delegateDeclaration.delegateRequest())
+          .ignoreStubGeneration(ignoreStubGeneration)
+          .generateTestDelegate(!ignoreStubGeneration && appConfigProvider.get().debug())
           .wrappedMapKey(delegateDeclaration.wrappedMapKey())
           .bindingKind(Kind.SYNTHETIC_DELEGATE_BINDING)
           .scope(Scope.uniqueScopeOf(delegateDeclaration.bindingElement().get()));

@@ -879,9 +879,7 @@ abstract class BindingGraph {
       private ImmutableSet<ContributionBinding> getLocalExplicitBindings(Key key) {
         return new ImmutableSet.Builder<ContributionBinding>()
             .addAll(explicitBindings.get(key))
-            .addAll(
-                createDelegateBindings(
-                    delegateDeclarations.get(keyFactory.convertToDelegateKey(key))))
+            .addAll(createDelegateBindings(delegateDeclarations.get(keyFactory.convertToDelegateKey(key))))
             .build();
       }
 

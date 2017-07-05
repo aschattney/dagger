@@ -73,6 +73,11 @@ abstract class ContributionBinding extends Binding implements HasContributionTyp
     return unwrapOptionalEquivalence(wrappedMapKey());
   }
 
+  @Override
+  public boolean shouldGenerateDelegate() {
+    return !ignoreStubGeneration();
+  }
+
   /**
    * The kind of contribution this binding represents. Defines which elements can specify this kind
    * of contribution.

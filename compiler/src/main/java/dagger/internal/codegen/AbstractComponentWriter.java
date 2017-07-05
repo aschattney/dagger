@@ -1102,15 +1102,13 @@ abstract class AbstractComponentWriter implements HasBindingMembers {
             CodeBlock.of(
                 "($T) $L",
                 binding.bindingType().frameworkClass(),
-                getMemberSelect(
-                        Iterables.getOnlyElement(binding.explicitDependencies()).bindingKey())
-                    .getExpressionFor(name));
+                getMemberSelect(Iterables.getOnlyElement(binding.explicitDependencies()).bindingKey()).getExpressionFor(name)
+            );
         return Optional.of(
             CodeBlocks.concat(
                 ImmutableList.of(
                     initializeDeferredDependencies(binding),
-                    initializeMember(
-                        bindingKey, decorateForScope(delegatingCodeBlock, binding.scope())))));
+                    initializeDelegateMember(bindingKey, decorateForScope(delegatingCodeBlock, binding.scope())))));
       case SINGLETON_INSTANCE:
         if (!binding.scope().isPresent()) {
           return Optional.empty();
@@ -1224,6 +1222,43 @@ abstract class AbstractComponentWriter implements HasBindingMembers {
     return CodeBlocks.concat(initializations.build());
   }
 
+  private CodeBlock initializeDelegateMember(BindingKey bindingKey, CodeBlock initializationCodeBlock) {
+    final String delegateFieldName = delegateFieldNames.get(bindingKey.key());
+    ImmutableList.Builder<CodeBlock> initializations = ImmutableList.builder();
+
+    CodeBlock memberSelect = getMemberSelectExpression(bindingKey);
+    CodeBlock delegateFactoryVariable = delegateFactoryVariableExpression(bindingKey);
+    if (getInitializationState(bindingKey).equals(DELEGATED)) {
+        initializations.add(
+                CodeBlock.of(
+                        "$1T $2L = ($1T) $3L;", DELEGATE_FACTORY, delegateFactoryVariable, memberSelect));
+    }
+    if (!getInitializationState(bindingKey).equals(DELEGATED) && delegateFieldName != null) {
+        final TypeName interfaceTypeName = ClassName.get(bindingKey.key().type());
+        final CodeBlock.Builder codeBuilder = CodeBlock.builder();
+        codeBuilder.beginControlFlow("if (builder.$L != null)", delegateFieldName);
+        codeBuilder.add("$1L = new javax.inject.Provider<$2T>() {\n" +
+              "   public $2T get() {\n" +
+              "     return builder.$3L.get();\n" +
+              "   }\n" +
+              "};\n", memberSelect, interfaceTypeName, delegateFieldName);
+      codeBuilder.nextControlFlow("else");
+      codeBuilder.add(CodeBlock.of("this.$L = $L;", memberSelect, initializationCodeBlock));
+      codeBuilder.endControlFlow();
+      initializations.add(codeBuilder.build());
+    }else {
+      initializations.add(
+              CodeBlock.of("this.$L = $L;", memberSelect, initializationCodeBlock));
+    }
+    if (getInitializationState(bindingKey).equals(DELEGATED)) {
+      initializations.add(
+              CodeBlock.of("$L.setDelegatedProvider($L);", delegateFactoryVariable, memberSelect));
+    }
+    setInitializationState(bindingKey, INITIALIZED);
+
+    return CodeBlocks.concat(initializations.build());
+  }
+
   private CodeBlock delegateFactoryVariableExpression(BindingKey key) {
     return CodeBlock.of("$LDelegate", getMemberSelectExpression(key).toString().replace('.', '_'));
   }
@@ -1256,7 +1291,7 @@ abstract class AbstractComponentWriter implements HasBindingMembers {
           // We can easily include the raw type (no generics) + annotation type (no values),
           // using .class & String.format -- but that wouldn't be the whole story.
           // What should we do?
-/*<<<<<<< HEAD:compiler/src/main/java/dagger/internal/codegen/AbstractComponentWriter.java
+/*
 
           CodeBlock.Builder getMethodBodyBuilder = CodeBlock.builder();
           getMethodBodyBuilder.add(getCodeBlock(binding, callFactoryMethod));
@@ -1318,7 +1353,6 @@ abstract class AbstractComponentWriter implements HasBindingMembers {
               factoryName,
               getComponentContributionExpression(
                   ComponentRequirement.forDependency(dependencyType.asType())));
-//>>>>>>> upstream/master:java/dagger/internal/codegen/AbstractComponentWriter.java
         }
 
       case SUBCOMPONENT_BUILDER:
@@ -1373,7 +1407,7 @@ abstract class AbstractComponentWriter implements HasBindingMembers {
           }
           arguments.addAll(getDependencyArguments(binding));
 
-          if (delegateFieldName != null && bindingSupportsTestDelegate(binding)) {
+          if (delegateFieldName != null && Util.bindingSupportsTestDelegate(binding)) {
             if (mockFieldName != null) {
               arguments.add(0, CodeBlock.of("builder.$L", mockFieldName));
             }

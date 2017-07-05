@@ -641,7 +641,8 @@ final class Util {
         final ImmutableList<ContributionBinding.Kind> kinds = ImmutableList.of(
                 ContributionBinding.Kind.PROVISION,
                 ContributionBinding.Kind.INJECTION,
-                ContributionBinding.Kind.BUILDER_BINDING
+                ContributionBinding.Kind.BUILDER_BINDING,
+                ContributionBinding.Kind.SYNTHETIC_DELEGATE_BINDING
         );
         final ContributionBinding.Kind kind = binding.bindingKind();
         return kinds.contains(kind);

@@ -92,6 +92,8 @@ abstract class Binding extends BindingDeclaration implements HasBindingType {
         : Sets.union(implicitDependencies, explicitDependencies());
   }
 
+  protected abstract boolean shouldGenerateDelegate();
+
   private final Supplier<ImmutableList<FrameworkDependency>> frameworkDependencies =
       memoize(
           () ->

@@ -2,9 +2,7 @@ package dagger.internal.codegen;
 
 import java.io.IOException;
 import java.util.Optional;
-
 import com.squareup.javapoet.*;
-
 import javax.annotation.processing.Filer;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.Modifier;
@@ -13,7 +11,6 @@ import javax.lang.model.util.Types;
 import java.util.*;
 import static dagger.internal.codegen.SourceFiles.generateBindingFieldsForDependencies;
 import static dagger.internal.codegen.TypeNames.*;
-import static dagger.internal.codegen.Util.bindingSupportsTestDelegate;
 
 
 public class StubGenerator extends SourceFileGenerator<ProvisionBinding> {
@@ -41,7 +38,7 @@ public class StubGenerator extends SourceFileGenerator<ProvisionBinding> {
     @Override
     Optional<TypeSpec.Builder> write(ClassName generatedTypeName, ProvisionBinding input) {
         final String o = generatedTypeName.packageName() + "." + generatedTypeName.simpleName();
-        if (generated.contains(o) || !bindingSupportsTestDelegate(input)) {
+        if (generated.contains(o) || !input.shouldGenerateDelegate()) {
             return Optional.empty();
         }
         generated.add(o);
