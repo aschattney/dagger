@@ -14,13 +14,9 @@ import java.util.List;
 
 import static com.google.common.io.ByteStreams.toByteArray;
 
-/**
- * Created by Andy on 07.05.2017.
- */
 public class TestRegistry {
 
     private List<EncodedClass> encodedClasses = new ArrayList<>();
-    private boolean debug = false;
 
     public void addEncodedClass(ClassName className, JavaFile javaFile) throws IOException {
         final JavaFileObject javaFileObject = javaFile.toJavaFileObject();

@@ -261,7 +261,8 @@ public final class ComponentProcessor extends BasicProcessor {
                 new DependencySpecGenerator(filer, elements, componentDescriptorFactory, bindingGraphFactory),
                 provisionBindingFactory,
                 new ApplicationGenerator(filer, types, elements, bindingGraphFactory, componentDescriptorFactory),
-                stubGenerator
+                stubGenerator,
+                new AnnotationGenerator(filer, elements, testRegistry)
         )
     );
   }

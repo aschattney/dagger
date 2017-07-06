@@ -67,6 +67,10 @@
             <version>24.2.0</version>
             <scope>provided</scope>
         </dependency>
+        <dependency>
+            <groupId>javax.inject</groupId>
+            <artifactId>javax.inject</artifactId>
+        </dependency>
     </dependencies>
 
     <build>

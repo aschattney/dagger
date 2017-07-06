@@ -30,6 +30,7 @@ public class InjectorProcessingStep implements BasicProcessor.ProcessingStep {
     private StubGenerator stubGenerator;
     private HashSet<TypeElement> components = new HashSet<>();
     private DecoratorGenerator decoratorGenerator;
+    private AnnotationGenerator annotationGenerator;
 
     public InjectorProcessingStep(Types types, Messager messager,
                                   AppConfig.Provider appConfigProvider,
@@ -42,7 +43,8 @@ public class InjectorProcessingStep implements BasicProcessor.ProcessingStep {
                                   DependencySpecGenerator dependencySpecGenerator,
                                   ProvisionBinding.Factory provisionBindingFactory,
                                   ApplicationGenerator applicationGenerator,
-                                  StubGenerator stubGenerator) {
+                                  StubGenerator stubGenerator,
+                                  AnnotationGenerator annotationGenerator) {
         this.types = types;
         this.messager = messager;
         this.appConfigProvider = appConfigProvider;
@@ -57,6 +59,7 @@ public class InjectorProcessingStep implements BasicProcessor.ProcessingStep {
         this.applicationGenerator = applicationGenerator;
         this.stubGenerator = stubGenerator;
         this.decoratorGenerator = decoratorGenerator;
+        this.annotationGenerator = annotationGenerator;
     }
 
     @Override
@@ -90,6 +93,7 @@ public class InjectorProcessingStep implements BasicProcessor.ProcessingStep {
             for (TypeElement component : components) {
                 final ComponentDescriptor componentDescriptor = componentDescriptorFactory.forComponent(component);
                 final BindingGraph bindingGraph = bindingGraphFactory.create(componentDescriptor);
+                this.createAnnotations(bindingGraph);
                 final ImmutableSet<ComponentDescriptor> componentDescriptors = bindingGraph.componentDescriptors();
                 componentDescriptors
                         .stream()
@@ -118,6 +122,13 @@ public class InjectorProcessingStep implements BasicProcessor.ProcessingStep {
         }
 
         return rejectedElements;
+    }
+
+    private void createAnnotations(BindingGraph bindingGraph) {
+        annotationGenerator.generate(bindingGraph, messager);
+        for (BindingGraph graph : bindingGraph.subgraphs()) {
+            this.createAnnotations(graph);
+        }
     }
 
 }

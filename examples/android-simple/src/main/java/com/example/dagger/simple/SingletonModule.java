@@ -5,9 +5,6 @@ import dagger.Provides;
 
 import javax.inject.Named;
 
-/**
- * Created by Andy on 04.05.2017.
- */
 @Module
 public abstract class SingletonModule {
 
