@@ -247,9 +247,7 @@ class FactoryGenerator extends SourceFileGenerator<ProvisionBinding> {
         createMethod = Optional.empty();
     }
 
-    if (constructorBuilder.isPresent()) {
-      factoryBuilder.addMethod(constructorBuilder.get().build());
-    }
+    constructorBuilder.ifPresent(builder -> factoryBuilder.addMethod(builder.build()));
 
     List<CodeBlock> parameters = Lists.newArrayList();
     for (DependencyRequest dependency : binding.explicitDependencies()) {

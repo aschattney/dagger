@@ -29,6 +29,7 @@ import static dagger.internal.codegen.ContributionBinding.Kind.SYNTHETIC_MULTIBO
 import static dagger.internal.codegen.ContributionBinding.Kind.SYNTHETIC_OPTIONAL_BINDING;
 import static dagger.internal.codegen.Key.indexByKey;
 import static dagger.internal.codegen.Scope.reusableScope;
+import static dagger.internal.codegen.Scope.uniqueScopeOf;
 import static dagger.internal.codegen.Util.toImmutableSet;
 import static java.util.function.Predicate.isEqual;
 import static javax.lang.model.element.Modifier.ABSTRACT;
@@ -56,8 +57,10 @@ import dagger.producers.Producer;
 
 import java.util.*;
 import java.util.concurrent.ExecutionException;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
+import javax.annotation.processing.Messager;
 import javax.inject.Inject;
 import javax.inject.Provider;
 import javax.lang.model.element.AnnotationMirror;
@@ -225,7 +228,9 @@ abstract class BindingGraph {
     private final Key.Factory keyFactory;
     private final ProvisionBinding.Factory provisionBindingFactory;
     private final ProductionBinding.Factory productionBindingFactory;
+    private final StubGenerator stubGenerator;
     private AppConfig.Provider appConfigProvider;
+    private final Messager messager;
     private TypeMirror application;
 
     Factory(
@@ -234,13 +239,17 @@ abstract class BindingGraph {
             Key.Factory keyFactory,
             ProvisionBinding.Factory provisionBindingFactory,
             ProductionBinding.Factory productionBindingFactory,
-            AppConfig.Provider appConfigProvider) {
+            StubGenerator stubGenerator,
+            AppConfig.Provider appConfigProvider,
+            Messager messager) {
       this.elements = elements;
       this.injectBindingRegistry = injectBindingRegistry;
       this.keyFactory = keyFactory;
       this.provisionBindingFactory = provisionBindingFactory;
       this.productionBindingFactory = productionBindingFactory;
+      this.stubGenerator = stubGenerator;
       this.appConfigProvider = appConfigProvider;
+      this.messager = messager;
     }
 
     BindingGraph create(ComponentDescriptor componentDescriptor) {
@@ -385,7 +394,7 @@ abstract class BindingGraph {
           componentDescriptor,
           requestResolver.getResolvedBindings(),
           subgraphs.build(),
-          MoreTypes.equivalence().wrap(application),
+          Util.wrap(application),
           requestResolver.getOwnedModules());
     }
 
@@ -521,10 +530,26 @@ abstract class BindingGraph {
                 .map(Optional::get)
                 .forEach(contributionBindings::add);
 
-            if (bindingKey.key().type().toString().equals(application.toString())) {
+            if (contributionBindings.isEmpty()) {
+              injectBindingRegistry.delegateDeclarations().stream()
+                      .map(this::createDelegateBinding)
+                      .filter(binding ->  bindingKey.key().equals(binding.key()))
+                      .filter(binding -> !binding.scope().isPresent() || binding.scope().equals(componentDescriptor.scopes().stream().findFirst()))
+                      .map(binding -> {
+                        stubGenerator.generate((ProvisionBinding) binding, messager);
+                        return binding;
+                      })
+                      .forEach(contributionBindings::add);
+            }
+
+            if (bindingKey.key().type().toString().equals(application.toString()) && contributionBindings.isEmpty()) {
               explicitBindingsSet.stream()
                       .filter(contributionBinding -> contributionBinding.key().type().toString().equals(application.toString()))
                       .findFirst().ifPresent(contributionBindings::add);
+            }
+
+            if (bindingKey.key().qualifier().isPresent() && bindingKey.key().qualifier().get().toString().toLowerCase().contains("api")) {
+              int a = 0;
             }
 
             return ResolvedBindings.forContributionBindings(
@@ -712,7 +737,11 @@ abstract class BindingGraph {
           ImmutableSet<DelegateDeclaration> delegateDeclarations) {
         ImmutableSet.Builder<ContributionBinding> builder = ImmutableSet.builder();
         for (DelegateDeclaration delegateDeclaration : delegateDeclarations) {
-          builder.add(createDelegateBinding(delegateDeclaration));
+          final ContributionBinding delegateBinding = createDelegateBinding(delegateDeclaration);
+          if (delegateBinding instanceof ProvisionBinding){
+            stubGenerator.generate((ProvisionBinding) delegateBinding, messager);
+          }
+          builder.add(delegateBinding);
         }
         return builder.build();
       }

@@ -54,7 +54,7 @@ abstract class Scope {
    */
   static Scope scope(AnnotationMirror scopeAnnotation) {
     checkArgument(isScope(scopeAnnotation));
-    return new AutoValue_Scope(AnnotationMirrors.equivalence().wrap(scopeAnnotation));
+    return new AutoValue_Scope(Util.wrap(scopeAnnotation));
   }
 
   /** Returns {@code true} if {@code scopeAnnotation} is a {@link javax.inject.Scope} annotation. */

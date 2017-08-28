@@ -126,7 +126,7 @@ abstract class MapType {
    */
   static MapType from(TypeMirror type) {
     checkArgument(isMap(type), "%s is not a Map", type);
-    return new AutoValue_MapType(MoreTypes.equivalence().wrap(MoreTypes.asDeclared(type)));
+    return new AutoValue_MapType(Util.wrap(MoreTypes.asDeclared(type)));
   }
 
   /**

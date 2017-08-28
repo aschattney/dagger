@@ -279,7 +279,7 @@ abstract class ContributionBinding extends Binding implements HasContributionTyp
         Multimaps.index(
             mapBindings,
             mapBinding ->
-                MoreTypes.equivalence().wrap(mapBinding.mapKey().get().getAnnotationType())));
+                Util.wrap(mapBinding.mapKey().get().getAnnotationType())));
   }
 
   /**
@@ -292,7 +292,7 @@ abstract class ContributionBinding extends Binding implements HasContributionTyp
 
     abstract B bindingElement(Element bindingElement);
 
-    abstract B contributingModule(TypeElement contributingModule);
+    abstract B contributingModule(Optional<TypeElement> contributingModule);
 
     abstract B key(Key key);
 

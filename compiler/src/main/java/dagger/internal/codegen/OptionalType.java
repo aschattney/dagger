@@ -129,7 +129,7 @@ abstract class OptionalType {
    */
   static OptionalType from(TypeMirror type) {
     checkArgument(isOptional(type), "%s must be an Optional", type);
-    return new AutoValue_OptionalType(MoreTypes.equivalence().wrap(MoreTypes.asDeclared(type)));
+    return new AutoValue_OptionalType(Util.wrap(MoreTypes.asDeclared(type)));
   }
 
   /**

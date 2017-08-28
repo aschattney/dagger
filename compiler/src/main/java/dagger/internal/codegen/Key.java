@@ -135,7 +135,7 @@ abstract class Key implements Serializable{
     abstract Builder wrappedType(Equivalence.Wrapper<TypeMirror> wrappedType);
 
     Builder type(TypeMirror type) {
-      return wrappedType(MoreTypes.equivalence().wrap(checkNotNull(type)));
+      return wrappedType(Util.wrap(checkNotNull(type)));
     }
 
     abstract Builder wrappedQualifier(
@@ -144,7 +144,7 @@ abstract class Key implements Serializable{
     abstract Builder wrappedQualifier(Equivalence.Wrapper<AnnotationMirror> wrappedQualifier);
 
     Builder qualifier(AnnotationMirror qualifier) {
-      return wrappedQualifier(AnnotationMirrors.equivalence().wrap(checkNotNull(qualifier)));
+      return wrappedQualifier(Util.wrap(checkNotNull(qualifier)));
     }
 
     Builder qualifier(Optional<AnnotationMirror> qualifier) {

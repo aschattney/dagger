@@ -105,7 +105,7 @@ abstract class SetType {
    */
   static SetType from(TypeMirror type) {
     checkArgument(isSet(type), "%s must be a Set", type);
-    return new AutoValue_SetType(MoreTypes.equivalence().wrap(MoreTypes.asDeclared(type)));
+    return new AutoValue_SetType(Util.wrap(MoreTypes.asDeclared(type)));
   }
 
   /**

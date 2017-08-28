@@ -401,6 +401,10 @@ abstract class DependencyRequest {
       return newDependencyRequest(Optional.of(variableElement), resolvedType, qualifier, Optional.empty());
     }
 
+    DependencyRequest forInlinedBinds(Element sourceElement, TypeMirror destinationType) {
+      return newDependencyRequest(Optional.of(sourceElement), destinationType, Optional.empty(), Optional.empty());
+    }
+
     DependencyRequest forComponentProvisionMethod(ExecutableElement provisionMethod,
         ExecutableType provisionMethodType) {
       checkNotNull(provisionMethod);

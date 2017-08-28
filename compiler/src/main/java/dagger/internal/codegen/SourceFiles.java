@@ -102,6 +102,23 @@ class SourceFiles {
     return bindingFields.build();
   }
 
+  static ImmutableMap<BindingKey, FrameworkField> generateBindingFieldsForStubDependencies(
+          ProvisionBinding binding) {
+    checkArgument(!binding.unresolved().isPresent(), "binding must be unresolved: %s", binding);
+
+    ImmutableMap.Builder<BindingKey, FrameworkField> bindingFields = ImmutableMap.builder();
+    for (Binding.DependencyAssociation dependencyAssociation : binding.stubDependencyAssocations()) {
+      FrameworkDependency frameworkDependency = dependencyAssociation.frameworkDependency();
+      bindingFields.put(
+              frameworkDependency.bindingKey(),
+              FrameworkField.create(
+                      ClassName.get(frameworkDependency.frameworkClass()),
+                      TypeName.get(frameworkDependency.bindingKey().key().type()),
+                      fieldNameForDependency(dependencyAssociation.dependencyRequests())));
+    }
+    return bindingFields.build();
+  }
+
   private static String fieldNameForDependency(ImmutableSet<DependencyRequest> dependencyRequests) {
     // collect together all of the names that we would want to call the provider
     ImmutableSet<String> dependencyNames =

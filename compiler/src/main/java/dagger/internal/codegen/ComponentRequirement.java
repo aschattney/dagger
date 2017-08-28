@@ -156,7 +156,7 @@ abstract class ComponentRequirement {
   static ComponentRequirement forDependency(TypeMirror type) {
     return new dagger.internal.codegen.AutoValue_ComponentRequirement(
         Kind.DEPENDENCY,
-        MoreTypes.equivalence().wrap(checkNotNull(type)),
+        Util.wrap(checkNotNull(type)),
         Optional.empty(),
         Optional.empty(),
         simpleVariableName(MoreTypes.asTypeElement(type)),
@@ -167,7 +167,7 @@ abstract class ComponentRequirement {
     final Module annotation = MoreTypes.asTypeElement(type).getAnnotation(Module.class);
     return new dagger.internal.codegen.AutoValue_ComponentRequirement(
         Kind.MODULE,
-        MoreTypes.equivalence().wrap(checkNotNull(type)),
+        Util.wrap(checkNotNull(type)),
         Optional.empty(),
         Optional.empty(),
         simpleVariableName(MoreTypes.asTypeElement(type)),

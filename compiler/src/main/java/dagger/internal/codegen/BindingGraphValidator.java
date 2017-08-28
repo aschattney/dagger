@@ -109,9 +109,7 @@ import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import javax.inject.Provider;
-import javax.lang.model.element.AnnotationMirror;
-import javax.lang.model.element.ExecutableElement;
-import javax.lang.model.element.TypeElement;
+import javax.lang.model.element.*;
 import javax.lang.model.type.ArrayType;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.ExecutableType;
@@ -529,9 +527,12 @@ final class BindingGraphValidator {
         switch (binding.bindingKind()) {
           case SYNTHETIC_DELEGATE_BINDING:
           case PROVISION:
-            message.append(
-                methodSignatureFormatter.format(
-                    MoreElements.asExecutable(binding.bindingElement().get())));
+            final Element element = binding.bindingElement().get();
+            if (element.getKind() == ElementKind.METHOD) {
+              message.append(
+                      methodSignatureFormatter.format(
+                              MoreElements.asExecutable(binding.bindingElement().get())));
+            }
             break;
 
           case INJECTION:

@@ -42,7 +42,7 @@ final class MoreAnnotationMirrors {
    */
   static Optional<Equivalence.Wrapper<AnnotationMirror>> wrapOptionalInEquivalence(
       Optional<AnnotationMirror> optional) {
-    return optional.map(AnnotationMirrors.equivalence()::wrap);
+    return optional.map(Util::wrap);
   }
 
   /**

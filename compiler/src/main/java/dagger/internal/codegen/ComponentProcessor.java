@@ -18,6 +18,7 @@ package dagger.internal.codegen;
 
 import static dagger.internal.codegen.ModuleProcessingStep.moduleProcessingStep;
 import static dagger.internal.codegen.ModuleProcessingStep.producerModuleProcessingStep;
+import static dagger.internal.codegen.Util.initEquivalenceWrapper;
 
 import com.google.auto.service.AutoService;
 import com.google.common.collect.ImmutableList;
@@ -74,6 +75,8 @@ public final class ComponentProcessor extends BasicProcessor {
     filer = new FormattingFiler(processingEnv.getFiler());
     CompilerOptions compilerOptions = CompilerOptions.create(processingEnv, elements);
 
+    initEquivalenceWrapper(types);
+
     KeyFormatter keyFormatter = new KeyFormatter();
     MethodSignatureFormatter methodSignatureFormatter = new MethodSignatureFormatter(types);
     BindingDeclarationFormatter bindingDeclarationFormatter =
@@ -117,7 +120,6 @@ public final class ComponentProcessor extends BasicProcessor {
 
     appConfigProvider = new AppConfig.Provider();
     StubGenerator stubGenerator = new StubGenerator(filer, elements, types, appConfigProvider, testRegistry);
-    //MockGenerator mockGenerator = new MockGenerator(filer, elements, types, appConfigProvider, testRegistry);
     FactoryGenerator factoryGenerator = new FactoryGenerator(filer, elements, compilerOptions, injectValidatorWhenGeneratingCode);
     TestFactoryGenerator testFactoryGenerator = new TestFactoryGenerator(filer, elements, compilerOptions, injectValidatorWhenGeneratingCode, appConfigProvider, testRegistry);
     multipleGenerator = new MultipleSourceFileGenerator<>(filer, elements, Arrays.asList(stubGenerator, factoryGenerator, testFactoryGenerator));
@@ -157,6 +159,7 @@ public final class ComponentProcessor extends BasicProcessor {
             keyFactory,
             provisionBindingFactory,
             membersInjectionBindingFactory,
+            bindingDelegateDeclarationFactory,
             compilerOptions);
 
     ModuleDescriptor.Factory moduleDescriptorFactory =
@@ -178,7 +181,9 @@ public final class ComponentProcessor extends BasicProcessor {
             keyFactory,
             provisionBindingFactory,
             productionBindingFactory,
-            appConfigProvider);
+            stubGenerator,
+            appConfigProvider,
+            messager);
 
     AnnotationCreatorGenerator annotationCreatorGenerator =
             new AnnotationCreatorGenerator(filer, elements);
@@ -262,14 +267,15 @@ public final class ComponentProcessor extends BasicProcessor {
                 provisionBindingFactory,
                 new ApplicationGenerator(filer, types, elements, bindingGraphFactory, componentDescriptorFactory),
                 stubGenerator,
-                new AnnotationGenerator(filer, elements, testRegistry)
+                new AnnotationGenerator(filer, elements, testRegistry),
+                new ApplicationValidator(elements, appConfigProvider, messager)
         )
     );
   }
 
   @Override
   protected void postRound(RoundEnvironment roundEnv) {
-    if (!roundEnv.processingOver()) {
+    if (!roundEnv.processingOver() && !roundEnv.errorRaised()) {
       try {
         injectBindingRegistry.generateSourcesForRequiredBindings(
             multipleGenerator, membersInjectorGenerator);

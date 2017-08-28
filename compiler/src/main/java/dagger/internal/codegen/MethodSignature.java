@@ -36,10 +36,10 @@ abstract class MethodSignature {
     ImmutableList.Builder<Equivalence.Wrapper<TypeMirror>> parameters = ImmutableList.builder();
     ImmutableList.Builder<Equivalence.Wrapper<TypeMirror>> thrownTypes = ImmutableList.builder();
     for (TypeMirror parameter : methodType.getParameterTypes()) {
-      parameters.add(MoreTypes.equivalence().wrap(parameter));
+      parameters.add(Util.wrap(parameter));
     }
     for (TypeMirror thrownType : methodType.getThrownTypes()) {
-      thrownTypes.add(MoreTypes.equivalence().wrap(thrownType));
+      thrownTypes.add(Util.wrap(thrownType));
     }
     return new AutoValue_MethodSignature(
         methodName,

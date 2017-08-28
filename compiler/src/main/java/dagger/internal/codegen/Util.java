@@ -21,15 +21,17 @@ import static com.google.auto.common.MoreElements.hasModifiers;
 import static com.google.auto.common.MoreTypes.asDeclared;
 import static com.google.common.collect.Lists.asList;
 import static dagger.internal.codegen.SourceFiles.generateBindingFieldsForDependencies;
-import static dagger.internal.codegen.SourceFiles.simpleVariableName;
 import static java.util.stream.Collectors.collectingAndThen;
 import static java.util.stream.Collectors.toList;
 import static javax.lang.model.element.ElementKind.CONSTRUCTOR;
 import static javax.lang.model.element.Modifier.ABSTRACT;
 import static javax.lang.model.element.Modifier.PRIVATE;
 import static javax.lang.model.element.Modifier.STATIC;
+
+import com.google.auto.common.AnnotationMirrors;
 import com.google.auto.common.MoreElements;
 import com.google.auto.common.MoreTypes;
+import com.google.common.base.Equivalence;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import java.util.Optional;
@@ -37,10 +39,6 @@ import java.util.Optional;
 import com.google.common.collect.*;
 import com.squareup.javapoet.*;
 import dagger.*;
-import dagger.multibindings.ClassKey;
-import dagger.multibindings.IntKey;
-import dagger.multibindings.LongKey;
-import dagger.multibindings.StringKey;
 import dagger.producers.Produces;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Predicate;
@@ -54,14 +52,10 @@ import javax.lang.model.element.TypeElement;
 import javax.lang.model.util.Elements;
 import java.lang.annotation.Annotation;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collector;
-import javax.inject.Named;
 import javax.lang.model.element.*;
 import javax.lang.model.type.*;
-import javax.lang.model.util.Elements;
 import javax.lang.model.util.SimpleElementVisitor6;
 import javax.lang.model.util.SimpleTypeVisitor6;
 import javax.lang.model.util.Types;
@@ -637,6 +631,64 @@ final class Util {
         return original.substring(0, 1).toLowerCase() + original.substring(1);
     }
 
+    static class TypeMirrorEquivalence<T> extends com.google.common.base.Equivalence<T> {
+
+        private final Types types;
+
+        public TypeMirrorEquivalence(Types types) {
+            this.types = types;
+        }
+
+        @Override
+        protected boolean doEquivalent(T t1, T t2) {
+            return types.isSameType((TypeMirror)t1, (TypeMirror)t2) || t1.toString().equals(t2.toString());
+        }
+
+        @Override
+        protected int doHash(T typeMirror) {
+            return typeMirror.toString().hashCode();
+        }
+
+    }
+
+    static class AnnotationEquivalence extends com.google.common.base.Equivalence<Object> {
+
+        public AnnotationEquivalence() {}
+
+        @Override
+        protected boolean doEquivalent(Object t1, Object t2) {
+            return t1.toString().equals(t2.toString());
+        }
+
+        @Override
+        protected int doHash(Object t) {
+            return t.toString().hashCode();
+        }
+
+    }
+
+    private static TypeMirrorEquivalence<TypeMirror> equivalenceInstanceMirror;
+    private static TypeMirrorEquivalence<DeclaredType> equivalenceInstanceDeclared;
+    private static AnnotationEquivalence equivalenceInstanceAnnotation;
+
+    public static void initEquivalenceWrapper(Types types) {
+        equivalenceInstanceMirror = new TypeMirrorEquivalence<>(types);
+        equivalenceInstanceDeclared = new TypeMirrorEquivalence<>(types);
+        equivalenceInstanceAnnotation = new AnnotationEquivalence();
+    }
+
+    public static Equivalence.Wrapper<TypeMirror> wrap(TypeMirror type) {
+        return equivalenceInstanceMirror.wrap(type);
+    }
+
+    public static Equivalence.Wrapper<AnnotationMirror> wrap(AnnotationMirror type) {
+        return equivalenceInstanceAnnotation.wrap(type);
+    }
+
+    public static Equivalence.Wrapper<DeclaredType> wrap(DeclaredType type) {
+        return equivalenceInstanceDeclared.wrap(type);
+    }
+
     public static boolean bindingCanBeProvidedInTest(ContributionBinding binding) {
         final ImmutableList<ContributionBinding.Kind> kinds = ImmutableList.of(
                 ContributionBinding.Kind.PROVISION,
@@ -822,6 +874,15 @@ final class Util {
 
     public static String getDelegateMethodName(ClassName delegateType) {
         return "with" + delegateType.simpleName().replaceAll("Delegate$", "");
+    }
+
+    public static String joinClassNames(TypeMirror typeMirror) {
+        final ClassName className = ClassName.bestGuess(typeMirror.toString());
+        return joinClassNames(className);
+    }
+
+    public static String joinClassNames(ClassName className) {
+        return Joiner.on(".").join(className.simpleNames());
     }
 
     public static ClassName getDaggerComponentClassName(ClassName componentDefinitionClassName) {

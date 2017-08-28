@@ -31,6 +31,7 @@ public class InjectorProcessingStep implements BasicProcessor.ProcessingStep {
     private HashSet<TypeElement> components = new HashSet<>();
     private DecoratorGenerator decoratorGenerator;
     private AnnotationGenerator annotationGenerator;
+    private final ApplicationValidator applicationValidator;
 
     public InjectorProcessingStep(Types types, Messager messager,
                                   AppConfig.Provider appConfigProvider,
@@ -44,7 +45,8 @@ public class InjectorProcessingStep implements BasicProcessor.ProcessingStep {
                                   ProvisionBinding.Factory provisionBindingFactory,
                                   ApplicationGenerator applicationGenerator,
                                   StubGenerator stubGenerator,
-                                  AnnotationGenerator annotationGenerator) {
+                                  AnnotationGenerator annotationGenerator,
+                                  ApplicationValidator applicationValidator) {
         this.types = types;
         this.messager = messager;
         this.appConfigProvider = appConfigProvider;
@@ -60,6 +62,7 @@ public class InjectorProcessingStep implements BasicProcessor.ProcessingStep {
         this.stubGenerator = stubGenerator;
         this.decoratorGenerator = decoratorGenerator;
         this.annotationGenerator = annotationGenerator;
+        this.applicationValidator = applicationValidator;
     }
 
     @Override
@@ -93,6 +96,10 @@ public class InjectorProcessingStep implements BasicProcessor.ProcessingStep {
             for (TypeElement component : components) {
                 final ComponentDescriptor componentDescriptor = componentDescriptorFactory.forComponent(component);
                 final BindingGraph bindingGraph = bindingGraphFactory.create(componentDescriptor);
+                boolean hasErrors = applicationValidator.validate(bindingGraph);
+                if (hasErrors) {
+                    return ImmutableSet.of(component);
+                }
                 this.createAnnotations(bindingGraph);
                 final ImmutableSet<ComponentDescriptor> componentDescriptors = bindingGraph.componentDescriptors();
                 componentDescriptors
@@ -110,7 +117,6 @@ public class InjectorProcessingStep implements BasicProcessor.ProcessingStep {
             final ClassName decoratorClassName = ClassName.get(appConfig.getAppClass()).topLevelClassName().peerClass("GraphDecorator");
             final DI di = new DI(appConfig, components, injectorTypeList, decoratorClassName);
             this.decoratorGenerator.generate(di, messager);
-            this.applicationGenerator.generate(di, messager);
             this.dependencySpecGenerator.generate(di, messager);
             this.injectorGenerator.generate(di, messager);
             if (appConfig.debug() || appConfig.generateExtendedComponents()) {

@@ -2,6 +2,9 @@ package dagger.internal.codegen;
 
 import java.io.IOException;
 import java.util.Optional;
+
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.squareup.javapoet.*;
 import javax.annotation.processing.Filer;
 import javax.lang.model.element.Element;
@@ -10,6 +13,7 @@ import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
 import java.util.*;
 import static dagger.internal.codegen.SourceFiles.generateBindingFieldsForDependencies;
+import static dagger.internal.codegen.SourceFiles.generateBindingFieldsForStubDependencies;
 import static dagger.internal.codegen.TypeNames.*;
 
 
@@ -47,7 +51,12 @@ public class StubGenerator extends SourceFileGenerator<ProvisionBinding> {
         final TypeName contributedTypeName = ClassName.get(input.contributedType());
         methodBuilder.returns(contributedTypeName);
         HashMap<BindingKey, FrameworkField> fields = new HashMap<>();
-        for (Map.Entry<BindingKey, FrameworkField> entry : generateBindingFieldsForDependencies(input).entrySet()) {
+
+        final ImmutableMap<BindingKey, FrameworkField> map =
+                input.bindingKind() == ContributionBinding.Kind.SYNTHETIC_DELEGATE_BINDING ?
+                generateBindingFieldsForStubDependencies(input) :
+                generateBindingFieldsForDependencies(input);
+        for (Map.Entry<BindingKey, FrameworkField> entry : map.entrySet()) {
             FrameworkField bindingField = entry.getValue();
             fields.put(entry.getKey(), bindingField);
         }
@@ -61,7 +70,11 @@ public class StubGenerator extends SourceFileGenerator<ProvisionBinding> {
 
     protected List<ParameterSpec> buildMethodParamsList(ProvisionBinding input, HashMap<BindingKey, FrameworkField> fields) {
         List<ParameterSpec> parameterSpecList = new ArrayList<>();
-        for (DependencyRequest request : input.explicitDependencies()) {
+        final ImmutableSet<DependencyRequest> dependencyRequests =
+                input.bindingKind() == ContributionBinding.Kind.SYNTHETIC_DELEGATE_BINDING ?
+                        input.stubDependencies() :
+                        input.explicitDependencies();
+        for (DependencyRequest request : dependencyRequests) {
             final FrameworkField frameworkField = fields.get(request.bindingKey());
             TypeName typeName = request.kind() == DependencyRequest.Kind.INSTANCE ?
                     frameworkField.type().typeArguments.get(0) :
